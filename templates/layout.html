@@ -167,36 +167,36 @@
         }
         
         /* Стили для социальных кнопок */
-        .social-links a {
-            transition: transform 0.3s ease;
-            display: inline-block;
+        .social-btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 500;
+            text-decoration: none;
+            margin: 5px;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
         }
-        
-        .social-links a:hover {
-            transform: scale(1.2);
+
+        .social-btn i {
+            margin-right: 8px;
+            font-size: 20px;
         }
-        
-        /* Специфичные цвета для соцсетей при наведении */
-        .fa-instagram:hover {
-            color: #E1306C !important;
+
+        .social-btn-instagram {
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            color: white !important;
         }
-        
-        .fa-telegram:hover {
-            color: #0088cc !important;
+
+        .social-btn-telegram {
+            background-color: #0088cc;
+            color: white !important;
         }
-        
-        .fa-facebook:hover {
-            color: #4267B2 !important;
-        }
-        
-        /* Стили для формы подписки */
-        .newsletter-form .input-group {
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .newsletter-form .form-control:focus {
-            border-color: #0d6efd;
-            box-shadow: none;
+
+        .social-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -290,11 +290,11 @@
                 <div class="col-md-4 mb-3">
                     <h5>Социальные сети</h5>
                     <div class="social-links">
-                        <a href="https://instagram.com" class="btn me-2" style="background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white;">
-                            <i class="fab fa-instagram"></i> Instagram
+                        <a href="https://instagram.com" class="social-btn social-btn-instagram">
+                            <i class="fab fa-instagram"></i>Instagram
                         </a>
-                        <a href="https://telegram.org" class="btn" style="background-color: #0088cc; color: white;">
-                            <i class="fab fa-telegram"></i> Telegram
+                        <a href="https://telegram.org" class="social-btn social-btn-telegram">
+                            <i class="fab fa-telegram"></i>Telegram
                         </a>
                     </div>
                 </div>
