@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+
+{% block title %}Магазин - Cursor Shop{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Категории</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('products') }}" class="list-group-item list-group-item-action {% if not request.args.get('category') %}active{% endif %}">
+                        Все товары
+                    </a>
+                    {% for category in categories %}
+                    <a href="{{ url_for('products', category=category.id) }}" 
+                       class="list-group-item list-group-item-action {% if request.args.get('category')|int == category.id %}active{% endif %}">
+                        {{ category.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Фильтр по цене</h5>
+                </div>
+                <div class="card-body">
+                    <form id="price-filter-form" method="GET">
+                        <div class="mb-3">
+                            <label for="min-price" class="form-label">Минимальная цена:</label>
+                            <input type="range" class="form-range" id="min-price" name="min_price" 
+                                   min="0" max="20000" step="100" value="{{ request.args.get('min_price', 0)|float }}">
+                            <span id="min-price-value">{{ request.args.get('min_price', 0)|float }} ₴</span>
+                        </div>
+                        <div class="mb-3">
+                            <label for="max-price" class="form-label">Максимальная цена:</label>
+                            <input type="range" class="form-range" id="max-price" name="max_price" 
+                                   min="0" max="20000" step="100" value="{{ request.args.get('max_price', 20000)|float }}">
+                            <span id="max-price-value">{{ request.args.get('max_price', 20000)|float }} ₴</span>
+                        </div>
+                        {% if request.args.get('category') %}
+                        <input type="hidden" name="category" value="{{ request.args.get('category') }}">
+                        {% endif %}
+                        {% if request.args.get('q') %}
+                        <input type="hidden" name="q" value="{{ request.args.get('q') }}">
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary w-100">Применить фильтр</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    {% if request.args.get('category') %}
+                        {% for category in categories %}
+                            {% if category.id == request.args.get('category')|int %}
+                                {{ category.name }}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        Все товары
+                    {% endif %}
+                </h2>
+                <div class="d-flex align-items-center">
+                    <form id="sort-form" method="GET" class="d-flex align-items-center">
+                        <label for="sort-by" class="me-2">Сортировать по:</label>
+                        <select class="form-select" id="sort-by" name="sort_by" onchange="this.form.submit()">
+                            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Сначала новые</option>
+                            <option value="price-low" {% if sort_by == 'price-low' %}selected{% endif %}>Цена: по возрастанию</option>
+                            <option value="price-high" {% if sort_by == 'price-high' %}selected{% endif %}>Цена: по убыванию</option>
+                            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>По названию</option>
+                        </select>
+                        {% if request.args.get('category_id') %}
+                        <input type="hidden" name="category_id" value="{{ request.args.get('category_id') }}">
+                        {% endif %}
+                        {% if request.args.get('q') %}
+                        <input type="hidden" name="q" value="{{ request.args.get('q') }}">
+                        {% endif %}
+                        {% if request.args.get('min_price') %}
+                        <input type="hidden" name="min_price" value="{{ request.args.get('min_price') }}">
+                        {% endif %}
+                        {% if request.args.get('max_price') %}
+                        <input type="hidden" name="max_price" value="{{ request.args.get('max_price') }}">
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            
+            <div class="row">
+                {% for product in products %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <img src="{{ url_for('static', filename=product.image) }}" 
+                             class="card-img-top" 
+                             alt="{{ product.name }}"
+                             style="height: 300px; object-fit: cover;">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.name }}</h5>
+                            <p class="card-text text-primary fw-bold">{{ "%.2f"|format(product.price) }} ₴</p>
+                            <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-outline-primary">Подробнее</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const minPriceSlider = document.getElementById('min-price');
+        const maxPriceSlider = document.getElementById('max-price');
+        const minPriceValue = document.getElementById('min-price-value');
+        const maxPriceValue = document.getElementById('max-price-value');
+        const priceFilterForm = document.getElementById('price-filter-form');
+        
+        // Обновление значений при перемещении ползунков
+        minPriceSlider.addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            minPriceValue.textContent = value.toFixed(2) + ' ₴';
+            if (value > parseFloat(maxPriceSlider.value)) {
+                maxPriceSlider.value = value;
+                maxPriceValue.textContent = value.toFixed(2) + ' ₴';
+            }
+        });
+        
+        maxPriceSlider.addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            maxPriceValue.textContent = value.toFixed(2) + ' ₴';
+            if (value < parseFloat(minPriceSlider.value)) {
+                minPriceSlider.value = value;
+                minPriceValue.textContent = value.toFixed(2) + ' ₴';
+            }
+        });
+    });
+</script>
+{% endblock %}

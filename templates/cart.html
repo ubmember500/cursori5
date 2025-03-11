@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+
+{% block title %}Корзина - Cursor Shop{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">Корзина</h2>
+    {% if cart_items %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Товар</th>
+                        <th>Цена</th>
+                        <th>Количество</th>
+                        <th>Всего</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart_items %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td>{{ "%.2f"|format(item.price) }} ₴</td>
+                        <td>
+                            <form action="{{ url_for('update_cart', product_id=item.id) }}" method="post" class="d-flex align-items-center">
+                                <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control" style="width: 70px;">
+                                <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Обновить</button>
+                            </form>
+                        </td>
+                        <td>{{ "%.2f"|format(item.total) }} ₴</td>
+                        <td>
+                            <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>Итого:</strong></td>
+                        <td><strong>{{ "%.2f"|format(total) }} ₴</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{{ url_for('products') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Продолжить покупки
+            </a>
+            <form action="{{ url_for('create_payment') }}" method="post">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-credit-card me-2"></i>Оплатить
+                </button>
+            </form>
+        </div>
+    {% else %}
+        <div class="text-center">
+            <p>Ваша корзина пуста</p>
+            <a href="{{ url_for('products') }}" class="btn btn-primary">Перейти к покупкам</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function increaseQuantity(inputId) {
+        const input = document.getElementById(inputId);
+        let value = parseInt(input.value);
+        if (value < 10) {
+            input.value = value + 1;
+        }
+    }
+    
+    function decreaseQuantity(inputId) {
+        const input = document.getElementById(inputId);
+        let value = parseInt(input.value);
+        if (value > 1) {
+            input.value = value - 1;
+        }
+    }
+    
+    function clearCart() {
+        if (confirm('Вы уверены, что хотите очистить корзину?')) {
+            window.location.href = "{{ url_for('cart') }}?clear=true";
+        }
+    }
+</script>
+{% endblock %}

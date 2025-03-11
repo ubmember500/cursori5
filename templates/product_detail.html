@@ -1,0 +1,292 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ product.name }} - Cursor Shop{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('home') }}">Главная</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('products') }}">Магазин</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('products', category=product.category_id) }}">{{ product.category.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <img src="{{ url_for('static', filename=product.image) }}" 
+                     class="card-img-top" 
+                     alt="{{ product.name }}"
+                     style="height: 500px; object-fit: cover;">
+            </div>
+            <div class="row mt-3">
+                <div class="col-3">
+                    <img src="{{ url_for('static', filename=product.image) }}" class="img-thumbnail" alt="{{ product.name }}">
+                </div>
+                <div class="col-3">
+                    <img src="{{ url_for('static', filename=product.image) }}" class="img-thumbnail" alt="{{ product.name }}">
+                </div>
+                <div class="col-3">
+                    <img src="{{ url_for('static', filename=product.image) }}" class="img-thumbnail" alt="{{ product.name }}">
+                </div>
+                <div class="col-3">
+                    <img src="{{ url_for('static', filename=product.image) }}" class="img-thumbnail" alt="{{ product.name }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <h1 class="mb-3">{{ product.name }}</h1>
+            <div class="mb-3">
+                <span class="text-primary h3">{{ "%.2f"|format(product.price) }} ₴</span>
+                <span class="text-muted ms-2"><del>{{ "%.2f"|format(product.price * 1.2) }} ₴</del></span>
+                <span class="badge bg-danger ms-2">Скидка 20%</span>
+            </div>
+
+            <div class="mb-3">
+                <div class="d-flex">
+                    <div class="text-warning me-2">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star-half-alt"></i>
+                    </div>
+                    <span class="text-muted">(4.5/5)</span>
+                </div>
+                <small class="text-muted">На основе 24 отзывов</small>
+            </div>
+
+            <p class="mb-4">{{ product.description }}</p>
+
+            <div class="mb-4">
+                <h5>Размер:</h5>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="size" id="size-xs" autocomplete="off">
+                    <label class="btn btn-outline-dark" for="size-xs">XS</label>
+
+                    <input type="radio" class="btn-check" name="size" id="size-s" autocomplete="off">
+                    <label class="btn btn-outline-dark" for="size-s">S</label>
+
+                    <input type="radio" class="btn-check" name="size" id="size-m" autocomplete="off" checked>
+                    <label class="btn btn-outline-dark" for="size-m">M</label>
+
+                    <input type="radio" class="btn-check" name="size" id="size-l" autocomplete="off">
+                    <label class="btn btn-outline-dark" for="size-l">L</label>
+
+                    <input type="radio" class="btn-check" name="size" id="size-xl" autocomplete="off">
+                    <label class="btn btn-outline-dark" for="size-xl">XL</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h5>Цвет:</h5>
+                <div class="d-flex">
+                    <div class="color-option me-2 active" style="background-color: #000;"></div>
+                    <div class="color-option me-2" style="background-color: #fff; border: 1px solid #ddd;"></div>
+                    <div class="color-option me-2" style="background-color: #0d6efd;"></div>
+                    <div class="color-option me-2" style="background-color: #dc3545;"></div>
+                    <div class="color-option me-2" style="background-color: #198754;"></div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h5>Количество:</h5>
+                <div class="input-group" style="width: 150px;">
+                    <button class="btn btn-outline-secondary" type="button" id="decrease-qty">-</button>
+                    <input type="text" class="form-control text-center" value="1" id="quantity">
+                    <button class="btn btn-outline-secondary" type="button" id="increase-qty">+</button>
+                </div>
+                <small class="text-muted mt-2 d-block">В наличии: {{ product.stock }} шт.</small>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex">
+                <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-cart-plus me-2"></i>В корзину
+                </a>
+                <button class="btn btn-outline-dark btn-lg">
+                    <i class="fas fa-heart me-2"></i>В избранное
+                </button>
+            </div>
+
+            <div class="mt-4">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-truck text-primary me-2"></i>
+                    <span>Бесплатная доставка при заказе от 5000 ₴</span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-undo text-primary me-2"></i>
+                    <span>Возврат в течение 30 дней</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-shield-alt text-primary me-2"></i>
+                    <span>Гарантия 1 месяц</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="productTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="description-tab" data-bs-toggle="tab" data-bs-target="#description" type="button" role="tab">Описание</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="specifications-tab" data-bs-toggle="tab" data-bs-target="#specifications" type="button" role="tab">Характеристики</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">Отзывы</button>
+                </li>
+            </ul>
+            <div class="tab-content p-4 border border-top-0 rounded-bottom" id="productTabsContent">
+                <div class="tab-pane fade show active" id="description" role="tabpanel">
+                    <p>{{ product.description }}</p>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla quam velit, vulputate eu pharetra nec, mattis ac neque. Duis vulputate commodo lectus, ac blandit elit tincidunt id.</p>
+                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                </div>
+                <div class="tab-pane fade" id="specifications" role="tabpanel">
+                    <table class="table table-striped">
+                        <tbody>
+                            <tr>
+                                <th scope="row">Материал</th>
+                                <td>100% Хлопок</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Покрой</th>
+                                <td>Классический</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Уход</th>
+                                <td>Машинная стирка при 30°C</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Страна производства</th>
+                                <td>Сделано в России</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Стиль</th>
+                                <td>Повседневный</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="tab-pane fade" id="reviews" role="tabpanel">
+                    <div class="mb-4">
+                        <h4>Отзывы покупателей</h4>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="text-warning me-2">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                            </div>
+                            <span>4.5 из 5</span>
+                        </div>
+                        <p>На основе 24 отзывов</p>
+                    </div>
+
+                    <div class="review-item mb-4 pb-4 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5>Отличный товар!</h5>
+                                <div class="text-warning">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                            <small class="text-muted">2 дня назад</small>
+                        </div>
+                        <p class="mt-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla quam velit, vulputate eu pharetra nec, mattis ac neque.</p>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('static', filename='img/avatar1.jpg') }}" alt="Пользователь" class="rounded-circle me-2" width="40">
+                            <span>Иван Иванов</span>
+                        </div>
+                    </div>
+
+                    <div class="review-item mb-4 pb-4 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5>Хорошее качество</h5>
+                                <div class="text-warning">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="far fa-star"></i>
+                                </div>
+                            </div>
+                            <small class="text-muted">1 неделю назад</small>
+                        </div>
+                        <p class="mt-2">Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('static', filename='img/avatar2.jpg') }}" alt="Пользователь" class="rounded-circle me-2" width="40">
+                            <span>Мария Петрова</span>
+                        </div>
+                    </div>
+
+                    <a href="#" class="btn btn-outline-primary">Написать отзыв</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <h3 class="mb-4">Похожие товары</h3>
+        <div class="row">
+            {% for i in range(4) %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100">
+                    <img src="{{ url_for('static', filename='img/tshirt' + (i+1)|string + '.jpg') }}" class="card-img-top" alt="Похожий товар">
+                    <div class="card-body">
+                        <h5 class="card-title">Похожий товар {{ i+1 }}</h5>
+                        <p class="card-text text-primary fw-bold">{{ "%.2f"|format(1999 + i*500) }} ₴</p>
+                        <a href="#" class="btn btn-outline-primary">Подробнее</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const quantityInput = document.getElementById('quantity');
+        const decreaseBtn = document.getElementById('decrease-qty');
+        const increaseBtn = document.getElementById('increase-qty');
+
+        decreaseBtn.addEventListener('click', function() {
+            let value = parseInt(quantityInput.value);
+            if (value > 1) {
+                quantityInput.value = value - 1;
+            }
+        });
+
+        increaseBtn.addEventListener('click', function() {
+            let value = parseInt(quantityInput.value);
+            let maxStock = {{ product.stock }};
+            if (value < maxStock) {
+                quantityInput.value = value + 1;
+            }
+        });
+
+        // Color options
+        const colorOptions = document.querySelectorAll('.color-option');
+        colorOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                colorOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    });
+</script>
+{% endblock %}
