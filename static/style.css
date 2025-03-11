@@ -6,9 +6,10 @@ body {
     color: #333;
 }
 
-/* Убираем общий стиль для ссылок, чтобы он не конфликтовал с социальными кнопками */
-a:not(.social-btn) {
+/* Стили для ссылок, исключая специальные кнопки */
+a:not([class]) {
     text-decoration: none;
+    color: inherit;
 }
 
 /* Header & Navigation */
@@ -117,56 +118,36 @@ footer {
     margin-top: 5rem;
 }
 
-/* Стили для социальных кнопок */
-.social-btn {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    padding: 12px 20px !important;
-    border-radius: 8px !important;
-    text-decoration: none !important;
-    color: #ffffff !important;
-    font-weight: 500 !important;
-    transition: all 0.3s ease !important;
-    border: none !important;
-    width: 100% !important;
-    max-width: 200px !important;
-    margin-bottom: 10px !important;
+/* Alert Styles */
+.alert {
+    margin-bottom: 20px;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
 }
 
-.social-btn i {
-    font-size: 24px !important;
-    margin-right: 10px !important;
-    color: #ffffff !important;
+.alert-error {
+    background-color: #fff5f5;
+    border-color: #ffe3e3;
+    color: #4a4a4a;
 }
 
-.social-btn span {
-    color: #ffffff !important;
+.alert-success {
+    background-color: #f0fff4;
+    border-color: #c6f6d5;
+    color: #2f855a;
 }
 
-.social-btn.instagram {
-    background: #E1306C !important;
-    background: -webkit-linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
-    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
-    box-shadow: 0 2px 4px rgba(220, 39, 67, 0.3) !important;
+.alert-info {
+    background-color: #ebf8ff;
+    border-color: #bee3f8;
+    color: #2b6cb0;
 }
 
-.social-btn.telegram {
-    background-color: #0088cc !important;
-    box-shadow: 0 2px 4px rgba(0, 136, 204, 0.3) !important;
-}
-
-.social-btn:hover {
-    transform: translateY(-2px) !important;
-    opacity: 0.95 !important;
-}
-
-.social-btn.instagram:hover {
-    box-shadow: 0 4px 12px rgba(220, 39, 67, 0.5) !important;
-}
-
-.social-btn.telegram:hover {
-    box-shadow: 0 4px 12px rgba(0, 136, 204, 0.5) !important;
+.alert-warning {
+    background-color: #fffff0;
+    border-color: #fefcbf;
+    color: #975a16;
 }
 
 /* Responsive Adjustments */
