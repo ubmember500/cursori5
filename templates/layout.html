@@ -39,14 +39,38 @@
             gap: 10px;
         }
 
-        .social-links a {
-            color: #333;
-            font-size: 24px;
-            transition: color 0.3s ease;
+        .social-links .social-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border: none;
+            margin: 5px;
+            color: white !important;
         }
 
-        .social-links a:hover {
-            color: #007bff;
+        .social-links .social-btn i {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+
+        .social-links .social-btn-instagram {
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        }
+
+        .social-links .social-btn-telegram {
+            background-color: #0088cc;
+        }
+
+        .social-links .social-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            opacity: 0.9;
+            color: white !important;
         }
 
         .alert {
@@ -78,32 +102,6 @@
             background-color: #fffff0;
             border-color: #fefcbf;
             color: #975a16;
-        }
-
-        .social-links .btn-instagram {
-            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-            border: none;
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .social-links .btn-instagram:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(220, 39, 67, 0.3);
-            color: white;
-        }
-
-        .social-links .btn-telegram {
-            background: linear-gradient(45deg, #0088cc, #00a2ff);
-            border: none;
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .social-links .btn-telegram:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 136, 204, 0.3);
-            color: white;
         }
 
         .logo-wrapper {
@@ -161,39 +159,6 @@
         footer {
             flex-shrink: 0;
             width: 100%;
-        }
-        
-        .social-btn {
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 500;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            transition: all 0.3s ease;
-            border: none;
-        }
-
-        .social-btn i {
-            margin-right: 8px;
-            font-size: 20px;
-        }
-
-        .social-btn-instagram {
-            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-            color: white !important;
-        }
-
-        .social-btn-telegram {
-            background-color: #0088cc;
-            color: white !important;
-        }
-
-        .social-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            opacity: 0.9;
         }
     </style>
 </head>
@@ -285,7 +250,7 @@
                     Телефон: +7 (999) 123-45-67</p>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <h5>Социальные сети</h5>
+                    <h5>Мы в социальных сетях</h5>
                     <div class="social-links">
                         <a href="https://instagram.com" class="social-btn social-btn-instagram">
                             <i class="fab fa-instagram"></i>Instagram
