@@ -2,8 +2,17 @@ from app import app, db
 
 def init_db():
     with app.app_context():
-        # Create tables
-        db.create_all()
+        # Проверяем, существуют ли таблицы
+        from app import User
+        try:
+            # Пробуем получить первого пользователя
+            User.query.first()
+            print("База данных уже существует и содержит таблицы!")
+            return
+        except:
+            # Если таблиц нет, создаем их
+            db.create_all()
+            print("Таблицы базы данных созданы!")
         
         # Import all models
         from app import Category, Product
@@ -76,7 +85,7 @@ def init_db():
             ]
             db.session.add_all(products)
             db.session.commit()
-            print("База данных успешно инициализирована!")
+            print("База данных успешно инициализирована с тестовыми данными!")
         else:
             print("База данных уже содержит данные!")
 
