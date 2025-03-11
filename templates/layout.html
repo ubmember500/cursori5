@@ -160,6 +160,58 @@
             flex-shrink: 0;
             width: 100%;
         }
+
+        /* Новые стили для социальных кнопок с повышенной специфичностью */
+        footer .social-links {
+            display: flex;
+            justify-content: flex-start;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        footer .social-links a.social-btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            text-decoration: none !important;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border: none;
+            color: #ffffff !important;
+            min-width: 160px;
+        }
+
+        footer .social-links a.social-btn i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+
+        footer .social-links a.social-btn.social-btn-instagram {
+            background: #E1306C !important;
+            background: -webkit-linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
+            box-shadow: 0 2px 4px rgba(220, 39, 67, 0.3);
+        }
+
+        footer .social-links a.social-btn.social-btn-telegram {
+            background: #0088cc !important;
+            box-shadow: 0 2px 4px rgba(0, 136, 204, 0.3);
+        }
+
+        footer .social-links a.social-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.95;
+        }
+
+        footer .social-links a.social-btn.social-btn-instagram:hover {
+            box-shadow: 0 4px 12px rgba(220, 39, 67, 0.5);
+        }
+
+        footer .social-links a.social-btn.social-btn-telegram:hover {
+            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -252,11 +304,13 @@
                 <div class="col-md-4 mb-3">
                     <h5>Мы в социальных сетях</h5>
                     <div class="social-links">
-                        <a href="https://instagram.com" class="social-btn social-btn-instagram">
-                            <i class="fab fa-instagram"></i>Instagram
+                        <a href="https://instagram.com" class="social-btn social-btn-instagram" target="_blank">
+                            <i class="fab fa-instagram"></i>
+                            <span>Instagram</span>
                         </a>
-                        <a href="https://telegram.org" class="social-btn social-btn-telegram">
-                            <i class="fab fa-telegram"></i>Telegram
+                        <a href="https://telegram.org" class="social-btn social-btn-telegram" target="_blank">
+                            <i class="fab fa-telegram"></i>
+                            <span>Telegram</span>
                         </a>
                     </div>
                 </div>
