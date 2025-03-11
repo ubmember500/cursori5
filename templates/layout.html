@@ -6,7 +6,7 @@
     <title>{% block title %}{% endblock %} - Cursor Shop</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% block extra_css %}{% endblock %}
     <style>
         html, body {
@@ -91,6 +91,58 @@
         footer {
             flex-shrink: 0;
             width: 100%;
+        }
+
+        /* Критически важные стили для социальных кнопок */
+        .social-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 12px 20px !important;
+            border-radius: 8px !important;
+            text-decoration: none !important;
+            color: #ffffff !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+            border: none !important;
+            width: 100% !important;
+            max-width: 200px !important;
+            margin-bottom: 10px !important;
+        }
+
+        .social-btn i {
+            font-size: 24px !important;
+            margin-right: 10px !important;
+            color: #ffffff !important;
+        }
+
+        .social-btn span {
+            color: #ffffff !important;
+        }
+
+        .social-btn.instagram {
+            background: #E1306C !important;
+            background: -webkit-linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
+            box-shadow: 0 2px 4px rgba(220, 39, 67, 0.3) !important;
+        }
+
+        .social-btn.telegram {
+            background-color: #0088cc !important;
+            box-shadow: 0 2px 4px rgba(0, 136, 204, 0.3) !important;
+        }
+
+        .social-btn:hover {
+            transform: translateY(-2px) !important;
+            opacity: 0.95 !important;
+        }
+
+        .social-btn.instagram:hover {
+            box-shadow: 0 4px 12px rgba(220, 39, 67, 0.5) !important;
+        }
+
+        .social-btn.telegram:hover {
+            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.5) !important;
         }
     </style>
 </head>
