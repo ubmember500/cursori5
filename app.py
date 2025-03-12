@@ -71,17 +71,24 @@ csp = {
         'data:',
         'https:'  # Разрешаем загрузку изображений по HTTPS
     ],
-    'connect-src': "'none'",  # Запрещаем все сетевые подключения
-    'frame-src': "'none'",    # Запрещаем фреймы
+    'connect-src': "'self'",  # Разрешаем подключения только к нашему домену
+    'frame-src': "'self'",    # Разрешаем фреймы только от нашего домена
     'frame-ancestors': "'none'",  # Запрещаем встраивание сайта в iframe
     'form-action': "'self'",  # Разрешаем отправку форм только на наш домен
-    'base-uri': "'none'",     # Запрещаем изменение base URI
+    'base-uri': "'self'",     # Разрешаем base URI только для нашего домена
     'object-src': "'none'",   # Запрещаем загрузку объектов
     'manifest-src': "'none'", # Запрещаем манифесты
     'media-src': "'none'",    # Запрещаем медиа
     'worker-src': "'none'",   # Запрещаем веб-воркеры
     'child-src': "'none'",    # Запрещаем дочерние фреймы
-    'prefetch-src': "'none'"  # Запрещаем предзагрузку
+    'prefetch-src': "'none'", # Запрещаем предзагрузку
+    'navigate-to': [
+        "'self'",
+        'https://instagram.com',
+        'https://www.instagram.com',
+        'https://t.me',
+        'https://telegram.org'
+    ]  # Разрешаем переходы на Instagram и Telegram
 }
 
 # Применяем CSP и другие заголовки безопасности
@@ -348,6 +355,7 @@ def inject_categories():
 
 @app.context_processor
 def inject_social_media():
+    print("Social media URLs:", SOCIAL_MEDIA)  # Отладочный вывод
     return dict(social_media=SOCIAL_MEDIA)
 
 def get_random_product_image(category_id):
