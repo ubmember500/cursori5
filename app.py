@@ -766,11 +766,13 @@ def before_request():
 
 @app.route('/favorites')
 def favorites():
-    # Получаем список избранных товаров
+    # Получаем список избранных товаров из базы данных
     favorite_products = []
     for product_id in session.get('favorites', []):
-        product = next((p for p in products if p['id'] == product_id), None)
+        product = Product.query.get(product_id)
         if product:
+            # Получаем правильное изображение для продукта
+            product.image = get_random_product_image(product.category_id)
             favorite_products.append(product)
     return render_template('favorites.html', favorites=favorite_products)
 
@@ -779,11 +781,17 @@ def add_to_favorites(product_id):
     if 'favorites' not in session:
         session['favorites'] = []
     
+    # Проверяем, существует ли продукт
+    product = Product.query.get_or_404(product_id)
+    
     if product_id not in session['favorites']:
         session['favorites'].append(product_id)
+        session.modified = True
         flash('Товар добавлен в избранное!', 'success')
     else:
-        flash('Товар уже в избранном!', 'info')
+        session['favorites'].remove(product_id)
+        session.modified = True
+        flash('Товар удален из избранного!', 'success')
     
     return redirect(request.referrer or url_for('products'))
 
@@ -791,6 +799,7 @@ def add_to_favorites(product_id):
 def remove_from_favorites(product_id):
     if product_id in session['favorites']:
         session['favorites'].remove(product_id)
+        session.modified = True
         flash('Товар удален из избранного!', 'success')
     
     return redirect(request.referrer or url_for('favorites'))
