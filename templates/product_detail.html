@@ -266,6 +266,7 @@
                 <p class="product-description">{{ product.description }}</p>
 
                 <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="POST">
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
                     <!-- Выбор размера -->
                     <div class="size-selector">
                         <h5>Размер:</h5>
@@ -292,10 +293,10 @@
 
                     <!-- Кнопки действий -->
                     <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary" formaction="{{ url_for('checkout') }}">
+                        <button type="submit" class="btn btn-primary flex-grow-1" formaction="{{ url_for('checkout') }}">
                             <i class="fas fa-credit-card me-2"></i>Купить
                         </button>
-                        <button type="submit" class="btn btn-outline-dark" formaction="{{ url_for('add_to_cart', product_id=product.id) }}">
+                        <button type="submit" class="btn btn-outline-dark flex-grow-1" formaction="{{ url_for('add_to_cart', product_id=product.id) }}">
                             <i class="fas fa-shopping-cart me-2"></i>В корзину
                         </button>
                     </div>

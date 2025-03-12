@@ -294,27 +294,37 @@ def product_detail(product_id):
     return render_template('product_detail.html', product=product)
 
 
-@app.route('/add_to_cart/<int:product_id>')
+@app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
 def add_to_cart(product_id):
     if 'cart' not in session:
         session['cart'] = []
 
     cart = session['cart']
+    quantity = int(request.form.get('quantity', 1))
+    size = request.form.get('size')
+    color = request.form.get('color')
 
     # Check if product is already in cart
     for item in cart:
-        if item['id'] == product_id:
-            item['quantity'] += 1
+        if item['id'] == product_id and item.get('size') == size and item.get('color') == color:
+            item['quantity'] += quantity
             session.modified = True
-            flash('Item quantity updated in cart!', 'success')
+            flash('Товар добавлен в корзину!', 'success')
             return redirect(request.referrer or url_for('products'))
 
     # Add new product to cart
     product = Product.query.get_or_404(product_id)
-    cart.append({'id': product_id, 'name': product.name, 'price': product.price, 'quantity': 1})
+    cart.append({
+        'id': product_id,
+        'name': product.name,
+        'price': product.price,
+        'quantity': quantity,
+        'size': size,
+        'color': color
+    })
     session.modified = True
 
-    flash('Item added to cart!', 'success')
+    flash('Товар добавлен в корзину!', 'success')
     return redirect(request.referrer or url_for('products'))
 
 
@@ -373,8 +383,28 @@ def remove_from_cart(product_id):
     return redirect(url_for('cart'))
 
 
-@app.route('/checkout')
+@app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
+    if request.method == 'POST':
+        product_id = int(request.form.get('product_id'))
+        quantity = int(request.form.get('quantity', 1))
+        size = request.form.get('size')
+        color = request.form.get('color')
+        
+        if 'cart' not in session:
+            session['cart'] = []
+            
+        product = Product.query.get_or_404(product_id)
+        session['cart'].append({
+            'id': product_id,
+            'name': product.name,
+            'price': product.price,
+            'quantity': quantity,
+            'size': size,
+            'color': color
+        })
+        session.modified = True
+        
     if 'cart' not in session or not session['cart']:
         return redirect(url_for('products'))
 
@@ -390,6 +420,8 @@ def checkout():
                 'name': item['name'],
                 'price': item['price'],
                 'quantity': item['quantity'],
+                'size': item.get('size'),
+                'color': item.get('color'),
                 'total': item_total
             })
             total += item_total

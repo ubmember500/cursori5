@@ -170,10 +170,6 @@
                                    class="btn btn-outline-primary">Подробнее</a>
                                 <a href="{{ url_for('add_to_cart', product_id=product.id) }}" 
                                    class="btn btn-primary">В корзину</a>
-                                <a href="{{ url_for('add_to_favorites', product_id=product.id) }}" 
-                                   class="btn btn-outline-danger">
-                                    <i class="fas {% if product.id in session.get('favorites', []) %}fa-heart-broken{% else %}fa-heart{% endif %}"></i>
-                                </a>
                             </div>
                         </div>
                     </div>
