@@ -44,10 +44,11 @@
         }
 
         /* Стили социальных кнопок */
-        .social-btn {
+        footer .social-btn,
+        .social-links .social-btn {
             display: inline-flex !important;
             align-items: center !important;
-            justify-content: flex-start !important;
+            justify-content: center !important;
             padding: 12px 20px !important;
             border-radius: 8px !important;
             text-decoration: none !important;
@@ -58,38 +59,45 @@
             width: 100% !important;
             max-width: 200px !important;
             margin-bottom: 10px !important;
+            opacity: 1 !important;
         }
 
-        .social-btn i {
+        footer .social-btn i,
+        .social-links .social-btn i {
             font-size: 24px !important;
             margin-right: 10px !important;
             color: #ffffff !important;
         }
 
-        .social-btn span {
+        footer .social-btn span,
+        .social-links .social-btn span {
             color: #ffffff !important;
         }
 
-        .social-btn.instagram {
+        footer .social-btn.instagram,
+        .social-links .social-btn.instagram {
             background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
-            box-shadow: 0 2px 4px rgba(220, 39, 67, 0.3) !important;
-        }
-
-        .social-btn.telegram {
-            background-color: #0088cc !important;
-            box-shadow: 0 2px 4px rgba(0, 136, 204, 0.3) !important;
-        }
-
-        .social-btn:hover {
-            transform: translateY(-2px) !important;
-            opacity: 0.95 !important;
-        }
-
-        .social-btn.instagram:hover {
             box-shadow: 0 4px 12px rgba(220, 39, 67, 0.5) !important;
         }
 
-        .social-btn.telegram:hover {
+        footer .social-btn.telegram,
+        .social-links .social-btn.telegram {
+            background-color: #0088cc !important;
+            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.5) !important;
+        }
+
+        footer .social-btn:hover,
+        .social-links .social-btn:hover {
+            transform: translateY(-2px) !important;
+        }
+
+        footer .social-btn.instagram:hover,
+        .social-links .social-btn.instagram:hover {
+            box-shadow: 0 4px 12px rgba(220, 39, 67, 0.5) !important;
+        }
+
+        footer .social-btn.telegram:hover,
+        .social-links .social-btn.telegram:hover {
             box-shadow: 0 4px 12px rgba(0, 136, 204, 0.5) !important;
         }
 
