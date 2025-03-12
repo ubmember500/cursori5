@@ -49,8 +49,19 @@
     box-shadow: 0 8px 16px rgba(0,0,0,0.15);
 }
 
+.product-card .card-img-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 133.375%; /* Соотношение сторон 3:4 (800:1067) */
+    overflow: hidden;
+}
+
 .product-card .card-img-top {
-    height: 300px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
     transition: transform 0.5s ease;
 }
@@ -84,10 +95,6 @@
 @media (max-width: 768px) {
     .filters {
         margin-bottom: 1rem;
-    }
-
-    .product-card .card-img-top {
-        height: 200px;
     }
 
     .sort-section select {
@@ -149,10 +156,12 @@
                 {% for product in products %}
                 <div class="col-md-4">
                     <div class="card product-card">
-                        <img src="{{ url_for('static', filename=product.image) }}" 
-                             class="card-img-top" 
-                             alt="{{ product.name }}"
-                             loading="lazy">
+                        <div class="card-img-wrapper">
+                            <img src="{{ url_for('static', filename=product.image) }}" 
+                                 class="card-img-top" 
+                                 alt="{{ product.name }}"
+                                 loading="lazy">
+                        </div>
                         <div class="card-body">
                             <h5 class="card-title">{{ product.name }}</h5>
                             <p class="price">{{ "%.2f"|format(product.price) }} ₴</p>
