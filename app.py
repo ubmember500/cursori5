@@ -375,9 +375,9 @@ def cleanup_old_sessions():
         db.session.rollback()
 
 # Запускаем очистку сессий каждый день
-@app.before_first_request
-def setup_session_cleanup():
+with app.app_context():
     cleanup_old_sessions()
+    print("Session cleanup completed")
 
 # Обновляем кэш при изменении товаров
 @app.after_request
