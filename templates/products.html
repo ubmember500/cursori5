@@ -183,16 +183,24 @@
                         <div class="slider-group">
                             <div class="slider-label">
                                 <span>От:</span>
-                                <span class="price-value"><span id="minPriceDisplay">{{ request.args.get('min_price', 0) }}</span> ₴</span>
+                                <span class="price-value"><span id="minPriceDisplay">{{ current_min_price|default(0)|int }}</span> ₴</span>
                             </div>
-                            <input type="range" class="form-range" id="minPriceRange" min="0" max="20000" value="{{ request.args.get('min_price', 0) }}" step="100">
+                            <input type="range" class="form-range" id="minPriceRange" 
+                                   min="{{ min_price|default(0)|int }}" 
+                                   max="{{ max_price|default(20000)|int }}" 
+                                   step="100" 
+                                   value="{{ current_min_price|default(0)|int }}">
                         </div>
                         <div class="slider-group">
                             <div class="slider-label">
                                 <span>До:</span>
-                                <span class="price-value"><span id="maxPriceDisplay">{{ request.args.get('max_price', 20000) }}</span> ₴</span>
+                                <span class="price-value"><span id="maxPriceDisplay">{{ current_max_price|default(20000)|int }}</span> ₴</span>
                             </div>
-                            <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="{{ request.args.get('max_price', 20000) }}" step="100" style="direction: rtl; transform: scaleX(-1);">
+                            <input type="range" class="form-range" id="maxPriceRange" 
+                                   min="{{ min_price|default(0)|int }}" 
+                                   max="{{ max_price|default(20000)|int }}" 
+                                   step="100" 
+                                   value="{{ current_max_price|default(20000)|int }}">
                         </div>
                     </div>
                 </form>
@@ -270,35 +278,29 @@ document.addEventListener('DOMContentLoaded', function() {
         maxDisplay.textContent = formatNumber(maxSlider.value);
     }
 
-    // Получение текущих параметров URL
-    function getCurrentUrlParams() {
+    // Функция обновления URL и перезагрузки страницы
+    function updateURLAndReload() {
         const params = new URLSearchParams(window.location.search);
+        
+        // Сохраняем текущие параметры
         const categories = params.getAll('category');
         const sort = params.get('sort');
         const q = params.get('q');
-        return { categories, sort, q };
-    }
-
-    // Обновление URL с сохранением параметров
-    function updateURL() {
-        const { categories, sort, q } = getCurrentUrlParams();
-        const params = new URLSearchParams();
-
-        // Добавляем категории
-        if (categories.length > 0) {
-            categories.forEach(cat => params.append('category', cat));
+        
+        // Очищаем все параметры
+        for (const key of Array.from(params.keys())) {
+            params.delete(key);
         }
-
+        
         // Добавляем цены
-        params.append('min_price', minSlider.value);
-        params.append('max_price', maxSlider.value);
-
-        // Добавляем сортировку
-        if (sort) params.append('sort', sort);
-
-        // Добавляем поиск
-        if (q) params.append('q', q);
-
+        params.set('min_price', minSlider.value);
+        params.set('max_price', maxSlider.value);
+        
+        // Восстанавливаем остальные параметры
+        categories.forEach(cat => params.append('category', cat));
+        if (sort) params.set('sort', sort);
+        if (q) params.set('q', q);
+        
         // Обновляем URL и перезагружаем страницу
         window.location.href = `${window.location.pathname}?${params.toString()}`;
     }
@@ -311,8 +313,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDisplays();
     });
 
-    minSlider.addEventListener('change', updateURL);
-
     maxSlider.addEventListener('input', function() {
         if (parseInt(this.value) < parseInt(minSlider.value)) {
             this.value = minSlider.value;
@@ -320,21 +320,28 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDisplays();
     });
 
-    maxSlider.addEventListener('change', updateURL);
+    // Обработчики для применения фильтров при отпускании ползунка
+    minSlider.addEventListener('change', updateURLAndReload);
+    maxSlider.addEventListener('change', updateURLAndReload);
 
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
+            const params = new URLSearchParams(window.location.search);
             const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
                 .map(cb => cb.value);
             
-            const params = new URLSearchParams(window.location.search);
+            // Очищаем все параметры
+            for (const key of Array.from(params.keys())) {
+                params.delete(key);
+            }
             
-            // Очищаем старые категории
-            params.delete('category');
-            
-            // Добавляем выбранные категории
+            // Добавляем все параметры
             checkedCategories.forEach(cat => params.append('category', cat));
+            params.set('min_price', minSlider.value);
+            params.set('max_price', maxSlider.value);
+            if (params.has('sort')) params.set('sort', params.get('sort'));
+            if (params.has('q')) params.set('q', params.get('q'));
             
             // Обновляем URL и перезагружаем страницу
             window.location.href = `${window.location.pathname}?${params.toString()}`;
