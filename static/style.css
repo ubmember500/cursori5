@@ -25,48 +25,22 @@ a:not([class]) {
 }
 
 /* Product Cards */
-.product-card {
+.products-section .product-card {
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.product-card:hover {
+.products-section .product-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
-.product-card .card-img-top {
+.products-section .product-card .card-img-top {
     height: 200px;
     object-fit: cover;
-}
-
-/* Category Cards */
-.category-card {
-    position: relative;
-    overflow: hidden;
-    height: 200px;
-}
-
-.category-card img {
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s;
-}
-
-.category-card:hover img {
-    transform: scale(1.05);
-}
-
-.category-card .card-img-overlay {
-    background-color: rgba(0, 0, 0, 0.3);
-    transition: background-color 0.3s;
-}
-
-.category-card:hover .card-img-overlay {
-    background-color: rgba(0, 0, 0, 0.5);
 }
 
 /* Product Detail Page */
-.product-image-container {
+.product-detail .product-image-container {
     height: 400px;
     display: flex;
     align-items: center;
@@ -75,13 +49,13 @@ a:not([class]) {
     border-radius: 0.25rem;
 }
 
-.product-image-container img {
+.product-detail .product-image-container img {
     max-height: 100%;
     max-width: 100%;
     object-fit: contain;
 }
 
-.color-option {
+.product-detail .color-option {
     width: 30px;
     height: 30px;
     border-radius: 50%;
@@ -89,7 +63,7 @@ a:not([class]) {
     position: relative;
 }
 
-.color-option.active::after {
+.product-detail .color-option.active::after {
     content: '';
     position: absolute;
     top: -4px;
@@ -101,14 +75,14 @@ a:not([class]) {
 }
 
 /* Cart Page */
-.cart-item-image {
+.cart-page .cart-item-image {
     width: 100px;
     height: 100px;
     object-fit: cover;
 }
 
 /* Checkout Page */
-.payment-icon {
+.checkout-page .payment-icon {
     height: 24px;
     margin-right: 10px;
 }
@@ -156,7 +130,7 @@ footer {
         padding: 3rem 0;
     }
 
-    .product-image-container {
+    .product-detail .product-image-container {
         height: 300px;
     }
 }
