@@ -7,9 +7,10 @@
     <h2 class="mb-4">Корзина</h2>
     {% if cart_items %}
         <div class="table-responsive">
-            <table class="table">
+            <table class="table align-middle">
                 <thead>
                     <tr>
+                        <th style="width: 100px">Фото</th>
                         <th>Товар</th>
                         <th>Цена</th>
                         <th>Количество</th>
@@ -20,17 +21,33 @@
                 <tbody>
                     {% for item in cart_items %}
                     <tr>
-                        <td>{{ item.name }}</td>
+                        <td>
+                            <img src="{{ url_for('static', filename=item.image) }}" 
+                                 alt="{{ item.name }}" 
+                                 class="img-thumbnail"
+                                 style="width: 80px; height: 80px; object-fit: cover;">
+                        </td>
+                        <td>
+                            <h6 class="mb-0">{{ item.name }}</h6>
+                        </td>
                         <td>{{ "%.2f"|format(item.price) }} ₴</td>
                         <td>
                             <form action="{{ url_for('update_cart', product_id=item.id) }}" method="post" class="d-flex align-items-center">
-                                <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control" style="width: 70px;">
-                                <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Обновить</button>
+                                <div class="input-group" style="width: 120px;">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="decreaseQuantity('quantity-{{ item.id }}')">-</button>
+                                    <input type="number" name="quantity" id="quantity-{{ item.id }}" value="{{ item.quantity }}" min="1" max="10" class="form-control text-center">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="increaseQuantity('quantity-{{ item.id }}')">+</button>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-outline-primary ms-2">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
                             </form>
                         </td>
                         <td>{{ "%.2f"|format(item.total) }} ₴</td>
                         <td>
-                            <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="btn btn-sm btn-danger">
+                            <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" 
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Вы уверены, что хотите удалить этот товар из корзины?')">
                                 <i class="fas fa-trash"></i>
                             </a>
                         </td>
@@ -39,7 +56,7 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" class="text-end"><strong>Итого:</strong></td>
+                        <td colspan="4" class="text-end"><strong>Итого:</strong></td>
                         <td><strong>{{ "%.2f"|format(total) }} ₴</strong></td>
                         <td></td>
                     </tr>
@@ -50,16 +67,25 @@
             <a href="{{ url_for('products') }}" class="btn btn-outline-primary">
                 <i class="fas fa-arrow-left me-2"></i>Продолжить покупки
             </a>
-            <form action="{{ url_for('create_payment') }}" method="post">
-                <button type="submit" class="btn btn-success">
-                    <i class="fas fa-credit-card me-2"></i>Оплатить
+            <div>
+                <button type="button" class="btn btn-outline-danger me-2" onclick="clearCart()">
+                    <i class="fas fa-trash-alt me-2"></i>Очистить корзину
                 </button>
-            </form>
+                <form action="{{ url_for('create_payment') }}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-credit-card me-2"></i>Оплатить
+                    </button>
+                </form>
+            </div>
         </div>
     {% else %}
-        <div class="text-center">
-            <p>Ваша корзина пуста</p>
-            <a href="{{ url_for('products') }}" class="btn btn-primary">Перейти к покупкам</a>
+        <div class="text-center py-5">
+            <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+            <h3>Ваша корзина пуста</h3>
+            <p class="text-muted">Добавьте товары в корзину, чтобы оформить заказ</p>
+            <a href="{{ url_for('products') }}" class="btn btn-primary mt-3">
+                <i class="fas fa-shopping-bag me-2"></i>Перейти к покупкам
+            </a>
         </div>
     {% endif %}
 </div>
@@ -72,6 +98,7 @@
         let value = parseInt(input.value);
         if (value < 10) {
             input.value = value + 1;
+            input.closest('form').submit();
         }
     }
     
@@ -80,6 +107,7 @@
         let value = parseInt(input.value);
         if (value > 1) {
             input.value = value - 1;
+            input.closest('form').submit();
         }
     }
     

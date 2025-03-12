@@ -478,6 +478,12 @@ def add_to_cart(product_id):
 
 @app.route('/cart')
 def cart():
+    # Проверяем, нужно ли очистить корзину
+    if request.args.get('clear') == 'true':
+        session['cart'] = []
+        flash('Корзина очищена', 'success')
+        return redirect(url_for('cart'))
+
     if 'cart' not in session or not session['cart']:
         return render_template('cart.html', cart_items=[], total=0)
 
@@ -488,12 +494,15 @@ def cart():
         product = Product.query.get(item['id'])
         if product:
             item_total = item['price'] * item['quantity']
+            # Получаем изображение для товара
+            product_image = get_random_product_image(product.category_id)
             cart_items.append({
                 'id': item['id'],
                 'name': item['name'],
                 'price': item['price'],
                 'quantity': item['quantity'],
-                'total': item_total
+                'total': item_total,
+                'image': product_image  # Добавляем изображение
             })
             total += item_total
 
