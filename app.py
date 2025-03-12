@@ -348,70 +348,84 @@ def home():
 
 @app.route('/products')
 def products():
-    # Получаем параметры фильтрации
-    categories = request.args.getlist('category')  # Получаем список выбранных категорий
-    search_query = request.args.get('q')
-    sort = request.args.get('sort', 'default')
-    
-    # Получаем и валидируем параметры цены
     try:
-        min_price = request.args.get('min_price')
-        max_price = request.args.get('max_price')
+        # Получаем параметры фильтрации
+        categories = request.args.getlist('category')  # Получаем список выбранных категорий
+        search_query = request.args.get('q')
+        sort = request.args.get('sort', 'default')
         
-        # Если параметры не указаны, используем значения по умолчанию
-        if min_price is None:
-            min_price = 0
-        else:
-            min_price = int(float(min_price))
+        # Получаем и валидируем параметры цены
+        try:
+            min_price = request.args.get('min_price')
+            max_price = request.args.get('max_price')
             
-        if max_price is None:
-            max_price = 20000
-        else:
-            max_price = int(float(max_price))
+            # Если параметры не указаны, используем значения по умолчанию
+            if min_price is None:
+                min_price = 0
+            else:
+                min_price = int(float(min_price))
+                
+            if max_price is None:
+                max_price = 20000
+            else:
+                max_price = int(float(max_price))
+                
+            # Проверяем и корректируем границы
+            min_price = max(0, min(min_price, 20000))
+            max_price = max(min_price, min(max_price, 20000))
             
-        # Проверяем и корректируем границы
-        min_price = max(0, min(min_price, 20000))
-        max_price = max(min_price, min(max_price, 20000))
+        except (ValueError, TypeError):
+            min_price, max_price = 0, 20000
         
-    except (ValueError, TypeError):
-        min_price, max_price = 0, 20000
-    
-    print(f"Filtering prices: min={min_price}, max={max_price}")  # Отладочный вывод
-    
-    # Базовый запрос
-    query = Product.query
-    
-    # Фильтр по категориям
-    if categories:
-        query = query.filter(Product.category_id.in_([int(cat) for cat in categories]))
-    
-    # Фильтр по поиску
-    if search_query:
-        query = query.filter(Product.name.ilike(f'%{search_query}%'))
-    
-    # Фильтр по цене
-    query = query.filter(Product.price >= min_price)
-    query = query.filter(Product.price <= max_price)
-    
-    # Сортировка
-    if sort == 'price_asc':
-        query = query.order_by(Product.price.asc())
-    elif sort == 'price_desc':
-        query = query.order_by(Product.price.desc())
-    elif sort == 'name_asc':
-        query = query.order_by(Product.name.asc())
-    elif sort == 'name_desc':
-        query = query.order_by(Product.name.desc())
-    
-    # Получаем все товары
-    products = query.all()
-    
-    print(f"Found {len(products)} products")  # Отладочный вывод
-    
-    response = make_response(render_template('products.html', 
-                                          products=products, 
-                                          categories=Category.query.all()))
-    return add_no_cache_headers(response)
+        print(f"Filtering prices: min={min_price}, max={max_price}")  # Отладочный вывод
+        
+        # Базовый запрос
+        query = Product.query
+        
+        # Фильтр по категориям
+        if categories:
+            try:
+                category_ids = [int(cat) for cat in categories if cat.isdigit()]
+                if category_ids:
+                    query = query.filter(Product.category_id.in_(category_ids))
+                print(f"Filtering by categories: {category_ids}")  # Отладочный вывод
+            except Exception as e:
+                print(f"Error processing categories: {e}")
+        
+        # Фильтр по поиску
+        if search_query:
+            query = query.filter(Product.name.ilike(f'%{search_query}%'))
+        
+        # Фильтр по цене
+        query = query.filter(Product.price >= min_price)
+        query = query.filter(Product.price <= max_price)
+        
+        # Сортировка
+        if sort == 'price_asc':
+            query = query.order_by(Product.price.asc())
+        elif sort == 'price_desc':
+            query = query.order_by(Product.price.desc())
+        elif sort == 'name_asc':
+            query = query.order_by(Product.name.asc())
+        elif sort == 'name_desc':
+            query = query.order_by(Product.name.desc())
+        
+        # Получаем все товары
+        products = query.all()
+        
+        print(f"Found {len(products)} products")  # Отладочный вывод
+        
+        # Получаем все категории для фильтров
+        all_categories = Category.query.all()
+        
+        response = make_response(render_template('products.html', 
+                                              products=products, 
+                                              categories=all_categories))
+        return add_no_cache_headers(response)
+        
+    except Exception as e:
+        print(f"Error in products route: {e}")  # Логируем ошибку
+        return render_template('error.html', error="Произошла ошибка при загрузке товаров"), 500
 
 
 @app.route('/product/<int:product_id>')

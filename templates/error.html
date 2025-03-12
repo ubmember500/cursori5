@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block title %}Ошибка - Cursor Shop🛍️{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="mb-4">Упс! Что-то пошло не так</h1>
+            <p class="lead mb-4">{{ error }}</p>
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <a href="{{ url_for('home') }}" class="btn btn-primary btn-lg px-4 gap-3">На главную</a>
+                <a href="{{ url_for('products') }}" class="btn btn-outline-secondary btn-lg px-4">В магазин</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

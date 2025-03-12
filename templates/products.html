@@ -342,14 +342,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
-                .map(cb => cb.value);
-            
-            updateURLWithParams({
-                category: checkedCategories,
-                min_price: parseInt(minSlider.value),
-                max_price: parseInt(maxSlider.value)
-            });
+            try {
+                const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
+                    .map(cb => cb.value)
+                    .filter(value => !isNaN(parseInt(value))); // Проверяем, что значения - числа
+                
+                if (checkedCategories.length > 0) {
+                    updateURLWithParams({
+                        category: checkedCategories,
+                        min_price: parseInt(minSlider.value),
+                        max_price: parseInt(maxSlider.value)
+                    });
+                } else {
+                    // Если категории не выбраны, удаляем параметр из URL
+                    const params = getCurrentParams();
+                    params.delete('category');
+                    window.location.href = `${window.location.pathname}?${params.toString()}`;
+                }
+            } catch (error) {
+                console.error('Ошибка при обработке категорий:', error);
+                alert('Произошла ошибка при фильтрации по категориям. Пожалуйста, попробуйте еще раз.');
+            }
         });
     });
 
