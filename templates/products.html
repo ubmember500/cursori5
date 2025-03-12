@@ -203,12 +203,12 @@
         <div class="col-md-9">
             <div class="sort-section d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Товары</h4>
-                <select class="form-select" style="width: auto;" onchange="window.location.href=this.value">
-                    <option value="{{ url_for('products', sort='default') }}" {% if not request.args.get('sort') or request.args.get('sort') == 'default' %}selected{% endif %}>По умолчанию</option>
-                    <option value="{{ url_for('products', sort='price_asc') }}" {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>По возрастанию цены</option>
-                    <option value="{{ url_for('products', sort='price_desc') }}" {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>По убыванию цены</option>
-                    <option value="{{ url_for('products', sort='name_asc') }}" {% if request.args.get('sort') == 'name_asc' %}selected{% endif %}>По названию А-Я</option>
-                    <option value="{{ url_for('products', sort='name_desc') }}" {% if request.args.get('sort') == 'name_desc' %}selected{% endif %}>По названию Я-А</option>
+                <select class="form-select" style="width: auto;" onchange="updateURLWithParams({sort: this.value})">
+                    <option value="default" {% if not request.args.get('sort') or request.args.get('sort') == 'default' %}selected{% endif %}>По умолчанию</option>
+                    <option value="price_asc" {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>По возрастанию цены</option>
+                    <option value="price_desc" {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>По убыванию цены</option>
+                    <option value="name_asc" {% if request.args.get('sort') == 'name_asc' %}selected{% endif %}>По названию А-Я</option>
+                    <option value="name_desc" {% if request.args.get('sort') == 'name_desc' %}selected{% endif %}>По названию Я-А</option>
                 </select>
             </div>
 
@@ -270,85 +270,83 @@ document.addEventListener('DOMContentLoaded', function() {
         maxDisplay.textContent = formatNumber(maxSlider.value);
     }
 
-    // Функция для обновления URL с параметрами фильтрации
-    function updateURL() {
+    // Функция для получения текущих параметров URL
+    function getCurrentUrlParams() {
         const params = new URLSearchParams(window.location.search);
-        
-        // Сохраняем текущие параметры сортировки и категорий
-        const sort = params.get('sort');
-        const categories = params.getAll('category');
-        const search = params.get('q');
-        
-        // Очищаем все параметры
-        params.delete('min_price');
-        params.delete('max_price');
-        params.delete('sort');
-        params.delete('category');
-        params.delete('q');
-        
-        // Добавляем параметры цены
-        params.append('min_price', minSlider.value);
-        params.append('max_price', maxSlider.value);
-        
-        // Восстанавливаем остальные параметры
-        if (sort) params.append('sort', sort);
-        if (search) params.append('q', search);
-        categories.forEach(cat => params.append('category', cat));
-        
+        return {
+            categories: params.getAll('category'),
+            min_price: params.get('min_price') || '0',
+            max_price: params.get('max_price') || '20000',
+            sort: params.get('sort'),
+            q: params.get('q')
+        };
+    }
+
+    // Функция для обновления URL с сохранением всех параметров
+    function updateURLWithParams(newParams = {}) {
+        const currentParams = getCurrentUrlParams();
+        const params = new URLSearchParams();
+
+        // Добавляем категории
+        const categories = newParams.categories || currentParams.categories;
+        if (categories && categories.length > 0) {
+            categories.forEach(cat => params.append('category', cat));
+        }
+
+        // Добавляем цены
+        params.append('min_price', newParams.min_price !== undefined ? newParams.min_price : currentParams.min_price);
+        params.append('max_price', newParams.max_price !== undefined ? newParams.max_price : currentParams.max_price);
+
+        // Добавляем сортировку
+        const sort = newParams.sort || currentParams.sort;
+        if (sort && sort !== 'default') params.append('sort', sort);
+
+        // Сохраняем поиск
+        const q = newParams.q || currentParams.q;
+        if (q) params.append('q', q);
+
         // Обновляем URL и перезагружаем страницу
         window.location.href = `${window.location.pathname}?${params.toString()}`;
     }
 
     // Обработчики событий для ползунков
-    minSlider.oninput = function() {
+    minSlider.addEventListener('input', function() {
         if (parseInt(this.value) > parseInt(maxSlider.value)) {
             this.value = maxSlider.value;
         }
         updateDisplays();
-    };
+    });
 
-    minSlider.onchange = updateURL;
+    minSlider.addEventListener('change', function() {
+        updateURLWithParams({
+            min_price: this.value,
+            max_price: maxSlider.value
+        });
+    });
 
-    maxSlider.oninput = function() {
+    maxSlider.addEventListener('input', function() {
         if (parseInt(this.value) < parseInt(minSlider.value)) {
             this.value = minSlider.value;
         }
         updateDisplays();
-    };
+    });
 
-    maxSlider.onchange = updateURL;
+    maxSlider.addEventListener('change', function() {
+        updateURLWithParams({
+            min_price: minSlider.value,
+            max_price: this.value
+        });
+    });
 
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const params = new URLSearchParams(window.location.search);
+            const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
+                .map(cb => cb.value);
             
-            // Сохраняем текущие параметры цены и сортировки
-            const min_price = params.get('min_price');
-            const max_price = params.get('max_price');
-            const sort = params.get('sort');
-            const search = params.get('q');
-            
-            // Очищаем все параметры
-            params.delete('category');
-            params.delete('min_price');
-            params.delete('max_price');
-            params.delete('sort');
-            params.delete('q');
-            
-            // Добавляем выбранные категории
-            document.querySelectorAll('.category-filter:checked').forEach(cb => {
-                params.append('category', cb.value);
+            updateURLWithParams({
+                categories: checkedCategories
             });
-            
-            // Восстанавливаем остальные параметры
-            if (min_price) params.append('min_price', min_price);
-            if (max_price) params.append('max_price', max_price);
-            if (sort) params.append('sort', sort);
-            if (search) params.append('q', search);
-            
-            // Обновляем URL и перезагружаем страницу
-            window.location.href = `${window.location.pathname}?${params.toString()}`;
         });
     });
 
@@ -358,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', e => e.preventDefault());
     }
 
-    // Устанавливаем начальные значения
+    // Инициализация начальных значений
     updateDisplays();
 });
 </script>
