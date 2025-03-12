@@ -2,6 +2,54 @@
 
 {% block title %}Корзина - Cursor Shop{% endblock %}
 
+{% block extra_css %}
+<style>
+.product-image {
+    width: 100px;
+    height: 100px;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin: 0 auto;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.product-image:hover img {
+    transform: scale(1.1);
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.product-info {
+    max-width: 300px;
+}
+
+.product-info h6 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.product-info small {
+    display: block;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-5">
     <h2 class="mb-4">Корзина</h2>
@@ -25,22 +73,22 @@
                             <div class="product-image">
                                 <img src="{{ url_for('static', filename=item.image) }}" 
                                      alt="{{ item.name }}" 
-                                     class="img-thumbnail"
-                                     style="width: 100px; height: 100px; object-fit: cover;">
+                                     class="img-fluid"
+                                     onerror="this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}'">
                             </div>
                         </td>
                         <td>
                             <div class="product-info">
-                                <h6 class="mb-1">{{ item.name }}</h6>
+                                <h6>{{ item.name }}</h6>
                                 {% if item.size %}
-                                <small class="text-muted">Размер: {{ item.size }}</small>
+                                <small>Размер: {{ item.size }}</small>
                                 {% endif %}
                                 {% if item.color %}
-                                <small class="text-muted d-block">Цвет: {{ item.color }}</small>
+                                <small>Цвет: {{ item.color }}</small>
                                 {% endif %}
                             </div>
                         </td>
-                        <td>{{ "%.2f"|format(item.price) }} ₴</td>
+                        <td class="text-nowrap">{{ "%.2f"|format(item.price) }} ₴</td>
                         <td>
                             <form action="{{ url_for('update_cart', product_id=item.id) }}" method="post" class="d-flex align-items-center">
                                 <div class="input-group" style="width: 120px;">

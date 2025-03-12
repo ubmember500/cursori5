@@ -488,10 +488,12 @@ def add_to_cart(product_id):
         flash('Извините, данного количества товара нет в наличии', 'error')
         return redirect(request.referrer or url_for('products'))
 
-    # Убеждаемся, что у нас есть изображение
+    # Убеждаемся, что у нас есть изображение и оно в правильном формате
     if not image or image == 'None':
         image = get_random_product_image(product.category_id)
     elif not image.startswith('img/products/'):
+        if '/' in image:
+            image = image.split('/')[-1]
         image = f'img/products/{image}'
 
     # Check if product is already in cart
@@ -543,8 +545,13 @@ def cart():
             item_total = item['price'] * item['quantity']
             # Используем изображение из корзины, если оно есть, иначе берем из продукта
             image = item.get('image')
-            if not image:
-                image = product.image
+            if not image or image == 'None':
+                image = get_random_product_image(product.category_id)
+            elif not image.startswith('img/products/'):
+                if '/' in image:
+                    image = image.split('/')[-1]
+                image = f'img/products/{image}'
+            
             cart_items.append({
                 'id': item['id'],
                 'name': item['name'],
