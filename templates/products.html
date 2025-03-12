@@ -166,7 +166,7 @@
         <!-- Фильтры -->
         <div class="col-md-3">
             <div class="filters">
-                <form id="filterForm" onsubmit="return false;">
+                <form id="filterForm">
                     <h5>Категории</h5>
                     {% for category in categories %}
                     <div class="form-check">
@@ -262,7 +262,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const maxSlider = document.getElementById('maxPriceRange');
     const minDisplay = document.getElementById('minPriceDisplay');
     const maxDisplay = document.getElementById('maxPriceDisplay');
-    let updateTimeout;
+    const filterForm = document.getElementById('filterForm');
+    let debounceTimer;
+
+    // Предотвращаем отправку формы
+    filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+    });
 
     // Форматирование числа с разделителями
     function formatNumber(num) {
@@ -270,18 +276,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Обновление отображаемых значений
-    function updateDisplays() {
-        const minValue = parseInt(minSlider.value);
-        const maxValue = parseInt(maxSlider.value);
-        
+    function updateDisplays(minValue, maxValue) {
         minDisplay.textContent = formatNumber(minValue);
         maxDisplay.textContent = formatNumber(maxValue);
     }
 
     // Получение текущих параметров URL
     function getCurrentParams() {
-        const params = new URLSearchParams(window.location.search);
-        return params;
+        return new URLSearchParams(window.location.search);
+    }
+
+    // Обновление URL и данных с задержкой
+    function debounceUpdate(callback, delay = 300) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(callback, delay);
     }
 
     // Обновление URL с сохранением всех параметров
@@ -299,7 +307,37 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        window.location.href = `${window.location.pathname}?${params.toString()}`;
+        // Формируем новый URL
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        
+        // Обновляем URL без перезагрузки страницы
+        window.history.pushState({}, '', newUrl);
+
+        // Загружаем новые данные
+        fetch(newUrl)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Обновляем список товаров
+                const productsContainer = doc.querySelector('.row.g-4.mt-3');
+                if (productsContainer) {
+                    document.querySelector('.row.g-4.mt-3').innerHTML = productsContainer.innerHTML;
+                }
+                
+                // Обновляем сообщение если нет товаров
+                const noProducts = doc.querySelector('.text-center.mt-5');
+                const currentNoProducts = document.querySelector('.text-center.mt-5');
+                if (noProducts && !currentNoProducts) {
+                    document.querySelector('.row.g-4.mt-3').insertAdjacentHTML('afterend', noProducts.outerHTML);
+                } else if (!noProducts && currentNoProducts) {
+                    currentNoProducts.remove();
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при обновлении товаров:', error);
+            });
     }
 
     // Обработчик изменения значения ползунка
@@ -308,37 +346,26 @@ document.addEventListener('DOMContentLoaded', function() {
         let otherValue = parseInt(otherSlider.value);
 
         // Проверяем и корректируем значения
-        if (isMin) {
-            if (currentValue > otherValue) {
-                currentValue = otherValue;
-                currentSlider.value = currentValue;
-            }
-        } else {
-            if (currentValue < otherValue) {
-                currentValue = otherValue;
-                currentSlider.value = currentValue;
-            }
+        if (isMin && currentValue > otherValue) {
+            currentValue = otherValue;
+            currentSlider.value = currentValue;
+        } else if (!isMin && currentValue < otherValue) {
+            currentValue = otherValue;
+            currentSlider.value = currentValue;
         }
 
-        // Немедленно обновляем отображение
-        updateDisplays();
-    }
+        // Обновляем отображение
+        const minValue = parseInt(minSlider.value);
+        const maxValue = parseInt(maxSlider.value);
+        updateDisplays(minValue, maxValue);
 
-    // Обработчик отпускания ползунка
-    function handleSliderChange() {
-        clearTimeout(updateTimeout);
-        updateTimeout = setTimeout(() => {
-            const minValue = parseInt(minSlider.value);
-            const maxValue = parseInt(maxSlider.value);
-            
-            // Проверяем корректность значений перед обновлением
-            if (minValue <= maxValue) {
-                updateURLWithParams({
-                    min_price: minValue,
-                    max_price: maxValue
-                });
-            }
-        }, 500);
+        // Обновляем URL и данные с задержкой
+        debounceUpdate(() => {
+            updateURLWithParams({
+                min_price: minValue,
+                max_price: maxValue
+            });
+        });
     }
 
     // Добавляем обработчики событий для ползунков
@@ -350,9 +377,6 @@ document.addEventListener('DOMContentLoaded', function() {
         handleSliderInput(maxSlider, minSlider, false);
     });
 
-    minSlider.addEventListener('change', handleSliderChange);
-    maxSlider.addEventListener('change', handleSliderChange);
-
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
@@ -361,17 +385,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     .map(cb => cb.value)
                     .filter(value => !isNaN(parseInt(value)));
                 
-                if (checkedCategories.length > 0) {
-                    updateURLWithParams({
-                        category: checkedCategories,
-                        min_price: parseInt(minSlider.value),
-                        max_price: parseInt(maxSlider.value)
-                    });
-                } else {
-                    const params = getCurrentParams();
-                    params.delete('category');
-                    window.location.href = `${window.location.pathname}?${params.toString()}`;
-                }
+                const minValue = parseInt(minSlider.value);
+                const maxValue = parseInt(maxSlider.value);
+                
+                updateURLWithParams({
+                    category: checkedCategories.length > 0 ? checkedCategories : null,
+                    min_price: minValue,
+                    max_price: maxValue
+                });
             } catch (error) {
                 console.error('Ошибка при обработке категорий:', error);
                 alert('Произошла ошибка при фильтрации по категориям. Пожалуйста, попробуйте еще раз.');
@@ -383,16 +404,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const sortSelect = document.querySelector('.sort-section select');
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
+            const minValue = parseInt(minSlider.value);
+            const maxValue = parseInt(maxSlider.value);
+            
             updateURLWithParams({
                 sort: this.value,
-                min_price: parseInt(minSlider.value),
-                max_price: parseInt(maxSlider.value)
+                min_price: minValue,
+                max_price: maxValue
             });
         });
     }
 
     // Инициализация отображения при загрузке страницы
-    updateDisplays();
+    const initialMinValue = parseInt(minSlider.value);
+    const initialMaxValue = parseInt(maxSlider.value);
+    updateDisplays(initialMinValue, initialMaxValue);
+
+    // Обработчик изменения истории браузера
+    window.addEventListener('popstate', function() {
+        location.reload();
+    });
 });
 </script>
 {% endblock %}
