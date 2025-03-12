@@ -50,11 +50,12 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # Настройка CSP
 csp = {
-    'default-src': "'none'",  # Запрещаем все по умолчанию
+    'default-src': "'self'",  # Разрешаем ресурсы с того же домена
     'script-src': [
         "'self'",
-        "'unsafe-inline'",  # Только для встроенных скриптов
-        'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js'  # Только Bootstrap
+        "'unsafe-inline'",
+        "'unsafe-eval'",  # Разрешаем eval для динамического JavaScript
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js'
     ],
     'style-src': [
         "'self'",
@@ -64,31 +65,31 @@ csp = {
     ],
     'font-src': [
         "'self'",
-        'https://cdnjs.cloudflare.com'  # Только для Font Awesome
+        'https://cdnjs.cloudflare.com'
     ],
     'img-src': [
         "'self'",
         'data:',
-        'https:'  # Разрешаем загрузку изображений по HTTPS
+        'https:'
     ],
-    'connect-src': "'self'",  # Разрешаем подключения только к нашему домену
-    'frame-src': "'self'",    # Разрешаем фреймы только от нашего домена
-    'frame-ancestors': "'none'",  # Запрещаем встраивание сайта в iframe
-    'form-action': "'self'",  # Разрешаем отправку форм только на наш домен
-    'base-uri': "'self'",     # Разрешаем base URI только для нашего домена
-    'object-src': "'none'",   # Запрещаем загрузку объектов
-    'manifest-src': "'none'", # Запрещаем манифесты
-    'media-src': "'none'",    # Запрещаем медиа
-    'worker-src': "'none'",   # Запрещаем веб-воркеры
-    'child-src': "'none'",    # Запрещаем дочерние фреймы
-    'prefetch-src': "'none'", # Запрещаем предзагрузку
+    'connect-src': "'self'",
+    'frame-src': "'self'",
+    'frame-ancestors': "'self'",
+    'form-action': "'self'",
+    'base-uri': "'self'",
+    'object-src': "'none'",
+    'manifest-src': "'self'",
+    'media-src': "'self'",
+    'worker-src': "'self'",
+    'child-src': "'self'",
+    'prefetch-src': "'self'",
     'navigate-to': [
         "'self'",
         'https://instagram.com',
         'https://www.instagram.com',
         'https://t.me',
         'https://telegram.org'
-    ]  # Разрешаем переходы на Instagram и Telegram
+    ]
 }
 
 # Применяем CSP и другие заголовки безопасности
@@ -449,6 +450,8 @@ def products():
     category_id = request.args.get('category_id', type=int)
     search_query = request.args.get('q')
     sort = request.args.get('sort', 'default')
+    min_price = request.args.get('min_price', type=float, default=0)
+    max_price = request.args.get('max_price', type=float, default=float('inf'))
     
     # Базовый запрос
     query = Product.query
@@ -460,6 +463,11 @@ def products():
     # Фильтр по поиску
     if search_query:
         query = query.filter(Product.name.ilike(f'%{search_query}%'))
+    
+    # Фильтр по цене
+    query = query.filter(Product.price >= min_price)
+    if max_price != float('inf'):
+        query = query.filter(Product.price <= max_price)
     
     # Сортировка
     if sort == 'price_asc':
@@ -475,16 +483,18 @@ def products():
     products = query.all()
     categories = Category.query.all()
     
-    # Находим минимальную и максимальную цену
-    prices = [product.price for product in products]
-    min_price = min(prices) if prices else 0
-    max_price = max(prices) if prices else 20000
+    # Находим минимальную и максимальную цену среди всех товаров (не только отфильтрованных)
+    all_prices = [p.price for p in Product.query.all()]
+    min_price_all = min(all_prices) if all_prices else 0
+    max_price_all = max(all_prices) if all_prices else 20000
     
     response = make_response(render_template('products.html', 
                                           products=products, 
                                           categories=categories,
-                                          min_price=min_price,
-                                          max_price=max_price))
+                                          min_price=min_price_all,
+                                          max_price=max_price_all,
+                                          current_min_price=min_price,
+                                          current_max_price=max_price))
     return add_no_cache_headers(response)
 
 
