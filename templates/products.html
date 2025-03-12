@@ -91,6 +91,47 @@
     gap: 0.5rem;
 }
 
+/* Стили для ползунка цены */
+.price-range-wrapper {
+    padding: 0 10px;
+}
+
+.price-display {
+    text-align: center;
+    font-weight: 500;
+    color: #0d6efd;
+}
+
+.range-slider {
+    position: relative;
+    width: 100%;
+}
+
+.form-range {
+    width: 100%;
+    cursor: pointer;
+}
+
+.form-range::-webkit-slider-thumb {
+    background: #0d6efd;
+}
+
+.form-range::-moz-range-thumb {
+    background: #0d6efd;
+}
+
+.form-range::-webkit-slider-runnable-track {
+    background: #dee2e6;
+    height: 4px;
+    border-radius: 2px;
+}
+
+.form-range::-moz-range-track {
+    background: #dee2e6;
+    height: 4px;
+    border-radius: 2px;
+}
+
 /* Медиа-запросы */
 @media (max-width: 768px) {
     .filters {
@@ -110,11 +151,11 @@
         <!-- Фильтры -->
         <div class="col-md-3">
             <div class="filters">
-                <form method="GET" action="{{ url_for('products') }}">
+                <form id="filterForm">
                     <h5>Категории</h5>
                     {% for category in categories %}
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="category" value="{{ category.id }}" 
+                        <input class="form-check-input category-filter" type="checkbox" name="category" value="{{ category.id }}" 
                                id="category{{ category.id }}" {% if category.id|string in request.args.getlist('category') %}checked{% endif %}>
                         <label class="form-check-label" for="category{{ category.id }}">
                             {{ category.name }}
@@ -123,18 +164,14 @@
                     {% endfor %}
 
                     <h5 class="mt-4">Цена</h5>
-                    <div class="mb-3">
-                        <label for="min_price" class="form-label">От:</label>
-                        <input type="number" class="form-control" id="min_price" name="min_price" 
-                               value="{{ request.args.get('min_price', '') }}" min="0">
+                    <div class="price-range-wrapper mb-3">
+                        <div class="price-display mb-2">
+                            <span id="minPriceDisplay">0</span> ₴ - <span id="maxPriceDisplay">20000</span> ₴
+                        </div>
+                        <div class="range-slider">
+                            <input type="range" class="form-range" id="priceRange" min="0" max="20000" step="100">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="max_price" class="form-label">До:</label>
-                        <input type="number" class="form-control" id="max_price" name="max_price" 
-                               value="{{ request.args.get('max_price', '') }}" min="0">
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">Применить</button>
                 </form>
             </div>
         </div>
@@ -155,7 +192,7 @@
             <div class="row g-4 mt-3">
                 {% for product in products %}
                 <div class="col-md-4">
-                    <div class="card product-card">
+                    <div class="card product-card" data-category="{{ product.category_id }}">
                         <div class="card-img-wrapper">
                             <img src="{{ url_for('static', filename=product.image) }}" 
                                  class="card-img-top" 
@@ -194,87 +231,76 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const minPriceInput = document.getElementById('min_price');
-    const maxPriceInput = document.getElementById('max_price');
-    const minPriceValue = document.getElementById('minPriceValue');
-    const maxPriceValue = document.getElementById('maxPriceValue');
-    const productsContainer = document.getElementById('productsContainer');
-    const sortSelect = document.getElementById('sort_by');
-    const productItems = document.querySelectorAll('.product-item');
+    const priceRange = document.getElementById('priceRange');
+    const minPriceDisplay = document.getElementById('minPriceDisplay');
+    const maxPriceDisplay = document.getElementById('maxPriceDisplay');
+    const productCards = document.querySelectorAll('.product-card');
+    const categoryFilters = document.querySelectorAll('.category-filter');
     
-    // Обновление отображаемых значений цен
-    function updatePriceLabels() {
-        minPriceValue.textContent = minPriceInput.value;
-        maxPriceValue.textContent = maxPriceInput.value;
+    // Функция для форматирования цены
+    function formatPrice(price) {
+        return parseFloat(price).toLocaleString('ru-RU', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
     }
     
-    // Фильтрация товаров
+    // Функция для получения цены из элемента товара
+    function getProductPrice(productCard) {
+        const priceElement = productCard.querySelector('.price');
+        return parseFloat(priceElement.textContent.replace('₴', '').trim());
+    }
+    
+    // Функция для проверки категории товара
+    function checkProductCategory(productCard, selectedCategories) {
+        if (selectedCategories.length === 0) return true;
+        const productCategory = productCard.dataset.category;
+        return selectedCategories.includes(productCategory);
+    }
+    
+    // Функция для фильтрации товаров
     function filterProducts() {
-        const minPrice = parseFloat(minPriceInput.value);
-        const maxPrice = parseFloat(maxPriceInput.value);
+        const minPrice = 0;
+        const maxPrice = parseInt(priceRange.value);
         
-        productItems.forEach(item => {
-            const price = parseFloat(item.dataset.price);
-            if (price >= minPrice && price <= maxPrice) {
-                item.style.display = '';
-            } else {
-                item.style.display = 'none';
-            }
-        });
+        // Получаем выбранные категории
+        const selectedCategories = Array.from(categoryFilters)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
         
-        sortProducts();
-    }
-    
-    // Сортировка товаров
-    function sortProducts() {
-        const sortBy = sortSelect.value;
-        const items = Array.from(productItems);
-        
-        items.sort((a, b) => {
-            const priceA = parseFloat(a.dataset.price);
-            const priceB = parseFloat(b.dataset.price);
-            const nameA = a.querySelector('.card-title').textContent;
-            const nameB = b.querySelector('.card-title').textContent;
+        productCards.forEach(card => {
+            const price = getProductPrice(card);
+            const categoryMatch = checkProductCategory(card, selectedCategories);
             
-            switch(sortBy) {
-                case 'price-low':
-                    return priceA - priceB;
-                case 'price-high':
-                    return priceB - priceA;
-                case 'name':
-                    return nameA.localeCompare(nameB);
-                default:
-                    return 0;
+            if (price >= minPrice && price <= maxPrice && categoryMatch) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
             }
-        });
-        
-        items.forEach(item => {
-            productsContainer.appendChild(item);
         });
     }
     
-    // Обработчики событий
-    minPriceInput.addEventListener('input', () => {
-        if (parseFloat(minPriceInput.value) > parseFloat(maxPriceInput.value)) {
-            maxPriceInput.value = minPriceInput.value;
-        }
-        updatePriceLabels();
+    // Обработчик изменения значения ползунка
+    priceRange.addEventListener('input', function() {
+        const value = parseInt(this.value);
+        
+        // Обновляем отображение цен
+        minPriceDisplay.textContent = formatPrice(0);
+        maxPriceDisplay.textContent = formatPrice(value);
+        
+        // Фильтруем товары
         filterProducts();
     });
     
-    maxPriceInput.addEventListener('input', () => {
-        if (parseFloat(maxPriceInput.value) < parseFloat(minPriceInput.value)) {
-            minPriceInput.value = maxPriceInput.value;
-        }
-        updatePriceLabels();
-        filterProducts();
+    // Обработчик изменения категорий
+    categoryFilters.forEach(checkbox => {
+        checkbox.addEventListener('change', filterProducts);
     });
-    
-    sortSelect.addEventListener('change', filterProducts);
     
     // Инициализация
-    updatePriceLabels();
-    filterProducts();
+    priceRange.value = priceRange.max;
+    const event = new Event('input');
+    priceRange.dispatchEvent(event);
 });
 </script>
 {% endblock %}
