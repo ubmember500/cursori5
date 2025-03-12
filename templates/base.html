@@ -77,11 +77,11 @@
     <footer class="bg-dark text-light mt-5 py-4">
         <div class="container">
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <h5>О нас</h5>
                     <p>Cursor Shop - ваш надежный магазин одежды и аксессуаров.</p>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <h5>Подписка на новости</h5>
                     <form action="{{ url_for('subscribe_newsletter') }}" method="POST">
                         <div class="input-group">
@@ -90,9 +90,20 @@
                         </div>
                     </form>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <h5>Контакты</h5>
                     <p>Email: info@cursorshop.com<br>Телефон: +380123456789</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Социальные сети</h5>
+                    <div class="social-links">
+                        <a href="https://www.instagram.com/greleolxpw/" target="_blank" class="text-light me-3">
+                            <i class="fab fa-instagram fa-2x"></i>
+                        </a>
+                        <a href="https://t.me/Cursor_shop" target="_blank" class="text-light">
+                            <i class="fab fa-telegram fa-2x"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
