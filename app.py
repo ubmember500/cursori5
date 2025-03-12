@@ -34,7 +34,7 @@ if not os.path.exists(INSTANCE_DIR):
 
 # Конфигурация социальных сетей
 SOCIAL_MEDIA = {
-    'instagram': 'https://www.instagram.com/greleolxpw',
+    'instagram': 'https://instagram.com/greleolxpw',
     'telegram': 'https://t.me/Cursor_shop'
 }
 
