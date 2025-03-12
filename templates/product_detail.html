@@ -290,15 +290,19 @@
                 </div>
 
                 <!-- Кнопки действий -->
-                <div class="action-buttons">
-                    <form method="POST" action="{{ url_for('checkout') }}" class="flex-grow-1">
+                <div class="d-flex gap-2">
+                    <form method="POST" action="{{ url_for('checkout') }}" style="flex: 1;">
                         <input type="hidden" name="product_id" value="{{ product.id }}">
                         <input type="hidden" name="quantity" value="1">
-                        <button type="submit" class="btn btn-primary w-100">Купить</button>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-credit-card me-2"></i>Купить
+                        </button>
                     </form>
-                    <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" class="flex-grow-1">
+                    <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex: 1;">
                         <input type="hidden" name="quantity" value="1">
-                        <button type="submit" class="btn btn-outline-dark w-100">В корзину</button>
+                        <button type="submit" class="btn btn-outline-dark w-100">
+                            <i class="fas fa-shopping-cart me-2"></i>В корзину
+                        </button>
                     </form>
                 </div>
             </div>
