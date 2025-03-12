@@ -54,11 +54,13 @@
             <div class="social-links">
                 <h5 class="mb-3 text-center">Мы в социальных сетях</h5>
                 <div class="d-flex justify-content-center gap-3">
-                    <a href="https://www.instagram.com/greleolxpw/" class="btn btn-instagram" target="_blank">
+                    <a href="https://www.instagram.com/greleolxpw/" class="social-btn instagram" target="_blank">
                         <i class="fab fa-instagram"></i>
+                        <span>Instagram</span>
                     </a>
-                    <a href="https://t.me/Cursor_shop" class="btn btn-telegram" target="_blank">
+                    <a href="https://t.me/Cursor_shop" class="social-btn telegram" target="_blank">
                         <i class="fab fa-telegram"></i>
+                        <span>Telegram</span>
                     </a>
                 </div>
             </div>
@@ -123,44 +125,51 @@
     background-color: #f8f9fa;
 }
 
-.btn-instagram {
-    background: linear-gradient(45deg, #833AB4, #C13584, #E4405F, #F77737);
-    border: none;
-    color: white;
-    transition: all 0.3s ease;
-    padding: 8px 16px;
-    font-size: 0.9rem;
+.social-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+    margin: 0 5px !important;
 }
 
-.btn-instagram:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 3px 10px rgba(131, 58, 180, 0.3);
-    color: white;
+.social-btn i {
+    font-size: 24px !important;
+    margin-right: 10px !important;
+    color: #ffffff !important;
 }
 
-.btn-telegram {
-    background: #0088cc;
-    border: none;
-    color: white;
-    transition: all 0.3s ease;
-    padding: 8px 16px;
-    font-size: 0.9rem;
+.social-btn span {
+    color: #ffffff !important;
 }
 
-.btn-telegram:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 3px 10px rgba(0, 136, 204, 0.3);
-    color: white;
-    background: #0077b3;
+.social-btn.instagram {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
+    box-shadow: 0 2px 4px rgba(220, 39, 67, 0.3) !important;
 }
 
-.social-links .btn {
-    min-width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
+.social-btn.telegram {
+    background-color: #0088cc !important;
+    box-shadow: 0 2px 4px rgba(0, 136, 204, 0.3) !important;
+}
+
+.social-btn:hover {
+    transform: translateY(-2px) !important;
+    opacity: 0.95 !important;
+}
+
+.social-btn.instagram:hover {
+    box-shadow: 0 4px 12px rgba(220, 39, 67, 0.5) !important;
+}
+
+.social-btn.telegram:hover {
+    box-shadow: 0 4px 12px rgba(0, 136, 204, 0.5) !important;
 }
 </style>
 {% endblock %} 
