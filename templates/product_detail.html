@@ -4,6 +4,30 @@
 
 {% block extra_css %}
 <style>
+/* Скрываем кнопку избранного с максимальной специфичностью */
+body .product-info button.btn-outline-secondary,
+body .product-info a.btn-outline-secondary,
+body .product-info [class*="bi-heart"],
+body .product-info button:has(> .bi-heart),
+body .product-info a:has(> .bi-heart),
+body .product-info #add-to-favorites,
+body .product-info .btn:has(> .bi-heart),
+body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+}
+
 /* Стили для основного изображения */
 .product-image {
     width: 100%;
@@ -290,48 +314,31 @@
                 </div>
 
                 <!-- Кнопки действий -->
-                <div class="action-buttons">
-                    <form method="POST" action="{{ url_for('checkout') }}" class="mb-2">
-                        <input type="hidden" name="product_id" value="{{ product.id }}">
-                        <input type="hidden" name="quantity" id="checkout_quantity" value="1">
-                        <input type="hidden" name="size" id="checkout_size" value="">
-                        <input type="hidden" name="color" id="checkout_color" value="">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-credit-card me-2"></i>Купить
-                        </button>
-                    </form>
-                    <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}">
-                        <input type="hidden" name="quantity" id="cart_quantity" value="1">
-                        <input type="hidden" name="size" id="cart_size" value="">
-                        <input type="hidden" name="color" id="cart_color" value="">
-                        <button type="submit" class="btn btn-outline-dark w-100">
-                            <i class="fas fa-shopping-cart me-2"></i>В корзину
-                        </button>
-                    </form>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary" onclick="submitForm('checkout')">
+                        <i class="fas fa-credit-card me-2"></i>Купить
+                    </button>
+                    <button type="button" class="btn btn-outline-dark" onclick="submitForm('cart')">
+                        <i class="fas fa-shopping-cart me-2"></i>В корзину
+                    </button>
                 </div>
 
+                <form id="checkoutForm" method="POST" action="{{ url_for('checkout') }}" style="display: none;">
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <input type="hidden" name="quantity" value="1">
+                </form>
+
+                <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="display: none;">
+                    <input type="hidden" name="quantity" value="1">
+                </form>
+
                 <script>
-                // Обновление значений в формах при изменении
-                document.getElementById('quantity').addEventListener('change', function() {
-                    document.getElementById('checkout_quantity').value = this.value;
-                    document.getElementById('cart_quantity').value = this.value;
-                });
-
-                // Обновление размера
-                document.querySelectorAll('input[name="size"]').forEach(function(radio) {
-                    radio.addEventListener('change', function() {
-                        document.getElementById('checkout_size').value = this.value;
-                        document.getElementById('cart_size').value = this.value;
-                    });
-                });
-
-                // Обновление цвета
-                document.querySelectorAll('input[name="color"]').forEach(function(radio) {
-                    radio.addEventListener('change', function() {
-                        document.getElementById('checkout_color').value = this.value;
-                        document.getElementById('cart_color').value = this.value;
-                    });
-                });
+                function submitForm(type) {
+                    const quantity = document.getElementById('quantity').value;
+                    const form = document.getElementById(type === 'checkout' ? 'checkoutForm' : 'cartForm');
+                    form.querySelector('input[name="quantity"]').value = quantity;
+                    form.submit();
+                }
                 </script>
             </div>
         </div>
