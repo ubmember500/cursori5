@@ -192,7 +192,7 @@
                                 <span>До:</span>
                                 <span class="price-value"><span id="maxPriceDisplay">20000</span> ₴</span>
                             </div>
-                            <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="20000" step="100">
+                            <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="20000" step="100" style="direction: rtl;">
                         </div>
                     </div>
                 </form>
@@ -254,121 +254,108 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const minPriceRange = document.getElementById('minPriceRange');
-    const maxPriceRange = document.getElementById('maxPriceRange');
-    const minPriceDisplay = document.getElementById('minPriceDisplay');
-    const maxPriceDisplay = document.getElementById('maxPriceDisplay');
-    const productCards = document.querySelectorAll('.product-card');
-    const categoryFilters = document.querySelectorAll('.category-filter');
-    
-    // Находим реальные минимальную и максимальную цены товаров
-    let minProductPrice = 0;
-    let maxProductPrice = 20000;
-    
-    // Устанавливаем значения для ползунков
-    minPriceRange.min = minProductPrice;
-    minPriceRange.max = maxProductPrice;
-    minPriceRange.value = minProductPrice;
-    
-    maxPriceRange.min = minProductPrice;
-    maxPriceRange.max = maxProductPrice;
-    maxPriceRange.value = maxProductPrice;
+    // Получаем элементы
+    const minSlider = document.getElementById('minPriceRange');
+    const maxSlider = document.getElementById('maxPriceRange');
+    const minDisplay = document.getElementById('minPriceDisplay');
+    const maxDisplay = document.getElementById('maxPriceDisplay');
 
-    // Функция форматирования цены
-    function formatPrice(price) {
-        return parseInt(price).toLocaleString('ru-RU');
-    }
+    // Устанавливаем начальные значения
+    minSlider.value = 0;
+    maxSlider.value = 20000;
+    minDisplay.textContent = '0';
+    maxDisplay.textContent = '20 000';
 
-    // Функция обновления отображения цен
-    function updatePriceDisplay() {
-        let minValue = parseInt(minPriceRange.value);
-        let maxValue = parseInt(maxPriceRange.value);
+    // Обработчик для минимального ползунка (слева направо)
+    minSlider.addEventListener('input', function() {
+        let min = parseInt(this.value);
+        let max = 20000 - parseInt(maxSlider.value);
         
-        console.log('Updating prices:', minValue, maxValue); // Отладочный вывод
-        
-        minPriceDisplay.textContent = minValue.toLocaleString('ru-RU');
-        maxPriceDisplay.textContent = maxValue.toLocaleString('ru-RU');
-    }
-
-    // Функция получения цены продукта
-    function getProductPrice(productCard) {
-        const priceElement = productCard.querySelector('.price');
-        if (priceElement) {
-            return parseFloat(priceElement.textContent.replace(/[^0-9.]/g, ''));
+        // Проверяем, чтобы минимум не был больше максимума
+        if (min > max) {
+            min = max;
+            this.value = min;
         }
-        return 0;
-    }
-
-    // Функция проверки категории продукта
-    function checkProductCategory(productCard) {
-        const selectedCategories = Array.from(categoryFilters)
-            .filter(checkbox => checkbox.checked)
-            .map(checkbox => checkbox.value);
         
-        if (selectedCategories.length === 0) return true;
+        // Обновляем отображение
+        minDisplay.textContent = min.toLocaleString('ru-RU');
         
-        const productCategory = productCard.dataset.category;
-        return selectedCategories.includes(productCategory);
-    }
+        // Фильтруем товары
+        updateProducts();
+    });
 
-    // Функция фильтрации продуктов
-    function filterProducts() {
-        const minPrice = parseInt(minPriceRange.value);
-        const maxPrice = parseInt(maxPriceRange.value);
-        let visibleProducts = 0;
+    // Обработчик для максимального ползунка (справа налево)
+    maxSlider.addEventListener('input', function() {
+        let min = parseInt(minSlider.value);
+        let max = 20000 - parseInt(this.value);
+        
+        // Проверяем, чтобы максимум не был меньше минимума
+        if (max < min) {
+            this.value = 20000 - min;
+            max = min;
+        }
+        
+        // Обновляем отображение
+        maxDisplay.textContent = max.toLocaleString('ru-RU');
+        
+        // Фильтруем товары
+        updateProducts();
+    });
 
-        productCards.forEach(card => {
-            const price = getProductPrice(card);
-            const matchesCategory = checkProductCategory(card);
-            const matchesPrice = price >= minPrice && price <= maxPrice;
-            
+    // Функция обновления товаров
+    function updateProducts() {
+        const min = parseInt(minSlider.value);
+        const max = 20000 - parseInt(maxSlider.value);
+        const products = document.querySelectorAll('.product-card');
+        let visibleCount = 0;
+
+        products.forEach(product => {
+            const priceText = product.querySelector('.price').textContent;
+            const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+            const parent = product.closest('.col-md-4');
+
+            // Проверяем категорию и цену
+            const matchesCategory = checkCategory(product);
+            const matchesPrice = price >= min && price <= max;
+
             if (matchesCategory && matchesPrice) {
-                card.closest('.col-md-4').style.display = '';
-                visibleProducts++;
+                parent.style.display = '';
+                visibleCount++;
             } else {
-                card.closest('.col-md-4').style.display = 'none';
+                parent.style.display = 'none';
             }
         });
 
-        // Показываем сообщение, если нет видимых продуктов
-        const noProductsMessage = document.querySelector('.text-center.mt-5');
-        if (noProductsMessage) {
-            noProductsMessage.style.display = visibleProducts === 0 ? '' : 'none';
+        // Показываем/скрываем сообщение "Товары не найдены"
+        const noProducts = document.querySelector('.text-center.mt-5');
+        if (noProducts) {
+            noProducts.style.display = visibleCount === 0 ? '' : 'none';
         }
     }
 
-    // Обработчик изменения ползунков
-    function handleRangeInput(e) {
-        console.log('Range input event:', e.target.id, e.target.value); // Отладочный вывод
+    // Функция проверки категории
+    function checkCategory(product) {
+        const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
+            .map(cb => cb.value);
         
-        const minVal = parseInt(minPriceRange.value);
-        const maxVal = parseInt(maxPriceRange.value);
-
-        // Предотвращаем пересечение значений
-        if (e.target === minPriceRange && minVal > maxVal) {
-            minPriceRange.value = maxVal;
-        }
-        if (e.target === maxPriceRange && maxVal < minVal) {
-            maxPriceRange.value = minVal;
-        }
-
-        // Обновляем отображение цен и фильтруем продукты
-        updatePriceDisplay();
-        filterProducts();
+        if (checkedCategories.length === 0) return true;
+        
+        return checkedCategories.includes(product.dataset.category);
     }
 
-    // Добавляем обработчики событий для постоянного обновления
-    minPriceRange.addEventListener('input', handleRangeInput);
-    maxPriceRange.addEventListener('input', handleRangeInput);
-    
-    // Обработчик изменения категорий
-    categoryFilters.forEach(checkbox => {
-        checkbox.addEventListener('change', filterProducts);
+    // Обработчики для категорий
+    document.querySelectorAll('.category-filter').forEach(checkbox => {
+        checkbox.addEventListener('change', updateProducts);
     });
 
-    // Применяем начальную фильтрацию и отображение цен
-    updatePriceDisplay();
-    filterProducts();
+    // Предотвращаем отправку формы
+    const form = document.getElementById('filterForm');
+    if (form) {
+        form.addEventListener('submit', e => e.preventDefault());
+    }
+
+    // Применяем начальную фильтрацию
+    updateProducts();
 });
 </script>
 {% endblock %}
