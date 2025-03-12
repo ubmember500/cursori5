@@ -315,30 +315,87 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
 
                 <!-- Кнопки действий -->
                 <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-primary" onclick="submitForm('checkout')">
-                        <i class="fas fa-credit-card me-2"></i>Купить
+                    {% set buttons %}
+                    <button type="button" class="btn btn-primary btn-lg" onclick="submitForm('checkout')">
+                        <i class="fas fa-credit-card me-2"></i>Купить сейчас
                     </button>
-                    <button type="button" class="btn btn-outline-dark" onclick="submitForm('cart')">
-                        <i class="fas fa-shopping-cart me-2"></i>В корзину
+                    <button type="button" class="btn btn-outline-primary btn-lg" onclick="submitForm('cart')">
+                        <i class="fas fa-shopping-cart me-2"></i>Добавить в корзину
                     </button>
+                    {% endset %}
+                    {{ buttons|safe }}
                 </div>
 
+                <!-- Скрытые формы для отправки -->
                 <form id="checkoutForm" method="POST" action="{{ url_for('checkout') }}" style="display: none;">
                     <input type="hidden" name="product_id" value="{{ product.id }}">
                     <input type="hidden" name="quantity" value="1">
+                    <input type="hidden" name="size" id="checkout_size" value="">
+                    <input type="hidden" name="color" id="checkout_color" value="">
                 </form>
 
                 <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="display: none;">
                     <input type="hidden" name="quantity" value="1">
+                    <input type="hidden" name="size" id="cart_size" value="">
+                    <input type="hidden" name="color" id="cart_color" value="">
                 </form>
 
                 <script>
                 function submitForm(type) {
                     const quantity = document.getElementById('quantity').value;
+                    const selectedSize = document.querySelector('input[name="size"]:checked')?.value || '';
+                    const selectedColor = document.querySelector('input[name="color"]:checked')?.value || '';
+                    
                     const form = document.getElementById(type === 'checkout' ? 'checkoutForm' : 'cartForm');
                     form.querySelector('input[name="quantity"]').value = quantity;
+                    
+                    if (type === 'checkout') {
+                        document.getElementById('checkout_size').value = selectedSize;
+                        document.getElementById('checkout_color').value = selectedColor;
+                    } else {
+                        document.getElementById('cart_size').value = selectedSize;
+                        document.getElementById('cart_color').value = selectedColor;
+                    }
+                    
+                    if (!selectedSize || !selectedColor) {
+                        alert('Пожалуйста, выберите размер и цвет');
+                        return;
+                    }
+                    
                     form.submit();
                 }
+
+                // Удаляем любые кнопки избранного, если они появятся
+                document.addEventListener('DOMContentLoaded', function() {
+                    function removeUnwantedButtons() {
+                        const unwantedSelectors = [
+                            'button:has(> .fa-heart)',
+                            'button:has(> .fas.fa-heart)',
+                            'button.btn-outline-dark:has(i.fas.fa-heart)',
+                            '.btn:has(> .fa-heart)',
+                            'button:contains("В избранное")'
+                        ];
+                        
+                        unwantedSelectors.forEach(selector => {
+                            document.querySelectorAll(selector).forEach(button => {
+                                button.remove();
+                            });
+                        });
+                    }
+
+                    // Удаляем при загрузке
+                    removeUnwantedButtons();
+
+                    // Наблюдаем за изменениями в DOM
+                    const observer = new MutationObserver(function(mutations) {
+                        removeUnwantedButtons();
+                    });
+
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                });
                 </script>
             </div>
         </div>
