@@ -207,6 +207,21 @@
         .logo-wrapper:hover .fa-mouse-pointer {
             transform: translate(-50%, -50%) rotate(0deg) scale(1.1);
         }
+
+        .payment-systems {
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .payment-systems img {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+        
+        .payment-systems img:hover {
+            filter: grayscale(0%);
+            opacity: 1;
+        }
     </style>
     
     <!-- Наши стили -->
@@ -328,31 +343,41 @@
         </div>
     </footer>
 
+    <!-- Платежные системы -->
+    <div class="payment-systems text-center py-3 bg-light">
+        <div class="container">
+            <div class="row justify-content-center align-items-center">
+                <div class="col-auto">
+                    <img src="https://cdn.visa.com/v2/assets/images/logos/visa/blue/logo.png" alt="Visa" height="25" class="mx-2">
+                    <img src="https://www.mastercard.com/content/dam/public/brandcenter/en/logos/mc-logo-52.png" alt="Mastercard" height="25" class="mx-2">
+                    <img src="https://www.apple.com/v/apple-pay/i/images/overview/og_image.png" alt="Apple Pay" height="25" class="mx-2">
+                    <img src="https://play-lh.googleusercontent.com/HArtbyi53u0jnqhnnxkQnMx9dHOERNcprZyKnInd2nrfM7Wd9ivMNTiz7IJP6-mSpwk" alt="Google Pay" height="25" class="mx-2">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/ff/Privat24_Logo.png" alt="Privat24" height="25" class="mx-2">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    {% block scripts %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
     
-    <!-- Social Media Links Debug -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const socialButtons = document.querySelectorAll('.social-btn');
-            socialButtons.forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault(); // Предотвращаем стандартное поведение
-                    const url = this.getAttribute('data-original-url');
-                    console.log('Переход по прямой ссылке:', url);
-                    
-                    // Создаем временную ссылку и программно кликаем по ней
-                    const tempLink = document.createElement('a');
-                    tempLink.href = url;
-                    tempLink.target = '_blank';
-                    tempLink.rel = 'noopener noreferrer';
-                    document.body.appendChild(tempLink);
-                    tempLink.click();
-                    document.body.removeChild(tempLink);
-                });
-            });
-        });
-    </script>
+    <style>
+        .payment-systems {
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .payment-systems img {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+        
+        .payment-systems img:hover {
+            filter: grayscale(0%);
+            opacity: 1;
+        }
+    </style>
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
