@@ -370,8 +370,7 @@ def products():
     
     # Фильтр по цене
     query = query.filter(Product.price >= min_price)
-    if max_price != float('inf'):
-        query = query.filter(Product.price <= max_price)
+    query = query.filter(Product.price <= max_price)
     
     # Сортировка
     if sort == 'price_asc':

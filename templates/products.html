@@ -91,6 +91,62 @@
     gap: 0.5rem;
 }
 
+/* Стили для ползунков цены */
+.price-range-wrapper {
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.price-display {
+    margin-bottom: 15px;
+}
+
+.slider-group {
+    margin-bottom: 15px;
+}
+
+.slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.price-value {
+    font-weight: 600;
+    color: #0d6efd;
+    min-width: 80px;
+    text-align: right;
+}
+
+.form-range {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: #e9ecef;
+    outline: none;
+    -webkit-appearance: none;
+    margin: 10px 0;
+}
+
+.form-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #0d6efd;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+}
+
+.form-range::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(13,110,253,0.4);
+}
+
 /* Медиа-запросы */
 @media (max-width: 768px) {
     .filters {
@@ -110,11 +166,11 @@
         <!-- Фильтры -->
         <div class="col-md-3">
             <div class="filters">
-                <form method="GET" action="{{ url_for('products') }}">
+                <form id="filterForm">
                     <h5>Категории</h5>
                     {% for category in categories %}
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="category" value="{{ category.id }}" 
+                        <input class="form-check-input category-filter" type="checkbox" name="category" value="{{ category.id }}" 
                                id="category{{ category.id }}" {% if category.id|string in request.args.getlist('category') %}checked{% endif %}>
                         <label class="form-check-label" for="category{{ category.id }}">
                             {{ category.name }}
@@ -123,18 +179,22 @@
                     {% endfor %}
 
                     <h5 class="mt-4">Цена</h5>
-                    <div class="mb-3">
-                        <label for="min_price" class="form-label">От:</label>
-                        <input type="number" class="form-control" id="min_price" name="min_price" 
-                               value="{{ request.args.get('min_price', '') }}" min="0">
+                    <div class="price-range-wrapper">
+                        <div class="slider-group">
+                            <div class="slider-label">
+                                <span>От:</span>
+                                <span class="price-value"><span id="minPriceDisplay">{{ request.args.get('min_price', 0) }}</span> ₴</span>
+                            </div>
+                            <input type="range" class="form-range" id="minPriceRange" min="0" max="20000" value="{{ request.args.get('min_price', 0) }}" step="100">
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-label">
+                                <span>До:</span>
+                                <span class="price-value"><span id="maxPriceDisplay">{{ request.args.get('max_price', 20000) }}</span> ₴</span>
+                            </div>
+                            <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="{{ request.args.get('max_price', 20000) }}" step="100" style="direction: rtl; transform: scaleX(-1);">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="max_price" class="form-label">До:</label>
-                        <input type="number" class="form-control" id="max_price" name="max_price" 
-                               value="{{ request.args.get('max_price', '') }}" min="0">
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">Применить</button>
                 </form>
             </div>
         </div>
@@ -155,7 +215,7 @@
             <div class="row g-4 mt-3">
                 {% for product in products %}
                 <div class="col-md-4">
-                    <div class="card product-card">
+                    <div class="card product-card" data-category="{{ product.category_id }}" data-price="{{ product.price }}">
                         <div class="card-img-wrapper">
                             <img src="{{ url_for('static', filename=product.image) }}" 
                                  class="card-img-top" 
@@ -213,26 +273,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для обновления URL с параметрами фильтрации
     function updateURL() {
         const params = new URLSearchParams(window.location.search);
-        params.set('min_price', minSlider.value);
-        params.set('max_price', maxSlider.value);
         
-        // Сохраняем остальные параметры
+        // Сохраняем текущие параметры сортировки и категорий
         const sort = params.get('sort');
-        const category = params.get('category');
+        const categories = params.getAll('category');
         const search = params.get('q');
         
-        if (sort) params.set('sort', sort);
-        if (category) params.set('category', category);
-        if (search) params.set('q', search);
+        // Очищаем все параметры
+        params.delete('min_price');
+        params.delete('max_price');
+        params.delete('sort');
+        params.delete('category');
+        params.delete('q');
         
+        // Добавляем параметры цены
+        params.append('min_price', minSlider.value);
+        params.append('max_price', maxSlider.value);
+        
+        // Восстанавливаем остальные параметры
+        if (sort) params.append('sort', sort);
+        if (search) params.append('q', search);
+        categories.forEach(cat => params.append('category', cat));
+        
+        // Обновляем URL и перезагружаем страницу
         window.location.href = `${window.location.pathname}?${params.toString()}`;
-    }
-
-    // Добавляем задержку для предотвращения частых запросов
-    let timeout;
-    function debounceUpdateURL() {
-        clearTimeout(timeout);
-        timeout = setTimeout(updateURL, 500);
     }
 
     // Обработчики событий для ползунков
@@ -243,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDisplays();
     };
 
-    minSlider.onchange = debounceUpdateURL;
+    minSlider.onchange = updateURL;
 
     maxSlider.oninput = function() {
         if (parseInt(this.value) < parseInt(minSlider.value)) {
@@ -252,15 +316,49 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDisplays();
     };
 
-    maxSlider.onchange = debounceUpdateURL;
+    maxSlider.onchange = updateURL;
 
-    // Устанавливаем начальные значения из URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlMinPrice = urlParams.get('min_price');
-    const urlMaxPrice = urlParams.get('max_price');
+    // Обработчики для категорий
+    document.querySelectorAll('.category-filter').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const params = new URLSearchParams(window.location.search);
+            
+            // Сохраняем текущие параметры цены и сортировки
+            const min_price = params.get('min_price');
+            const max_price = params.get('max_price');
+            const sort = params.get('sort');
+            const search = params.get('q');
+            
+            // Очищаем все параметры
+            params.delete('category');
+            params.delete('min_price');
+            params.delete('max_price');
+            params.delete('sort');
+            params.delete('q');
+            
+            // Добавляем выбранные категории
+            document.querySelectorAll('.category-filter:checked').forEach(cb => {
+                params.append('category', cb.value);
+            });
+            
+            // Восстанавливаем остальные параметры
+            if (min_price) params.append('min_price', min_price);
+            if (max_price) params.append('max_price', max_price);
+            if (sort) params.append('sort', sort);
+            if (search) params.append('q', search);
+            
+            // Обновляем URL и перезагружаем страницу
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        });
+    });
 
-    if (urlMinPrice) minSlider.value = urlMinPrice;
-    if (urlMaxPrice) maxSlider.value = urlMaxPrice;
+    // Предотвращаем отправку формы
+    const form = document.getElementById('filterForm');
+    if (form) {
+        form.addEventListener('submit', e => e.preventDefault());
+    }
+
+    // Устанавливаем начальные значения
     updateDisplays();
 });
 </script>
