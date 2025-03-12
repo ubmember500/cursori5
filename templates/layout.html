@@ -337,18 +337,13 @@
             </div>
             <div class="row mt-3">
                 <div class="col text-center">
-                    <p class="mb-0">&copy; 2024 Cursor Shop. Все права защищены.</p>
-                    <div class="payment-systems mt-3">
-                        <img src="{{ url_for('static', filename='img/payment/apple-pay.svg') }}" alt="Apple Pay" height="30" class="mx-2">
-                        <img src="{{ url_for('static', filename='img/payment/google-pay.svg') }}" alt="Google Pay" height="30" class="mx-2">
-                        <img src="{{ url_for('static', filename='img/payment/paypal.svg') }}" alt="PayPal" height="30" class="mx-2">
-                        <img src="{{ url_for('static', filename='img/payment/visa.svg') }}" alt="Visa" height="30" class="mx-2">
-                        <img src="{{ url_for('static', filename='img/payment/mastercard.svg') }}" alt="Mastercard" height="30" class="mx-2">
-                        <img src="{{ url_for('static', filename='img/payment/amex.svg') }}" alt="American Express" height="30" class="mx-2">
-                        <img src="{{ url_for('static', filename='img/payment/diners.svg') }}" alt="Diners Club" height="30" class="mx-2">
-                        <img src="{{ url_for('static', filename='img/payment/discover.svg') }}" alt="Discover" height="30" class="mx-2">
-                        <img src="{{ url_for('static', filename='img/payment/jcb.svg') }}" alt="JCB" height="30" class="mx-2">
+                    <div class="payment-systems mb-3">
+                        <img src="https://www.apple.com/ac/globalnav/7/en_US/images/be15095f-5a20-57d0-ad14-cf4c638e223a/apple_pay_logo_black.svg" alt="Apple Pay" class="mx-2">
+                        <img src="https://www.gstatic.com/instantbuy/svg/dark_gpay.svg" alt="Google Pay" class="mx-2">
+                        <img src="https://www.visa.com/images/merchantoffers/card-image.png" alt="Visa" class="mx-2">
+                        <img src="https://www.mastercard.com/content/dam/public/brandcenter/en/logos/mc-logo-52.svg" alt="Mastercard" class="mx-2">
                     </div>
+                    <p class="mb-0">&copy; 2024 Cursor Shop. Все права защищены.</p>
                 </div>
             </div>
         </div>
@@ -359,12 +354,12 @@
     
     <style>
         .payment-systems {
-            margin-top: 20px;
+            margin-bottom: 20px;
         }
         
         .payment-systems img {
-            height: 30px;
-            margin: 0 8px;
+            height: 25px;
+            margin: 0 10px;
             filter: brightness(0) invert(1);
             opacity: 0.8;
             transition: all 0.3s ease;
