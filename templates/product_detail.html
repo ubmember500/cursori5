@@ -16,7 +16,15 @@ body button.btn.btn-outline-dark.btn-lg,
 body button.btn-outline-dark:has(i.fa-heart),
 body button:has(> i.fas.fa-heart),
 body .btn:has(> i.fas.fa-heart.me-2),
-body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
+body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart),
+body [class*="favorite"],
+body [id*="favorite"],
+body button:has(i.fa-heart),
+body a:has(i.fa-heart),
+body .btn:has(i.fa-heart),
+body button:contains("В избранное"),
+body a:contains("В избранное"),
+body .btn:contains("В избранное") {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
@@ -30,6 +38,8 @@ body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
     border: 0 !important;
     clip: rect(0 0 0 0) !important;
     clip-path: inset(50%) !important;
+    z-index: -9999 !important;
+    transform: scale(0) !important;
 }
 
 /* Стили для основного изображения */
@@ -324,11 +334,6 @@ body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
     transform: translateY(1px);
 }
 
-.isolated-button--primary {
-    background-color: var(--button-primary-color);
-    color: white;
-}
-
 .isolated-button--secondary {
     background-color: white;
     color: var(--button-secondary-color);
@@ -399,13 +404,6 @@ body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
                 <div class="isolated-buttons-component">
                     <div class="isolated-button-wrapper">
                         <button type="button" 
-                                class="isolated-button isolated-button--primary" 
-                                onclick="handleBuyNow()">
-                            Купить сейчас
-                        </button>
-                    </div>
-                    <div class="isolated-button-wrapper">
-                        <button type="button" 
                                 class="isolated-button isolated-button--secondary" 
                                 onclick="handleAddToCart()">
                             В корзину
@@ -452,11 +450,6 @@ body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
                         transform: translateY(1px);
                     }
 
-                    .isolated-button--primary {
-                        background-color: var(--button-primary-color);
-                        color: white;
-                    }
-
                     .isolated-button--secondary {
                         background-color: white;
                         color: var(--button-secondary-color);
@@ -465,13 +458,6 @@ body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
                 </style>
 
                 <!-- Скрытые формы для отправки -->
-                <form id="checkoutForm" method="POST" action="{{ url_for('checkout') }}" style="display: none;">
-                    <input type="hidden" name="product_id" value="{{ product.id }}">
-                    <input type="hidden" name="quantity" value="1">
-                    <input type="hidden" name="size" id="checkout_size" value="">
-                    <input type="hidden" name="color" id="checkout_color" value="">
-                </form>
-
                 <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="display: none;">
                     <input type="hidden" name="quantity" value="1">
                     <input type="hidden" name="size" id="cart_size" value="">
@@ -479,117 +465,6 @@ body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
                 </form>
 
                 <script>
-                // Функция для удаления нежелательных кнопок
-                function removeUnwantedButtons() {
-                    // Селекторы для поиска кнопок
-                    const buttonSelectors = [
-                        'button:has(i.fa-heart)',
-                        'button:has(i.fas.fa-heart)',
-                        'button:has(i.bi-heart)',
-                        'button.btn-outline-dark',
-                        'button.btn-outline-secondary',
-                        'a:has(i.fa-heart)',
-                        'a:has(i.fas.fa-heart)',
-                        'a:has(i.bi-heart)',
-                        '[id*="favorite"]',
-                        '[class*="favorite"]',
-                        '[data-favorite]',
-                        '[data-favorites]',
-                        'button:contains("В избранное")',
-                        'a:contains("В избранное")',
-                        '.btn:contains("В избранное")',
-                        'button.btn-outline-dark.btn-lg',
-                        'button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart)',
-                        'button:has(i.fas.fa-heart.me-2)',
-                        '.btn-outline-dark:has(.fa-heart)',
-                        'button.btn.btn-outline-dark'
-                    ];
-
-                    // Удаляем все найденные элементы
-                    buttonSelectors.forEach(selector => {
-                        document.querySelectorAll(selector).forEach(element => {
-                            element.remove();
-                        });
-                    });
-
-                    // Дополнительная проверка по тексту кнопки
-                    document.querySelectorAll('button, a, .btn').forEach(element => {
-                        if (element.textContent.includes('В избранное') || 
-                            element.textContent.includes('избранное') ||
-                            element.textContent.includes('favorite') ||
-                            element.textContent.includes('Favorite')) {
-                            element.remove();
-                        }
-                    });
-                }
-
-                // Удаляем кнопки при загрузке страницы
-                document.addEventListener('DOMContentLoaded', () => {
-                    // Немедленное удаление при загрузке
-                    removeUnwantedButtons();
-
-                    // Наблюдаем за изменениями в DOM
-                    const observer = new MutationObserver((mutations) => {
-                        mutations.forEach(mutation => {
-                            // Если добавлены новые узлы
-                            if (mutation.addedNodes.length) {
-                                removeUnwantedButtons();
-                            }
-                        });
-                    });
-
-                    // Настраиваем наблюдение за всем документом
-                    observer.observe(document.body, {
-                        childList: true,
-                        subtree: true,
-                        attributes: true,
-                        characterData: true
-                    });
-
-                    // Дополнительная проверка каждые 100мс в течение первых 5 секунд
-                    let checkCount = 0;
-                    const interval = setInterval(() => {
-                        removeUnwantedButtons();
-                        checkCount++;
-                        if (checkCount >= 50) { // 5 секунд (50 * 100мс)
-                            clearInterval(interval);
-                        }
-                    }, 100);
-                });
-
-                // Блокируем добавление новых элементов через innerHTML
-                const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-                Object.defineProperty(Element.prototype, 'innerHTML', {
-                    set: function(value) {
-                        originalInnerHTML.set.call(this, value);
-                        removeUnwantedButtons();
-                    }
-                });
-
-                // Блокируем добавление через insertAdjacentHTML
-                const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
-                Element.prototype.insertAdjacentHTML = function(position, text) {
-                    originalInsertAdjacentHTML.call(this, position, text);
-                    removeUnwantedButtons();
-                };
-
-                function handleBuyNow() {
-                    const quantity = document.getElementById('quantity').value;
-                    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
-                    const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
-                    
-                    if (!selectedSize || !selectedColor) {
-                        alert('Пожалуйста, выберите размер и цвет');
-                        return;
-                    }
-                    
-                    const form = document.getElementById('checkoutForm');
-                    form.querySelector('input[name="quantity"]').value = quantity;
-                    document.getElementById('checkout_size').value = selectedSize;
-                    document.getElementById('checkout_color').value = selectedColor;
-                    form.submit();
-                }
-
                 function handleAddToCart() {
                     const quantity = document.getElementById('quantity').value;
                     const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
@@ -610,38 +485,6 @@ body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
                 function changeImage(src) {
                     document.getElementById('mainImage').src = src;
                 }
-
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Функция для удаления кнопки избранного
-                    function removeFavoriteButton() {
-                        const buttons = document.querySelectorAll('button');
-                        buttons.forEach(button => {
-                            if (button.classList.contains('btn-outline-dark') && 
-                                button.classList.contains('btn-lg') && 
-                                button.querySelector('i.fas.fa-heart')) {
-                                button.remove();
-                            }
-                        });
-                    }
-
-                    // Удаляем кнопку при загрузке страницы
-                    removeFavoriteButton();
-
-                    // Наблюдаем за изменениями в DOM
-                    const observer = new MutationObserver(function(mutations) {
-                        mutations.forEach(function(mutation) {
-                            if (mutation.addedNodes.length) {
-                                removeFavoriteButton();
-                            }
-                        });
-                    });
-
-                    // Настраиваем наблюдение за всем документом
-                    observer.observe(document.body, {
-                        childList: true,
-                        subtree: true
-                    });
-                });
                 </script>
             </div>
         </div>
