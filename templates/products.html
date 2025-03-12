@@ -166,7 +166,7 @@
         <!-- Фильтры -->
         <div class="col-md-3">
             <div class="filters">
-                <form id="filterForm">
+                <form id="filterForm" onsubmit="return false;">
                     <h5>Категории</h5>
                     {% for category in categories %}
                     <div class="form-check">
@@ -186,9 +186,7 @@
                                 <span class="price-value"><span id="minPriceDisplay">{{ current_min_price|default(0)|int }}</span> ₴</span>
                             </div>
                             <input type="range" class="form-range" id="minPriceRange" 
-                                   min="{{ min_price|default(0)|int }}" 
-                                   max="{{ max_price|default(20000)|int }}" 
-                                   step="100" 
+                                   min="0" max="20000" step="100" 
                                    value="{{ current_min_price|default(0)|int }}">
                         </div>
                         <div class="slider-group">
@@ -197,9 +195,7 @@
                                 <span class="price-value"><span id="maxPriceDisplay">{{ current_max_price|default(20000)|int }}</span> ₴</span>
                             </div>
                             <input type="range" class="form-range" id="maxPriceRange" 
-                                   min="{{ min_price|default(0)|int }}" 
-                                   max="{{ max_price|default(20000)|int }}" 
-                                   step="100" 
+                                   min="0" max="20000" step="100" 
                                    value="{{ current_max_price|default(20000)|int }}">
                         </div>
                     </div>
@@ -211,7 +207,7 @@
         <div class="col-md-9">
             <div class="sort-section d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Товары</h4>
-                <select class="form-select" style="width: auto;" onchange="const params = new URLSearchParams(window.location.search); params.set('sort', this.value); window.location.href = `${window.location.pathname}?${params.toString()}`">
+                <select class="form-select" style="width: auto;">
                     <option value="default" {% if not request.args.get('sort') or request.args.get('sort') == 'default' %}selected{% endif %}>По умолчанию</option>
                     <option value="price_asc" {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>По возрастанию цены</option>
                     <option value="price_desc" {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>По убыванию цены</option>
@@ -266,41 +262,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const maxSlider = document.getElementById('maxPriceRange');
     const minDisplay = document.getElementById('minPriceDisplay');
     const maxDisplay = document.getElementById('maxPriceDisplay');
+    const sortSelect = document.querySelector('.sort-section select');
 
-    // Функция форматирования числа с разделителями
+    // Форматирование числа с разделителями
     function formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     }
 
-    // Функция обновления отображаемых значений
+    // Обновление отображаемых значений
     function updateDisplays() {
         minDisplay.textContent = formatNumber(minSlider.value);
         maxDisplay.textContent = formatNumber(maxSlider.value);
     }
 
-    // Функция обновления URL и перезагрузки страницы
-    function updateURLAndReload() {
-        const params = new URLSearchParams(window.location.search);
+    // Получение текущих параметров URL
+    function getCurrentParams() {
+        return new URLSearchParams(window.location.search);
+    }
+
+    // Обновление URL с сохранением всех параметров
+    function updateURLWithParams(newParams = {}) {
+        const params = getCurrentParams();
         
-        // Сохраняем текущие параметры
-        const categories = params.getAll('category');
-        const sort = params.get('sort');
-        const q = params.get('q');
-        
-        // Очищаем все параметры
-        for (const key of Array.from(params.keys())) {
-            params.delete(key);
-        }
-        
-        // Добавляем цены
-        params.set('min_price', minSlider.value);
-        params.set('max_price', maxSlider.value);
-        
-        // Восстанавливаем остальные параметры
-        categories.forEach(cat => params.append('category', cat));
-        if (sort) params.set('sort', sort);
-        if (q) params.set('q', q);
-        
+        // Обновляем параметры
+        Object.entries(newParams).forEach(([key, value]) => {
+            if (value === null) {
+                params.delete(key);
+            } else if (Array.isArray(value)) {
+                params.delete(key);
+                value.forEach(v => params.append(key, v));
+            } else {
+                params.set(key, value);
+            }
+        });
+
         // Обновляем URL и перезагружаем страницу
         window.location.href = `${window.location.pathname}?${params.toString()}`;
     }
@@ -320,41 +315,45 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDisplays();
     });
 
-    // Обработчики для применения фильтров при отпускании ползунка
-    minSlider.addEventListener('change', updateURLAndReload);
-    maxSlider.addEventListener('change', updateURLAndReload);
+    // Применяем фильтры при отпускании ползунка
+    minSlider.addEventListener('change', () => {
+        updateURLWithParams({
+            min_price: minSlider.value,
+            max_price: maxSlider.value
+        });
+    });
+
+    maxSlider.addEventListener('change', () => {
+        updateURLWithParams({
+            min_price: minSlider.value,
+            max_price: maxSlider.value
+        });
+    });
 
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const params = new URLSearchParams(window.location.search);
             const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
                 .map(cb => cb.value);
             
-            // Очищаем все параметры
-            for (const key of Array.from(params.keys())) {
-                params.delete(key);
-            }
-            
-            // Добавляем все параметры
-            checkedCategories.forEach(cat => params.append('category', cat));
-            params.set('min_price', minSlider.value);
-            params.set('max_price', maxSlider.value);
-            if (params.has('sort')) params.set('sort', params.get('sort'));
-            if (params.has('q')) params.set('q', params.get('q'));
-            
-            // Обновляем URL и перезагружаем страницу
-            window.location.href = `${window.location.pathname}?${params.toString()}`;
+            updateURLWithParams({
+                category: checkedCategories,
+                min_price: minSlider.value,
+                max_price: maxSlider.value
+            });
         });
     });
 
-    // Предотвращаем отправку формы
-    const form = document.getElementById('filterForm');
-    if (form) {
-        form.addEventListener('submit', e => e.preventDefault());
+    // Обработчик для сортировки
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            updateURLWithParams({
+                sort: this.value
+            });
+        });
     }
 
-    // Инициализация начальных значений
+    // Инициализация отображения
     updateDisplays();
 });
 </script>

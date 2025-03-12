@@ -353,18 +353,14 @@ def products():
     search_query = request.args.get('q')
     sort = request.args.get('sort', 'default')
     
-    # Находим минимальную и максимальную цену среди всех товаров
-    all_prices = [p.price for p in Product.query.all()]
-    min_price_all = min(all_prices) if all_prices else 0
-    max_price_all = max(all_prices) if all_prices else 20000
-    
-    # Получаем параметры цены из URL с учетом реальных границ
-    min_price = request.args.get('min_price', type=float, default=min_price_all)
-    max_price = request.args.get('max_price', type=float, default=max_price_all)
-    
-    # Убеждаемся, что цены находятся в допустимых пределах
-    min_price = max(min_price_all, min(max_price_all, min_price))
-    max_price = max(min_price, min(max_price_all, max_price))
+    # Получаем и валидируем параметры цены
+    try:
+        min_price = max(0, int(float(request.args.get('min_price', 0))))
+        max_price = min(20000, int(float(request.args.get('max_price', 20000))))
+        if min_price > max_price:
+            min_price, max_price = max_price, min_price
+    except (ValueError, TypeError):
+        min_price, max_price = 0, 20000
     
     # Базовый запрос
     query = Product.query
@@ -397,8 +393,6 @@ def products():
     response = make_response(render_template('products.html', 
                                           products=products, 
                                           categories=Category.query.all(),
-                                          min_price=min_price_all,
-                                          max_price=max_price_all,
                                           current_min_price=min_price,
                                           current_max_price=max_price))
     return add_no_cache_headers(response)
