@@ -4,34 +4,61 @@
 
 {% block extra_css %}
 <style>
-/* Изолированные стили для секции категорий */
-.categories-section.bg-light.py-5 .row.g-4 {
+/* Общие стили для всех карточек */
+.card {
+    border: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.card-img-top {
+    height: 300px;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.card:hover .card-img-top {
+    transform: scale(1.05);
+}
+
+/* Стили для секции категорий */
+.categories-section {
+    padding: 4rem 0;
+    background-color: #f8f9fa;
+}
+
+.categories-section .row {
     --bs-gutter-x: 2rem;
     --bs-gutter-y: 2rem;
-    display: flex;
-    flex-wrap: wrap;
-    margin: calc(var(--bs-gutter-y) * -0.5) calc(var(--bs-gutter-x) * -0.5);
+    margin-right: calc(var(--bs-gutter-x) * -.5);
+    margin-left: calc(var(--bs-gutter-x) * -.5);
 }
 
-.categories-section.bg-light.py-5 .col-md-4 {
-    padding: calc(var(--bs-gutter-y) * 0.5) calc(var(--bs-gutter-x) * 0.5);
-    display: flex;
-    flex: 0 0 33.333333%;
-    max-width: 33.333333%;
+.categories-section .col-md-4 {
+    padding-right: calc(var(--bs-gutter-x) * .5);
+    padding-left: calc(var(--bs-gutter-x) * .5);
+    margin-bottom: var(--bs-gutter-y);
 }
 
-.categories-section.bg-light.py-5 .category-card {
+/* Стили карточек категорий */
+.category-card {
     position: relative;
     width: 100%;
-    height: 0;
-    padding-bottom: 133.33%; /* Фиксированное соотношение сторон 3:4 */
+    padding-top: 133.33%; /* Фиксированное соотношение сторон 3:4 */
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     background-color: #f8f9fa;
 }
 
-.categories-section.bg-light.py-5 .category-card img {
+.category-card img {
     position: absolute;
     top: 0;
     left: 0;
@@ -40,36 +67,36 @@
     object-fit: cover;
     object-position: center;
     transition: transform 0.5s ease;
-    backface-visibility: hidden; /* Предотвращает мерцание при трансформации */
+    transform-origin: center;
+    backface-visibility: hidden;
 }
 
-.categories-section.bg-light.py-5 .category-card .overlay {
+.category-card .overlay {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.3s ease;
-    z-index: 1;
+    transition: all 0.3s ease;
 }
 
-.categories-section.bg-light.py-5 .category-card:hover .overlay {
-    background: rgba(0,0,0,0.6);
+.category-card:hover .overlay {
+    background: rgba(0,0,0,0.4);
 }
 
-.categories-section.bg-light.py-5 .category-card:hover img {
-    transform: scale(1.1);
+.category-card:hover img {
+    transform: scale(1.05);
 }
 
-.categories-section.bg-light.py-5 .category-card .btn {
+.category-card .btn {
     background: rgba(255,255,255,0.95) !important;
     color: #000 !important;
     font-weight: 600 !important;
-    padding: 12px 30px !important;
+    padding: 0.8rem 2rem !important;
     font-size: 1.1rem !important;
     border: none !important;
     border-radius: 8px !important;
@@ -77,30 +104,57 @@
     letter-spacing: 1px !important;
     transition: all 0.3s ease !important;
     white-space: nowrap !important;
-    z-index: 2 !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
 }
 
-.categories-section.bg-light.py-5 .category-card .btn:hover {
-    background: #fff !important;
+.category-card .btn:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+    background: rgba(255,255,255,1) !important;
 }
 
-/* Медиа-запросы для адаптивности */
+/* Стили для карточек преимуществ */
+.feature-card {
+    padding: 2rem;
+    text-align: center;
+    height: 100%;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.feature-card i {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: #0d6efd;
+}
+
+/* Медиа-запросы */
 @media (max-width: 768px) {
-    .categories-section.bg-light.py-5 .category-card {
-        padding-bottom: 100%; /* Квадратное соотношение для мобильных */
+    .categories-section {
+        padding: 2rem 0;
     }
     
-    .categories-section.bg-light.py-5 .col-md-4 {
-        flex: 0 0 100%;
-        max-width: 100%;
+    .category-card {
+        padding-top: 100%; /* Квадратное соотношение для мобильных */
+    }
+    
+    .category-card .btn {
+        padding: 0.6rem 1.5rem !important;
+        font-size: 1rem !important;
+    }
+
+    .card-img-top {
+        height: 200px;
     }
 }
 
 @media (min-width: 769px) and (max-width: 1200px) {
-    .categories-section.bg-light.py-5 .category-card .btn {
-        padding: 10px 20px !important;
+    .category-card .btn {
+        padding: 0.7rem 1.8rem !important;
         font-size: 1rem !important;
     }
 }
@@ -128,8 +182,7 @@
             <div class="card h-100">
                 <img src="{{ url_for('static', filename=product.image) }}" 
                      class="card-img-top" 
-                     alt="{{ product.name }}"
-                     style="height: 300px; object-fit: cover;">
+                     alt="{{ product.name }}">
                 <div class="card-body">
                     <h5 class="card-title">{{ product.name }}</h5>
                     <p class="card-text text-primary fw-bold">{{ "%.2f"|format(product.price) }} ₴</p>
@@ -147,27 +200,27 @@
 <div class="container my-5">
     <div class="row">
         <div class="col-md-4 mb-4">
-            <div class="card text-center h-100">
+            <div class="card feature-card">
                 <div class="card-body">
-                    <i class="fas fa-truck fa-3x mb-3 text-primary"></i>
+                    <i class="fas fa-truck"></i>
                     <h5 class="card-title">Бесплатная доставка</h5>
                     <p class="card-text">При заказе от 5000 ₴</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4 mb-4">
-            <div class="card text-center h-100">
+            <div class="card feature-card">
                 <div class="card-body">
-                    <i class="fas fa-undo fa-3x mb-3 text-primary"></i>
+                    <i class="fas fa-undo"></i>
                     <h5 class="card-title">Легкий возврат</h5>
                     <p class="card-text">Возврат в течение 30 дней</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4 mb-4">
-            <div class="card text-center h-100">
+            <div class="card feature-card">
                 <div class="card-body">
-                    <i class="fas fa-lock fa-3x mb-3 text-primary"></i>
+                    <i class="fas fa-lock"></i>
                     <h5 class="card-title">Безопасная оплата</h5>
                     <p class="card-text">Защищенное оформление заказа</p>
                 </div>
@@ -176,13 +229,13 @@
     </div>
 </div>
 
-<div class="categories-section bg-light py-5">
+<div class="categories-section">
     <div class="container">
         <h2 class="text-center mb-4">Магазин по категориям</h2>
-        <div class="row g-4">
+        <div class="row">
             <div class="col-md-4">
                 <div class="category-card">
-                    <img src="{{ url_for('static', filename='img/products/tshirt1.jpg') }}" alt="Футболки">
+                    <img src="{{ url_for('static', filename='img/products/tshirt1.jpg') }}" alt="Футболки" loading="lazy">
                     <div class="overlay">
                         <a href="{{ url_for('products', category=1) }}" class="btn btn-light">Футболки</a>
                     </div>
@@ -190,7 +243,7 @@
             </div>
             <div class="col-md-4">
                 <div class="category-card">
-                    <img src="{{ url_for('static', filename='img/products/jeans1.jpg') }}" alt="Джинсы">
+                    <img src="{{ url_for('static', filename='img/products/jeans1.jpg') }}" alt="Джинсы" loading="lazy">
                     <div class="overlay">
                         <a href="{{ url_for('products', category=2) }}" class="btn btn-light">Джинсы</a>
                     </div>
@@ -198,7 +251,7 @@
             </div>
             <div class="col-md-4">
                 <div class="category-card">
-                    <img src="{{ url_for('static', filename='img/products/dress1.jpg') }}" alt="Платья">
+                    <img src="{{ url_for('static', filename='img/products/dress1.jpg') }}" alt="Платья" loading="lazy">
                     <div class="overlay">
                         <a href="{{ url_for('products', category=3) }}" class="btn btn-light">Платья</a>
                     </div>

@@ -13,21 +13,86 @@
     
     <!-- Критические стили -->
     <style>
-        /* Базовые стили */
-        html, body {
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-
+        /* Общие стили */
         body {
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
         }
 
         main {
-            flex: 1 0 auto;
+            flex: 1;
+        }
+
+        /* Стили для навигации */
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .nav-link {
+            font-weight: 500;
+        }
+
+        /* Стили для футера */
+        footer {
+            background-color: #f8f9fa;
+            padding: 3rem 0;
+            margin-top: auto;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .social-links a {
+            color: #6c757d;
+            font-size: 1.5rem;
+            transition: color 0.3s ease;
+            text-decoration: none;
+        }
+
+        .social-links a:hover {
+            color: #0d6efd;
+        }
+
+        /* Стили для корзины */
+        .cart-icon {
+            position: relative;
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            min-width: 1.5rem;
+            text-align: center;
+        }
+
+        /* Стили для уведомлений */
+        .alert {
+            margin-bottom: 0;
+            border-radius: 0;
+        }
+
+        /* Стили для кнопок */
+        .btn {
+            border-radius: 8px;
+            padding: 0.5rem 1.5rem;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
         }
 
         /* Стили футера */
