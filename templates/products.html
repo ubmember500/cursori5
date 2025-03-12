@@ -91,7 +91,7 @@
     gap: 0.5rem;
 }
 
-/* Стили для ползунка цены */
+/* Стили для ползунков цены */
 .price-range-wrapper {
     padding: 0 10px;
 }
@@ -112,12 +112,30 @@
     cursor: pointer;
 }
 
-.form-range::-webkit-slider-thumb {
+/* Стили для первого ползунка (минимальная цена) */
+#minPriceRange::-webkit-slider-thumb {
     background: #0d6efd;
+    position: relative;
+    z-index: 2;
 }
 
-.form-range::-moz-range-thumb {
+#minPriceRange::-moz-range-thumb {
     background: #0d6efd;
+    position: relative;
+    z-index: 2;
+}
+
+/* Стили для второго ползунка (максимальная цена) */
+#maxPriceRange::-webkit-slider-thumb {
+    background: #0d6efd;
+    position: relative;
+    z-index: 2;
+}
+
+#maxPriceRange::-moz-range-thumb {
+    background: #0d6efd;
+    position: relative;
+    z-index: 2;
 }
 
 .form-range::-webkit-slider-runnable-track {
@@ -169,7 +187,8 @@
                             <span id="minPriceDisplay">0</span> ₴ - <span id="maxPriceDisplay">20000</span> ₴
                         </div>
                         <div class="range-slider">
-                            <input type="range" class="form-range" id="priceRange" min="0" max="20000" step="100">
+                            <input type="range" class="form-range mb-2" id="minPriceRange" min="0" max="20000" step="100" value="0">
+                            <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" step="100" value="20000">
                         </div>
                     </div>
                 </form>
@@ -231,7 +250,8 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const priceRange = document.getElementById('priceRange');
+    const minPriceRange = document.getElementById('minPriceRange');
+    const maxPriceRange = document.getElementById('maxPriceRange');
     const minPriceDisplay = document.getElementById('minPriceDisplay');
     const maxPriceDisplay = document.getElementById('maxPriceDisplay');
     const productCards = document.querySelectorAll('.product-card');
@@ -260,37 +280,69 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Функция для фильтрации товаров
     function filterProducts() {
-        const minPrice = 0;
-        const maxPrice = parseInt(priceRange.value);
+        const minPrice = parseInt(minPriceRange.value);
+        const maxPrice = parseInt(maxPriceRange.value);
         
         // Получаем выбранные категории
         const selectedCategories = Array.from(categoryFilters)
             .filter(checkbox => checkbox.checked)
             .map(checkbox => checkbox.value);
         
+        let visibleCount = 0;
+        
         productCards.forEach(card => {
             const price = getProductPrice(card);
             const categoryMatch = checkProductCategory(card, selectedCategories);
+            const priceMatch = price >= minPrice && price <= maxPrice;
             
-            if (price >= minPrice && price <= maxPrice && categoryMatch) {
-                card.style.display = '';
+            if (priceMatch && categoryMatch) {
+                card.closest('.col-md-4').style.display = '';
+                visibleCount++;
             } else {
-                card.style.display = 'none';
+                card.closest('.col-md-4').style.display = 'none';
             }
         });
+
+        // Показываем или скрываем сообщение о том, что товары не найдены
+        const noProductsMessage = document.querySelector('.no-products-message');
+        if (visibleCount === 0) {
+            if (!noProductsMessage) {
+                const message = document.createElement('div');
+                message.className = 'text-center mt-5 no-products-message';
+                message.innerHTML = '<h5>Товары не найдены</h5><p>Попробуйте изменить параметры фильтрации</p>';
+                document.querySelector('.row.g-4').appendChild(message);
+            }
+        } else if (noProductsMessage) {
+            noProductsMessage.remove();
+        }
     }
     
-    // Обработчик изменения значения ползунка
-    priceRange.addEventListener('input', function() {
-        const value = parseInt(this.value);
+    // Обработчик изменения значения ползунков
+    function handleRangeInput(e) {
+        let minVal = parseInt(minPriceRange.value);
+        let maxVal = parseInt(maxPriceRange.value);
+        
+        // Проверяем и корректируем значения
+        if (e.target === minPriceRange && minVal > maxVal) {
+            minVal = maxVal;
+            minPriceRange.value = minVal;
+        }
+        if (e.target === maxPriceRange && maxVal < minVal) {
+            maxVal = minVal;
+            maxPriceRange.value = maxVal;
+        }
         
         // Обновляем отображение цен
-        minPriceDisplay.textContent = formatPrice(0);
-        maxPriceDisplay.textContent = formatPrice(value);
+        minPriceDisplay.textContent = formatPrice(minVal);
+        maxPriceDisplay.textContent = formatPrice(maxVal);
         
         // Фильтруем товары
         filterProducts();
-    });
+    }
+    
+    // Добавляем обработчики событий
+    minPriceRange.addEventListener('input', handleRangeInput);
+    maxPriceRange.addEventListener('input', handleRangeInput);
     
     // Обработчик изменения категорий
     categoryFilters.forEach(checkbox => {
@@ -298,9 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Инициализация
-    priceRange.value = priceRange.max;
+    minPriceRange.value = 0;
+    maxPriceRange.value = 20000;
     const event = new Event('input');
-    priceRange.dispatchEvent(event);
+    minPriceRange.dispatchEvent(event);
 });
 </script>
 {% endblock %}
