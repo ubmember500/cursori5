@@ -448,46 +448,43 @@ def home():
 def products():
     category_id = request.args.get('category_id', type=int)
     search_query = request.args.get('q')
-    min_price = request.args.get('min_price', type=float, default=0)
-    max_price = request.args.get('max_price', type=float, default=20000)
-    sort_by = request.args.get('sort_by', 'newest')  # Добавляем параметр сортировки
+    sort = request.args.get('sort', 'default')
     
-    # Получаем базовый запрос
+    # Базовый запрос
     query = Product.query
     
-    # Применяем фильтры
+    # Фильтр по категории
     if category_id:
         query = query.filter_by(category_id=category_id)
+    
+    # Фильтр по поиску
     if search_query:
         query = query.filter(Product.name.ilike(f'%{search_query}%'))
     
-    # Применяем фильтр по цене
-    query = query.filter(Product.price >= min_price, Product.price <= max_price)
-    
-    # Применяем сортировку
-    if sort_by == 'price-low':
+    # Сортировка
+    if sort == 'price_asc':
         query = query.order_by(Product.price.asc())
-    elif sort_by == 'price-high':
+    elif sort == 'price_desc':
         query = query.order_by(Product.price.desc())
-    elif sort_by == 'name':
+    elif sort == 'name_asc':
         query = query.order_by(Product.name.asc())
-    else:  # newest
-        query = query.order_by(Product.created_at.desc())
+    elif sort == 'name_desc':
+        query = query.order_by(Product.name.desc())
     
-    # Получаем отфильтрованные и отсортированные продукты
+    # Получаем все товары и категории
     products = query.all()
     categories = Category.query.all()
     
-    # Обновляем изображения для товаров
-    for product in products:
-        product.image = get_random_product_image(product.category_id)
+    # Находим минимальную и максимальную цену
+    prices = [product.price for product in products]
+    min_price = min(prices) if prices else 0
+    max_price = max(prices) if prices else 20000
     
     response = make_response(render_template('products.html', 
                                           products=products, 
                                           categories=categories,
                                           min_price=min_price,
-                                          max_price=max_price,
-                                          sort_by=sort_by))  # Передаем текущий параметр сортировки
+                                          max_price=max_price))
     return add_no_cache_headers(response)
 
 

@@ -261,19 +261,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const productCards = document.querySelectorAll('.product-card');
     const categoryFilters = document.querySelectorAll('.category-filter');
     
-    // Функция для форматирования цены
-    function formatPrice(price) {
-        return parseFloat(price).toLocaleString('ru-RU', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        });
-    }
+    // Находим реальные минимальную и максимальную цены товаров
+    let minProductPrice = Infinity;
+    let maxProductPrice = 0;
     
-    // Функция для получения цены из элемента товара
-    function getProductPrice(productCard) {
-        const priceElement = productCard.querySelector('.price');
-        const priceText = priceElement.textContent.replace('₴', '').trim();
-        return parseFloat(priceText.replace(/\s+/g, ''));
+    productCards.forEach(card => {
+        const price = parseFloat(card.querySelector('.price').textContent.replace('₴', '').replace(/\s+/g, ''));
+        minProductPrice = Math.min(minProductPrice, price);
+        maxProductPrice = Math.max(maxProductPrice, price);
+    });
+
+    // Устанавливаем значения для ползунков
+    minPriceRange.min = minProductPrice;
+    minPriceRange.max = maxProductPrice;
+    minPriceRange.value = minProductPrice;
+    
+    maxPriceRange.min = minProductPrice;
+    maxPriceRange.max = maxProductPrice;
+    maxPriceRange.value = maxProductPrice;
+
+    // Обновляем отображение начальных цен
+    minPriceDisplay.textContent = formatPrice(minProductPrice);
+    maxPriceDisplay.textContent = formatPrice(maxProductPrice);
+
+    // Функция форматирования цены
+    function formatPrice(price) {
+        return Math.round(price).toLocaleString('ru-RU');
+    }
+
+    // Функция получения цены товара
+    function getProductPrice(card) {
+        return parseFloat(card.querySelector('.price').textContent.replace('₴', '').replace(/\s+/g, ''));
     }
     
     // Функция для проверки категории товара
@@ -283,64 +301,76 @@ document.addEventListener('DOMContentLoaded', function() {
         return selectedCategories.includes(productCategory);
     }
     
-    // Функция для фильтрации и сортировки товаров
-    function filterAndSortProducts() {
-        const minPrice = parseInt(minPriceRange.value);
-        const maxPrice = parseInt(maxPriceRange.value);
+    // Функция фильтрации товаров
+    function filterProducts() {
+        const minPrice = parseFloat(minPriceRange.value);
+        const maxPrice = parseFloat(maxPriceRange.value);
+        const selectedCategories = Array.from(categoryFilters)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
         
-        console.log('Фильтрация по цене:', minPrice, 'до', maxPrice); // Отладочный вывод
+        console.log(`Фильтрация: от ${minPrice}₴ до ${maxPrice}₴`);
+        let visibleProducts = 0;
         
-        let visibleCount = 0;
-        const container = document.querySelector('.row.g-4');
-        const productArray = Array.from(productCards);
-        
-        // Фильтруем товары
-        productArray.forEach(card => {
+        productCards.forEach(card => {
             const price = getProductPrice(card);
-            const cardElement = card.closest('.col-md-4');
-            console.log('Товар:', card.querySelector('.card-title').textContent, 'Цена:', price); // Отладочный вывод
+            console.log(`Проверка товара: ${card.querySelector('.card-title').textContent} - ${price}₴`);
+            const productContainer = card.closest('.col-md-4');
+            const categoryMatch = checkProductCategory(card, selectedCategories);
+            const priceMatch = price >= minPrice && price <= maxPrice;
             
-            if (price >= minPrice && price <= maxPrice) {
-                cardElement.style.display = '';
-                visibleCount++;
+            if (categoryMatch && priceMatch) {
+                console.log(`✅ Товар показан: цена ${price}₴ в диапазоне ${minPrice}₴-${maxPrice}₴`);
+                productContainer.style.display = '';
+                visibleProducts++;
             } else {
-                cardElement.style.display = 'none';
+                console.log(`❌ Товар скрыт: цена ${price}₴ вне диапазона ${minPrice}₴-${maxPrice}₴`);
+                productContainer.style.display = 'none';
             }
         });
-        
-        // Показываем сообщение если нет товаров
-        const noProductsMessage = document.querySelector('.no-products-message');
-        if (visibleCount === 0) {
-            if (!noProductsMessage) {
-                const message = document.createElement('div');
-                message.className = 'text-center mt-5 no-products-message';
-                message.innerHTML = '<h5>Товары не найдены</h5><p>Попробуйте изменить диапазон цен</p>';
-                container.appendChild(message);
-            }
-        } else if (noProductsMessage) {
-            noProductsMessage.remove();
-        }
-        
+
         // Обновляем отображение цен
         minPriceDisplay.textContent = formatPrice(minPrice);
         maxPriceDisplay.textContent = formatPrice(maxPrice);
+
+        // Показываем сообщение если нет товаров
+        const container = document.querySelector('.row.g-4');
+        const existingMessage = container.querySelector('.no-products-message');
+        
+        if (visibleProducts === 0) {
+            if (!existingMessage) {
+                const message = document.createElement('div');
+                message.className = 'text-center mt-5 no-products-message col-12';
+                message.innerHTML = `
+                    <h5>Товары не найдены</h5>
+                    <p>Нет товаров в диапазоне цен ${formatPrice(minPrice)}₴ - ${formatPrice(maxPrice)}₴</p>
+                `;
+                container.appendChild(message);
+            } else {
+                existingMessage.querySelector('p').textContent = 
+                    `Нет товаров в диапазоне цен ${formatPrice(minPrice)}₴ - ${formatPrice(maxPrice)}₴`;
+            }
+        } else if (existingMessage) {
+            existingMessage.remove();
+        }
     }
     
-    // Обработчик изменения значения ползунков
+    // Обработчик изменения ползунков
     function handleRangeInput(e) {
-        const minVal = parseInt(minPriceRange.value);
-        const maxVal = parseInt(maxPriceRange.value);
-        
-        // Проверяем и корректируем значения
-        if (e.target === minPriceRange && minVal > maxVal) {
-            minPriceRange.value = maxVal;
+        const minVal = parseFloat(minPriceRange.value);
+        const maxVal = parseFloat(maxPriceRange.value);
+
+        if (e.target === minPriceRange) {
+            if (minVal > maxVal) {
+                minPriceRange.value = maxVal;
+            }
+        } else if (e.target === maxPriceRange) {
+            if (maxVal < minVal) {
+                maxPriceRange.value = minVal;
+            }
         }
-        if (e.target === maxPriceRange && maxVal < minVal) {
-            maxPriceRange.value = minVal;
-        }
-        
-        // Фильтруем товары
-        filterAndSortProducts();
+
+        filterProducts();
     }
     
     // Добавляем обработчики событий
@@ -349,13 +379,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обработчик изменения категорий
     categoryFilters.forEach(checkbox => {
-        checkbox.addEventListener('change', filterAndSortProducts);
+        checkbox.addEventListener('change', filterProducts);
     });
     
-    // Инициализация
-    minPriceRange.value = 0;
-    maxPriceRange.value = 20000;
-    filterAndSortProducts();
+    // Запускаем начальную фильтрацию
+    filterProducts();
 });
 </script>
 {% endblock %}
