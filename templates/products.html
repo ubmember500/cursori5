@@ -192,7 +192,7 @@
                                 <span>До:</span>
                                 <span class="price-value"><span id="maxPriceDisplay">20000</span> ₴</span>
                             </div>
-                            <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="20000" step="100" style="direction: rtl;">
+                            <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="20000" step="100" style="direction: rtl; transform: scaleX(-1);">
                         </div>
                     </div>
                 </form>
@@ -268,7 +268,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateDisplays() {
         minDisplay.textContent = formatNumber(minSlider.value);
         maxDisplay.textContent = formatNumber(maxSlider.value);
-        console.log('Min:', minSlider.value, 'Max:', maxSlider.value); // Для отладки
     }
 
     // Обработчики событий для ползунков
