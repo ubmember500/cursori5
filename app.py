@@ -452,6 +452,10 @@ def add_to_cart(product_id):
     size = request.form.get('size')
     color = request.form.get('color')
 
+    # Получаем товар и его изображение
+    product = Product.query.get_or_404(product_id)
+    product_image = get_random_product_image(product.category_id)
+
     # Check if product is already in cart
     for item in cart:
         if item['id'] == product_id and item.get('size') == size and item.get('color') == color:
@@ -461,14 +465,14 @@ def add_to_cart(product_id):
             return redirect(request.referrer or url_for('products'))
 
     # Add new product to cart
-    product = Product.query.get_or_404(product_id)
     cart.append({
         'id': product_id,
         'name': product.name,
         'price': product.price,
         'quantity': quantity,
         'size': size,
-        'color': color
+        'color': color,
+        'image': product_image  # Сохраняем путь к изображению
     })
     session.modified = True
 
@@ -494,15 +498,13 @@ def cart():
         product = Product.query.get(item['id'])
         if product:
             item_total = item['price'] * item['quantity']
-            # Получаем изображение для товара
-            product_image = get_random_product_image(product.category_id)
             cart_items.append({
                 'id': item['id'],
                 'name': item['name'],
                 'price': item['price'],
                 'quantity': item['quantity'],
                 'total': item_total,
-                'image': product_image  # Добавляем изображение
+                'image': item.get('image', get_random_product_image(product.category_id))  # Используем сохраненное изображение или получаем новое
             })
             total += item_total
 
