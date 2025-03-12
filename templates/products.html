@@ -294,78 +294,61 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обновление URL с сохранением всех параметров
     function updateURLWithParams(newParams = {}) {
-        const params = getCurrentParams();
-        
-        Object.entries(newParams).forEach(([key, value]) => {
-            if (value === null) {
-                params.delete(key);
-            } else if (Array.isArray(value)) {
-                params.delete(key);
-                value.forEach(v => params.append(key, v));
-            } else {
-                params.set(key, value);
-            }
-        });
-
-        // Формируем новый URL
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
-        
-        // Обновляем URL без перезагрузки страницы
-        window.history.pushState({}, '', newUrl);
-
-        // Загружаем новые данные
-        fetch(newUrl)
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Обновляем список товаров
-                const productsContainer = doc.querySelector('.row.g-4.mt-3');
-                if (productsContainer) {
-                    document.querySelector('.row.g-4.mt-3').innerHTML = productsContainer.innerHTML;
+        try {
+            const params = getCurrentParams();
+            
+            Object.entries(newParams).forEach(([key, value]) => {
+                if (value === null) {
+                    params.delete(key);
+                } else if (Array.isArray(value)) {
+                    params.delete(key);
+                    value.forEach(v => params.append(key, v));
+                } else {
+                    params.set(key, value);
                 }
-                
-                // Обновляем сообщение если нет товаров
-                const noProducts = doc.querySelector('.text-center.mt-5');
-                const currentNoProducts = document.querySelector('.text-center.mt-5');
-                if (noProducts && !currentNoProducts) {
-                    document.querySelector('.row.g-4.mt-3').insertAdjacentHTML('afterend', noProducts.outerHTML);
-                } else if (!noProducts && currentNoProducts) {
-                    currentNoProducts.remove();
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка при обновлении товаров:', error);
             });
+
+            // Формируем новый URL
+            const newUrl = `${window.location.pathname}?${params.toString()}`;
+            
+            // Перезагружаем страницу с новыми параметрами
+            window.location.href = newUrl;
+        } catch (error) {
+            console.error('Ошибка при обновлении URL:', error);
+            alert('Произошла ошибка при обновлении фильтров. Пожалуйста, попробуйте еще раз.');
+        }
     }
 
     // Обработчик изменения значения ползунка
     function handleSliderInput(currentSlider, otherSlider, isMin) {
-        let currentValue = parseInt(currentSlider.value);
-        let otherValue = parseInt(otherSlider.value);
+        try {
+            let currentValue = parseInt(currentSlider.value);
+            let otherValue = parseInt(otherSlider.value);
 
-        // Проверяем и корректируем значения
-        if (isMin && currentValue > otherValue) {
-            currentValue = otherValue;
-            currentSlider.value = currentValue;
-        } else if (!isMin && currentValue < otherValue) {
-            currentValue = otherValue;
-            currentSlider.value = currentValue;
-        }
+            // Проверяем и корректируем значения
+            if (isMin && currentValue > otherValue) {
+                currentValue = otherValue;
+                currentSlider.value = currentValue;
+            } else if (!isMin && currentValue < otherValue) {
+                currentValue = otherValue;
+                currentSlider.value = currentValue;
+            }
 
-        // Обновляем отображение
-        const minValue = parseInt(minSlider.value);
-        const maxValue = parseInt(maxSlider.value);
-        updateDisplays(minValue, maxValue);
+            // Обновляем отображение
+            const minValue = parseInt(minSlider.value);
+            const maxValue = parseInt(maxSlider.value);
+            updateDisplays(minValue, maxValue);
 
-        // Обновляем URL и данные с задержкой
-        debounceUpdate(() => {
-            updateURLWithParams({
-                min_price: minValue,
-                max_price: maxValue
+            // Обновляем URL и данные с задержкой
+            debounceUpdate(() => {
+                updateURLWithParams({
+                    min_price: minValue,
+                    max_price: maxValue
+                });
             });
-        });
+        } catch (error) {
+            console.error('Ошибка при обработке изменения ползунка:', error);
+        }
     }
 
     // Добавляем обработчики событий для ползунков
@@ -383,7 +366,9 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
                     .map(cb => cb.value)
-                    .filter(value => !isNaN(parseInt(value)));
+                    .filter(value => value && !isNaN(parseInt(value)));
+                
+                console.log('Выбранные категории:', checkedCategories); // Отладочный вывод
                 
                 const minValue = parseInt(minSlider.value);
                 const maxValue = parseInt(maxSlider.value);
@@ -404,26 +389,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const sortSelect = document.querySelector('.sort-section select');
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
-            const minValue = parseInt(minSlider.value);
-            const maxValue = parseInt(maxSlider.value);
-            
-            updateURLWithParams({
-                sort: this.value,
-                min_price: minValue,
-                max_price: maxValue
-            });
+            try {
+                const minValue = parseInt(minSlider.value);
+                const maxValue = parseInt(maxSlider.value);
+                
+                updateURLWithParams({
+                    sort: this.value,
+                    min_price: minValue,
+                    max_price: maxValue
+                });
+            } catch (error) {
+                console.error('Ошибка при изменении сортировки:', error);
+                alert('Произошла ошибка при изменении сортировки. Пожалуйста, попробуйте еще раз.');
+            }
         });
     }
 
     // Инициализация отображения при загрузке страницы
-    const initialMinValue = parseInt(minSlider.value);
-    const initialMaxValue = parseInt(maxSlider.value);
-    updateDisplays(initialMinValue, initialMaxValue);
-
-    // Обработчик изменения истории браузера
-    window.addEventListener('popstate', function() {
-        location.reload();
-    });
+    try {
+        const initialMinValue = parseInt(minSlider.value);
+        const initialMaxValue = parseInt(maxSlider.value);
+        updateDisplays(initialMinValue, initialMaxValue);
+    } catch (error) {
+        console.error('Ошибка при инициализации значений:', error);
+    }
 });
 </script>
 {% endblock %}

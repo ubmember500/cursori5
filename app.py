@@ -349,15 +349,21 @@ def home():
 @app.route('/products')
 def products():
     try:
+        print("Начало обработки запроса /products")  # Отладочный вывод
+        
         # Получаем параметры фильтрации
-        categories = request.args.getlist('category')  # Получаем список выбранных категорий
+        categories = request.args.getlist('category')
         search_query = request.args.get('q')
         sort = request.args.get('sort', 'default')
+        
+        print(f"Полученные параметры: categories={categories}, search={search_query}, sort={sort}")  # Отладочный вывод
         
         # Получаем и валидируем параметры цены
         try:
             min_price = request.args.get('min_price')
             max_price = request.args.get('max_price')
+            
+            print(f"Исходные параметры цены: min_price={min_price}, max_price={max_price}")  # Отладочный вывод
             
             # Если параметры не указаны, используем значения по умолчанию
             if min_price is None:
@@ -369,15 +375,18 @@ def products():
                 max_price = 20000
             else:
                 max_price = int(float(max_price))
+            
+            print(f"Преобразованные параметры цены: min_price={min_price}, max_price={max_price}")  # Отладочный вывод
                 
             # Проверяем и корректируем границы
             min_price = max(0, min(min_price, 20000))
             max_price = max(min_price, min(max_price, 20000))
             
-        except (ValueError, TypeError):
+            print(f"Скорректированные параметры цены: min_price={min_price}, max_price={max_price}")  # Отладочный вывод
+            
+        except (ValueError, TypeError) as e:
+            print(f"Ошибка при обработке параметров цены: {e}")  # Отладочный вывод
             min_price, max_price = 0, 20000
-        
-        print(f"Filtering prices: min={min_price}, max={max_price}")  # Отладочный вывод
         
         # Базовый запрос
         query = Product.query
@@ -385,12 +394,12 @@ def products():
         # Фильтр по категориям
         if categories:
             try:
-                category_ids = [int(cat) for cat in categories if cat.isdigit()]
+                category_ids = [int(cat) for cat in categories if cat and cat.isdigit()]
                 if category_ids:
                     query = query.filter(Product.category_id.in_(category_ids))
-                print(f"Filtering by categories: {category_ids}")  # Отладочный вывод
+                print(f"Фильтрация по категориям: {category_ids}")  # Отладочный вывод
             except Exception as e:
-                print(f"Error processing categories: {e}")
+                print(f"Ошибка при обработке категорий: {e}")  # Отладочный вывод
         
         # Фильтр по поиску
         if search_query:
@@ -412,11 +421,11 @@ def products():
         
         # Получаем все товары
         products = query.all()
-        
-        print(f"Found {len(products)} products")  # Отладочный вывод
+        print(f"Найдено товаров: {len(products)}")  # Отладочный вывод
         
         # Получаем все категории для фильтров
         all_categories = Category.query.all()
+        print(f"Всего категорий: {len(all_categories)}")  # Отладочный вывод
         
         response = make_response(render_template('products.html', 
                                               products=products, 
@@ -424,7 +433,7 @@ def products():
         return add_no_cache_headers(response)
         
     except Exception as e:
-        print(f"Error in products route: {e}")  # Логируем ошибку
+        print(f"Критическая ошибка в route products: {e}")  # Отладочный вывод
         return render_template('error.html', error="Произошла ошибка при загрузке товаров"), 500
 
 
