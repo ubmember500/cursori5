@@ -21,6 +21,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_migrate import Migrate
 import bleach
 import re
+from sqlalchemy.exc import IntegrityError
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -339,33 +340,47 @@ def download_and_save_image(url, product_id):
     return url
 
 
-# Кэширование функции получения продуктов
+# Кэширование с версионированием
+_cache_version = int(time.time())
+
+def invalidate_cache():
+    global _cache_version
+    _cache_version = int(time.time())
+
 @lru_cache(maxsize=32)
-def get_cached_products(category_id=None, search_query=None):
+def get_cached_products(category_id=None, search_query=None, cache_version=None):
+    # cache_version игнорируется в логике, но используется для инвалидации кэша
+    query = Product.query
     if category_id:
-        products = Product.query.filter_by(category_id=category_id).all()
-    elif search_query:
-        products = Product.query.filter(Product.name.ilike(f'%{search_query}%')).all()
-    else:
-        products = Product.query.all()
-    return products
+        query = query.filter_by(category_id=category_id)
+    if search_query:
+        query = query.filter(Product.name.ilike(f'%{search_query}%'))
+    return query.all()
 
+# Очистка старых сессий
+def cleanup_old_sessions():
+    try:
+        sessions = Session.query.filter(
+            Session.expiry < datetime.utcnow()
+        ).all()
+        for session in sessions:
+            db.session.delete(session)
+        db.session.commit()
+    except Exception as e:
+        app.logger.error(f'Error cleaning up sessions: {str(e)}')
+        db.session.rollback()
 
-# Функция для добавления заголовков против кэширования
-def add_no_cache_headers(response):
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+# Запускаем очистку сессий каждый день
+@app.before_first_request
+def setup_session_cleanup():
+    cleanup_old_sessions()
 
-
+# Обновляем кэш при изменении товаров
 @app.after_request
 def after_request(response):
-    # Добавляем заголовки против кэширования для всех HTML-ответов
-    if response.content_type and response.content_type.startswith('text/html'):
-        return add_no_cache_headers(response)
+    if request.endpoint in ['add_product', 'edit_product', 'delete_product']:
+        invalidate_cache()
     return response
-
 
 # Routes
 @app.route('/')
@@ -434,12 +449,24 @@ def product_detail(product_id):
         Product.id != product_id
     ).limit(4).all()
     
-    # Обновляем изображения
-    product.image = get_random_product_image(product.category_id)
-    for similar_product in similar_products:
-        similar_product.image = get_random_product_image(similar_product.category_id)
+    # Получаем актуальное изображение продукта
+    product_image = get_random_product_image(product.category_id)
     
-    return render_template('product_detail.html', product=product, similar_products=similar_products)
+    # Обновляем изображения для похожих товаров
+    similar_products_with_images = []
+    for similar_product in similar_products:
+        similar_products_with_images.append({
+            'id': similar_product.id,
+            'name': similar_product.name,
+            'price': similar_product.price,
+            'description': similar_product.description,
+            'image': get_random_product_image(similar_product.category_id)
+        })
+    
+    return render_template('product_detail.html', 
+                         product=product,
+                         product_image=product_image,
+                         similar_products=similar_products_with_images)
 
 
 @app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
@@ -451,15 +478,29 @@ def add_to_cart(product_id):
     quantity = int(request.form.get('quantity', 1))
     size = request.form.get('size')
     color = request.form.get('color')
+    image = request.form.get('image')
 
-    # Получаем товар и его изображение
+    # Получаем товар
     product = Product.query.get_or_404(product_id)
-    product_image = get_random_product_image(product.category_id)
+    
+    # Проверяем наличие товара
+    if quantity > product.stock:
+        flash('Извините, данного количества товара нет в наличии', 'error')
+        return redirect(request.referrer or url_for('products'))
+
+    # Убеждаемся, что у нас есть изображение
+    if not image or image == 'None':
+        image = get_random_product_image(product.category_id)
 
     # Check if product is already in cart
     for item in cart:
         if item['id'] == product_id and item.get('size') == size and item.get('color') == color:
+            if item['quantity'] + quantity > product.stock:
+                flash('Извините, данного количества товара нет в наличии', 'error')
+                return redirect(request.referrer or url_for('products'))
             item['quantity'] += quantity
+            if not item.get('image') or item['image'] == 'None':
+                item['image'] = image
             session.modified = True
             flash('Товар добавлен в корзину!', 'success')
             return redirect(request.referrer or url_for('products'))
@@ -472,7 +513,7 @@ def add_to_cart(product_id):
         'quantity': quantity,
         'size': size,
         'color': color,
-        'image': product_image  # Сохраняем путь к изображению
+        'image': image
     })
     session.modified = True
 
@@ -498,13 +539,17 @@ def cart():
         product = Product.query.get(item['id'])
         if product:
             item_total = item['price'] * item['quantity']
+            # Используем изображение из корзины, если оно есть, иначе берем из продукта
+            image = item.get('image')
+            if not image:
+                image = product.image
             cart_items.append({
                 'id': item['id'],
                 'name': item['name'],
                 'price': item['price'],
                 'quantity': item['quantity'],
                 'total': item_total,
-                'image': item.get('image', get_random_product_image(product.category_id))  # Используем сохраненное изображение или получаем новое
+                'image': image
             })
             total += item_total
 
@@ -544,46 +589,81 @@ def remove_from_cart(product_id):
 
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
-    if request.method == 'POST':
-        product_id = int(request.form.get('product_id'))
-        quantity = int(request.form.get('quantity', 1))
-        size = request.form.get('size')
-        color = request.form.get('color')
-        
-        if 'cart' not in session:
-            session['cart'] = []
-            
-        product = Product.query.get_or_404(product_id)
-        session['cart'].append({
-            'id': product_id,
-            'name': product.name,
-            'price': product.price,
-            'quantity': quantity,
-            'size': size,
-            'color': color
-        })
-        session.modified = True
-        
+    if not g.user:
+        flash('Для оформления заказа необходимо авторизоваться', 'warning')
+        return redirect(url_for('login', next=url_for('checkout')))
+
     if 'cart' not in session or not session['cart']:
-        return redirect(url_for('products'))
+        flash('Ваша корзина пуста', 'warning')
+        return redirect(url_for('cart'))
 
     cart_items = []
     total = 0
 
+    # Проверяем наличие всех товаров перед оформлением
     for item in session['cart']:
         product = Product.query.get(item['id'])
-        if product:
-            item_total = item['price'] * item['quantity']
-            cart_items.append({
-                'id': item['id'],
-                'name': item['name'],
-                'price': item['price'],
-                'quantity': item['quantity'],
-                'size': item.get('size'),
-                'color': item.get('color'),
-                'total': item_total
-            })
-            total += item_total
+        if not product:
+            flash(f'Товар {item["name"]} больше не доступен', 'error')
+            return redirect(url_for('cart'))
+        
+        if item['quantity'] > product.stock:
+            flash(f'Товар {item["name"]} доступен только в количестве {product.stock} шт.', 'error')
+            return redirect(url_for('cart'))
+
+        item_total = item['price'] * item['quantity']
+        cart_items.append({
+            'id': item['id'],
+            'name': item['name'],
+            'price': item['price'],
+            'quantity': item['quantity'],
+            'total': item_total,
+            'image': item.get('image')
+        })
+        total += item_total
+
+    if request.method == 'POST':
+        try:
+            # Создаем заказ
+            order = Order(
+                user_id=g.user.id,
+                total_amount=total,
+                status='pending'
+            )
+            db.session.add(order)
+            
+            # Добавляем товары к заказу
+            for item in cart_items:
+                product = Product.query.get(item['id'])
+                if product.stock < item['quantity']:
+                    db.session.rollback()
+                    flash(f'Извините, товар {item["name"]} закончился', 'error')
+                    return redirect(url_for('cart'))
+                
+                order_item = OrderItem(
+                    order=order,
+                    product_id=item['id'],
+                    quantity=item['quantity'],
+                    price=item['price']
+                )
+                db.session.add(order_item)
+                
+                # Уменьшаем количество товара на складе
+                product.stock -= item['quantity']
+            
+            db.session.commit()
+            
+            # Очищаем корзину
+            session.pop('cart', None)
+            
+            flash('Заказ успешно оформлен!', 'success')
+            return redirect(url_for('order_confirmation', order_id=order.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f'Error creating order: {str(e)}')
+            flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
+            return redirect(url_for('cart'))
 
     return render_template('checkout.html', cart_items=cart_items, total=total)
 
@@ -920,32 +1000,25 @@ def load_logged_in_user():
 @app.route('/subscribe', methods=['POST'])
 def subscribe_newsletter():
     email = request.form.get('email')
-    if not email:
-        flash('Пожалуйста, введите email адрес', 'error')
-        return redirect(url_for('home'))
+    if not email or not is_valid_email(email):
+        flash('Пожалуйста, введите корректный email адрес', 'error')
+        return redirect(request.referrer or url_for('home'))
     
-    # Проверяем, существует ли уже такая подписка
-    existing_subscription = NewsletterSubscription.query.filter_by(email=email).first()
-    if existing_subscription:
-        if existing_subscription.is_active:
-            flash('Этот email уже подписан на рассылку', 'info')
-        else:
-            existing_subscription.is_active = True
-            db.session.commit()
-            flash('Ваша подписка успешно возобновлена!', 'success')
-        return redirect(url_for('home'))
-    
-    # Создаем новую подписку
-    subscription = NewsletterSubscription(email=email)
-    db.session.add(subscription)
+    # Добавление email в базу подписчиков
     try:
+        subscriber = NewsletterSubscription(email=email)
+        db.session.add(subscriber)
         db.session.commit()
-        flash('Спасибо за подписку на наши акции!', 'success')
-    except:
+        flash('Вы успешно подписались на рассылку!', 'success')
+    except IntegrityError:
         db.session.rollback()
-        flash('Произошла ошибка при подписке. Пожалуйста, попробуйте позже.', 'error')
+        flash('Этот email уже подписан на рассылку', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        flash('Произошла ошибка при подписке. Попробуйте позже.', 'error')
+        app.logger.error(f'Error in subscribe_newsletter: {str(e)}')
     
-    return redirect(url_for('home'))
+    return redirect(request.referrer or url_for('home'))
 
 @app.before_request
 def load_user_data():
@@ -966,6 +1039,29 @@ def load_user_data():
     # Инициализируем корзину
     if 'cart' not in session:
         session['cart'] = []
+
+# Обработчики ошибок
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
+
+@app.errorhandler(413)
+def request_entity_too_large(e):
+    flash('Размер загружаемого файла превышает допустимый', 'error')
+    return redirect(request.referrer or url_for('home'))
+
+# Конфигурация безопасности
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
+
+# Валидация email
+def is_valid_email(email):
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

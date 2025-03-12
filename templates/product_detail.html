@@ -373,16 +373,17 @@ body .btn:contains("В избранное") {
     <div class="row">
         <!-- Изображения товара -->
         <div class="col-md-6">
-            <img src="{{ url_for('static', filename=product.image) }}" 
+            <img src="{{ url_for('static', filename=product_image) }}" 
                  alt="{{ product.name }}" 
                  class="product-image" 
-                 id="mainImage">
+                 id="mainImage"
+                 onerror="this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}'">
             <div class="thumbnails">
-                <img src="{{ url_for('static', filename=product.image) }}" 
+                <img src="{{ url_for('static', filename=product_image) }}" 
                      alt="Thumbnail 1" 
                      class="thumbnail" 
-                     onclick="changeImage(this.src)">
-                <!-- Дополнительные миниатюры -->
+                     onclick="changeImage(this.src)"
+                     onerror="this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}'">
             </div>
         </div>
 
@@ -498,6 +499,7 @@ body .btn:contains("В избранное") {
                     <input type="hidden" name="quantity" value="1">
                     <input type="hidden" name="size" id="cart_size" value="">
                     <input type="hidden" name="color" id="cart_color" value="">
+                    <input type="hidden" name="image" value="{{ product_image }}">
                 </form>
 
                 <script>
@@ -620,17 +622,14 @@ body .btn:contains("В избранное") {
                     <img src="{{ url_for('static', filename=product.image) }}" 
                          class="card-img-top" 
                          alt="{{ product.name }}"
-                         loading="lazy">
+                         loading="lazy"
+                         onerror="this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}'">
                     <div class="card-body">
                         <h5 class="card-title">{{ product.name }}</h5>
                         <p class="price">{{ "%.2f"|format(product.price) }} ₴</p>
                         <div class="btn-group">
                             <a href="{{ url_for('product_detail', product_id=product.id) }}" 
                                class="btn btn-outline-primary">Подробнее</a>
-                            <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="btn btn-primary w-100">В корзину</button>
-                            </form>
                         </div>
                     </div>
                 </div>
