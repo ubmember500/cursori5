@@ -74,9 +74,9 @@ csp = {
 # Применяем CSP и другие заголовки безопасности
 talisman = Talisman(
     app,
-    force_https=True,
-    strict_transport_security=True,
-    session_cookie_secure=True,
+    force_https=False,  # Отключаем принудительный HTTPS для PythonAnywhere
+    strict_transport_security=False,  # Отключаем HSTS
+    session_cookie_secure=False,  # Разрешаем cookie без HTTPS
     session_cookie_http_only=True,
     feature_policy={
         'geolocation': "'none'",
@@ -127,7 +127,7 @@ talisman = Talisman(
 
 # Настройка безопасной сессии
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = False  # Разрешаем cookie без HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
