@@ -254,98 +254,80 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Получаем элементы
     const minSlider = document.getElementById('minPriceRange');
     const maxSlider = document.getElementById('maxPriceRange');
     const minDisplay = document.getElementById('minPriceDisplay');
     const maxDisplay = document.getElementById('maxPriceDisplay');
 
-    // Устанавливаем начальные значения
-    minSlider.value = 0;
-    maxSlider.value = 20000;
-    minDisplay.textContent = '0';
-    maxDisplay.textContent = '20 000';
+    // Функция форматирования числа с разделителями
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
 
-    // Обработчик для минимального ползунка (слева направо)
-    minSlider.addEventListener('input', function() {
-        let min = parseInt(this.value);
-        let max = 20000 - parseInt(maxSlider.value);
-        
-        // Проверяем, чтобы минимум не был больше максимума
-        if (min > max) {
-            min = max;
-            this.value = min;
+    // Функция обновления отображаемых значений
+    function updateDisplays() {
+        minDisplay.textContent = formatNumber(minSlider.value);
+        maxDisplay.textContent = formatNumber(maxSlider.value);
+        console.log('Min:', minSlider.value, 'Max:', maxSlider.value); // Для отладки
+    }
+
+    // Обработчики событий для ползунков
+    minSlider.oninput = function() {
+        if (parseInt(this.value) > parseInt(maxSlider.value)) {
+            this.value = maxSlider.value;
         }
-        
-        // Обновляем отображение
-        minDisplay.textContent = min.toLocaleString('ru-RU');
-        
-        // Фильтруем товары
-        updateProducts();
-    });
+        updateDisplays();
+        filterProducts();
+    };
 
-    // Обработчик для максимального ползунка (справа налево)
-    maxSlider.addEventListener('input', function() {
-        let min = parseInt(minSlider.value);
-        let max = 20000 - parseInt(this.value);
-        
-        // Проверяем, чтобы максимум не был меньше минимума
-        if (max < min) {
-            this.value = 20000 - min;
-            max = min;
+    maxSlider.oninput = function() {
+        if (parseInt(this.value) < parseInt(minSlider.value)) {
+            this.value = minSlider.value;
         }
-        
-        // Обновляем отображение
-        maxDisplay.textContent = max.toLocaleString('ru-RU');
-        
-        // Фильтруем товары
-        updateProducts();
-    });
+        updateDisplays();
+        filterProducts();
+    };
 
-    // Функция обновления товаров
-    function updateProducts() {
+    // Функция фильтрации товаров
+    function filterProducts() {
         const min = parseInt(minSlider.value);
-        const max = 20000 - parseInt(maxSlider.value);
+        const max = parseInt(maxSlider.value);
         const products = document.querySelectorAll('.product-card');
-        let visibleCount = 0;
 
         products.forEach(product => {
             const priceText = product.querySelector('.price').textContent;
             const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
             const parent = product.closest('.col-md-4');
 
-            // Проверяем категорию и цену
-            const matchesCategory = checkCategory(product);
-            const matchesPrice = price >= min && price <= max;
-
-            if (matchesCategory && matchesPrice) {
+            if (price >= min && price <= max && checkCategory(product)) {
                 parent.style.display = '';
-                visibleCount++;
             } else {
                 parent.style.display = 'none';
             }
         });
 
-        // Показываем/скрываем сообщение "Товары не найдены"
-        const noProducts = document.querySelector('.text-center.mt-5');
-        if (noProducts) {
-            noProducts.style.display = visibleCount === 0 ? '' : 'none';
-        }
+        updateNoProductsMessage();
     }
 
     // Функция проверки категории
     function checkCategory(product) {
         const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
             .map(cb => cb.value);
-        
-        if (checkedCategories.length === 0) return true;
-        
-        return checkedCategories.includes(product.dataset.category);
+        return checkedCategories.length === 0 || checkedCategories.includes(product.dataset.category);
+    }
+
+    // Функция обновления сообщения "Товары не найдены"
+    function updateNoProductsMessage() {
+        const visibleProducts = document.querySelectorAll('.product-card').length;
+        const noProductsMessage = document.querySelector('.text-center.mt-5');
+        if (noProductsMessage) {
+            noProductsMessage.style.display = visibleProducts === 0 ? '' : 'none';
+        }
     }
 
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(checkbox => {
-        checkbox.addEventListener('change', updateProducts);
+        checkbox.addEventListener('change', filterProducts);
     });
 
     // Предотвращаем отправку формы
@@ -354,8 +336,11 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', e => e.preventDefault());
     }
 
-    // Применяем начальную фильтрацию
-    updateProducts();
+    // Устанавливаем начальные значения
+    minSlider.value = 0;
+    maxSlider.value = 20000;
+    updateDisplays();
+    filterProducts();
 });
 </script>
 {% endblock %}
