@@ -3,6 +3,7 @@
 {% block title %}Товары - Cursor Shop🛍️{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.css">
 <style>
 /* Стили для фильтров */
 .filters {
@@ -97,54 +98,61 @@
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-top: 20px;
 }
 
-.price-display {
-    margin-bottom: 15px;
+.price-slider {
+    margin: 20px 0;
+    height: 6px;
 }
 
-.slider-group {
-    margin-bottom: 15px;
-}
-
-.slider-label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.price-value {
-    font-weight: 600;
-    color: #0d6efd;
-    min-width: 80px;
-    text-align: right;
-}
-
-.form-range {
-    width: 100%;
-    height: 8px;
-    border-radius: 4px;
-    background: #e9ecef;
-    outline: none;
-    -webkit-appearance: none;
-    margin: 10px 0;
-}
-
-.form-range::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
+.noUi-connect {
     background: #0d6efd;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    transition: all 0.2s ease;
 }
 
-.form-range::-webkit-slider-thumb:hover {
+.noUi-handle {
+    border: 1px solid #0d6efd;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.noUi-handle:hover {
     transform: scale(1.1);
     box-shadow: 0 2px 8px rgba(13,110,253,0.4);
+}
+
+.noUi-handle:before,
+.noUi-handle:after {
+    display: none;
+}
+
+.price-inputs {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.price-input {
+    width: 45%;
+}
+
+.price-input label {
+    display: block;
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.price-input input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    text-align: center;
 }
 
 /* Медиа-запросы */
@@ -180,23 +188,16 @@
 
                     <h5 class="mt-4">Цена</h5>
                     <div class="price-range-wrapper">
-                        <div class="slider-group">
-                            <div class="slider-label">
-                                <span>От:</span>
-                                <span class="price-value"><span id="minPriceDisplay">{{ request.args.get('min_price', 0)|int }}</span> ₴</span>
+                        <div id="priceSlider" class="price-slider"></div>
+                        <div class="price-inputs">
+                            <div class="price-input">
+                                <label>От:</label>
+                                <input type="text" id="minPrice" readonly>
                             </div>
-                            <input type="range" class="form-range" id="minPriceRange" 
-                                   min="0" max="20000" step="100" 
-                                   value="{{ request.args.get('min_price', 0)|int }}">
-                        </div>
-                        <div class="slider-group">
-                            <div class="slider-label">
-                                <span>До:</span>
-                                <span class="price-value"><span id="maxPriceDisplay">{{ request.args.get('max_price', 20000)|int }}</span> ₴</span>
+                            <div class="price-input">
+                                <label>До:</label>
+                                <input type="text" id="maxPrice" readonly>
                             </div>
-                            <input type="range" class="form-range" id="maxPriceRange" 
-                                   min="0" max="20000" step="100" 
-                                   value="{{ request.args.get('max_price', 20000)|int }}">
                         </div>
                     </div>
                 </form>
@@ -256,119 +257,97 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const minSlider = document.getElementById('minPriceRange');
-    const maxSlider = document.getElementById('maxPriceRange');
-    const minDisplay = document.getElementById('minPriceDisplay');
-    const maxDisplay = document.getElementById('maxPriceDisplay');
-    const sortSelect = document.querySelector('.sort-section select');
-
     // Форматирование числа с разделителями
     function formatNumber(num) {
-        return parseInt(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     }
 
-    // Обновление отображаемых значений
-    function updateDisplays() {
-        minDisplay.textContent = formatNumber(minSlider.value);
-        maxDisplay.textContent = formatNumber(maxSlider.value);
-    }
+    // Инициализация слайдера
+    const slider = document.getElementById('priceSlider');
+    const minPriceInput = document.getElementById('minPrice');
+    const maxPriceInput = document.getElementById('maxPrice');
 
-    // Получение текущих параметров URL
-    function getCurrentParams() {
-        return new URLSearchParams(window.location.search);
-    }
+    // Получаем начальные значения из URL или используем значения по умолчанию
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialMinPrice = parseInt(urlParams.get('min_price')) || 0;
+    const initialMaxPrice = parseInt(urlParams.get('max_price')) || 20000;
 
-    // Обновление URL с сохранением всех параметров
-    function updateURLWithParams(newParams = {}) {
-        const params = getCurrentParams();
-        
-        // Обновляем параметры
-        Object.entries(newParams).forEach(([key, value]) => {
-            if (value === null) {
-                params.delete(key);
-            } else if (Array.isArray(value)) {
-                params.delete(key);
-                value.forEach(v => params.append(key, v));
-            } else {
-                params.set(key, value);
+    // Создаем слайдер
+    noUiSlider.create(slider, {
+        start: [initialMinPrice, initialMaxPrice],
+        connect: true,
+        step: 100,
+        range: {
+            'min': 0,
+            'max': 20000
+        },
+        format: {
+            to: function (value) {
+                return Math.round(value);
+            },
+            from: function (value) {
+                return Number(value);
             }
-        });
+        }
+    });
 
-        // Обновляем URL и перезагружаем страницу
+    // Обновление инпутов при изменении слайдера
+    slider.noUiSlider.on('update', function (values, handle) {
+        const value = formatNumber(values[handle]);
+        if (handle === 0) {
+            minPriceInput.value = value + ' ₴';
+        } else {
+            maxPriceInput.value = value + ' ₴';
+        }
+    });
+
+    // Обновление URL и перезагрузка страницы при отпускании слайдера
+    slider.noUiSlider.on('change', function (values) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('min_price', values[0]);
+        params.set('max_price', values[1]);
         window.location.href = `${window.location.pathname}?${params.toString()}`;
-    }
-
-    // Обработчики событий для ползунков
-    minSlider.addEventListener('input', function() {
-        const minValue = parseInt(this.value);
-        const maxValue = parseInt(maxSlider.value);
-        
-        if (minValue > maxValue) {
-            this.value = maxValue;
-        }
-        updateDisplays();
-    });
-
-    maxSlider.addEventListener('input', function() {
-        const minValue = parseInt(minSlider.value);
-        const maxValue = parseInt(this.value);
-        
-        if (maxValue < minValue) {
-            this.value = minValue;
-        }
-        updateDisplays();
-    });
-
-    // Применяем фильтры при отпускании ползунка
-    minSlider.addEventListener('change', () => {
-        const minValue = parseInt(minSlider.value);
-        const maxValue = parseInt(maxSlider.value);
-        
-        updateURLWithParams({
-            min_price: minValue,
-            max_price: maxValue
-        });
-    });
-
-    maxSlider.addEventListener('change', () => {
-        const minValue = parseInt(minSlider.value);
-        const maxValue = parseInt(maxSlider.value);
-        
-        updateURLWithParams({
-            min_price: minValue,
-            max_price: maxValue
-        });
     });
 
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
+            const params = new URLSearchParams(window.location.search);
             const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
                 .map(cb => cb.value);
             
-            updateURLWithParams({
-                category: checkedCategories,
-                min_price: parseInt(minSlider.value),
-                max_price: parseInt(maxSlider.value)
-            });
+            // Очищаем старые категории
+            params.delete('category');
+            // Добавляем новые категории
+            checkedCategories.forEach(cat => params.append('category', cat));
+            
+            // Сохраняем текущие значения цен
+            const currentValues = slider.noUiSlider.get();
+            params.set('min_price', currentValues[0]);
+            params.set('max_price', currentValues[1]);
+            
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
         });
     });
 
     // Обработчик для сортировки
+    const sortSelect = document.querySelector('.sort-section select');
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
-            updateURLWithParams({
-                sort: this.value,
-                min_price: parseInt(minSlider.value),
-                max_price: parseInt(maxSlider.value)
-            });
+            const params = new URLSearchParams(window.location.search);
+            params.set('sort', this.value);
+            
+            // Сохраняем текущие значения цен
+            const currentValues = slider.noUiSlider.get();
+            params.set('min_price', currentValues[0]);
+            params.set('max_price', currentValues[1]);
+            
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
         });
     }
-
-    // Инициализация отображения
-    updateDisplays();
 });
 </script>
 {% endblock %}
