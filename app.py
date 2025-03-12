@@ -355,12 +355,28 @@ def products():
     
     # Получаем и валидируем параметры цены
     try:
-        min_price = max(0, int(float(request.args.get('min_price', 0))))
-        max_price = min(20000, int(float(request.args.get('max_price', 20000))))
-        if min_price > max_price:
-            min_price, max_price = max_price, min_price
+        min_price = request.args.get('min_price')
+        max_price = request.args.get('max_price')
+        
+        # Если параметры не указаны, используем значения по умолчанию
+        if min_price is None:
+            min_price = 0
+        else:
+            min_price = int(float(min_price))
+            
+        if max_price is None:
+            max_price = 20000
+        else:
+            max_price = int(float(max_price))
+            
+        # Проверяем и корректируем границы
+        min_price = max(0, min(min_price, 20000))
+        max_price = max(min_price, min(max_price, 20000))
+        
     except (ValueError, TypeError):
         min_price, max_price = 0, 20000
+    
+    print(f"Filtering prices: min={min_price}, max={max_price}")  # Отладочный вывод
     
     # Базовый запрос
     query = Product.query
@@ -390,11 +406,11 @@ def products():
     # Получаем все товары
     products = query.all()
     
+    print(f"Found {len(products)} products")  # Отладочный вывод
+    
     response = make_response(render_template('products.html', 
                                           products=products, 
-                                          categories=Category.query.all(),
-                                          current_min_price=min_price,
-                                          current_max_price=max_price))
+                                          categories=Category.query.all()))
     return add_no_cache_headers(response)
 
 

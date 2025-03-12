@@ -183,20 +183,20 @@
                         <div class="slider-group">
                             <div class="slider-label">
                                 <span>От:</span>
-                                <span class="price-value"><span id="minPriceDisplay">{{ current_min_price|default(0)|int }}</span> ₴</span>
+                                <span class="price-value"><span id="minPriceDisplay">{{ request.args.get('min_price', 0)|int }}</span> ₴</span>
                             </div>
                             <input type="range" class="form-range" id="minPriceRange" 
                                    min="0" max="20000" step="100" 
-                                   value="{{ current_min_price|default(0)|int }}">
+                                   value="{{ request.args.get('min_price', 0)|int }}">
                         </div>
                         <div class="slider-group">
                             <div class="slider-label">
                                 <span>До:</span>
-                                <span class="price-value"><span id="maxPriceDisplay">{{ current_max_price|default(20000)|int }}</span> ₴</span>
+                                <span class="price-value"><span id="maxPriceDisplay">{{ request.args.get('max_price', 20000)|int }}</span> ₴</span>
                             </div>
                             <input type="range" class="form-range" id="maxPriceRange" 
                                    min="0" max="20000" step="100" 
-                                   value="{{ current_max_price|default(20000)|int }}">
+                                   value="{{ request.args.get('max_price', 20000)|int }}">
                         </div>
                     </div>
                 </form>
@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Форматирование числа с разделителями
     function formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        return parseInt(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     }
 
     // Обновление отображаемых значений
@@ -302,31 +302,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обработчики событий для ползунков
     minSlider.addEventListener('input', function() {
-        if (parseInt(this.value) > parseInt(maxSlider.value)) {
-            this.value = maxSlider.value;
+        const minValue = parseInt(this.value);
+        const maxValue = parseInt(maxSlider.value);
+        
+        if (minValue > maxValue) {
+            this.value = maxValue;
         }
         updateDisplays();
     });
 
     maxSlider.addEventListener('input', function() {
-        if (parseInt(this.value) < parseInt(minSlider.value)) {
-            this.value = minSlider.value;
+        const minValue = parseInt(minSlider.value);
+        const maxValue = parseInt(this.value);
+        
+        if (maxValue < minValue) {
+            this.value = minValue;
         }
         updateDisplays();
     });
 
     // Применяем фильтры при отпускании ползунка
     minSlider.addEventListener('change', () => {
+        const minValue = parseInt(minSlider.value);
+        const maxValue = parseInt(maxSlider.value);
+        
         updateURLWithParams({
-            min_price: minSlider.value,
-            max_price: maxSlider.value
+            min_price: minValue,
+            max_price: maxValue
         });
     });
 
     maxSlider.addEventListener('change', () => {
+        const minValue = parseInt(minSlider.value);
+        const maxValue = parseInt(maxSlider.value);
+        
         updateURLWithParams({
-            min_price: minSlider.value,
-            max_price: maxSlider.value
+            min_price: minValue,
+            max_price: maxValue
         });
     });
 
@@ -338,8 +350,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             updateURLWithParams({
                 category: checkedCategories,
-                min_price: minSlider.value,
-                max_price: maxSlider.value
+                min_price: parseInt(minSlider.value),
+                max_price: parseInt(maxSlider.value)
             });
         });
     });
@@ -348,7 +360,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
             updateURLWithParams({
-                sort: this.value
+                sort: this.value,
+                min_price: parseInt(minSlider.value),
+                max_price: parseInt(maxSlider.value)
             });
         });
     }
