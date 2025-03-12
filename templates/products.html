@@ -276,13 +276,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция форматирования цены
     function formatPrice(price) {
-        return Math.round(price).toLocaleString('ru-RU');
+        return parseInt(price).toLocaleString('ru-RU');
     }
 
     // Функция обновления отображения цен
     function updatePriceDisplay() {
-        minPriceDisplay.textContent = formatPrice(minPriceRange.value);
-        maxPriceDisplay.textContent = formatPrice(maxPriceRange.value);
+        let minValue = parseInt(minPriceRange.value);
+        let maxValue = parseInt(maxPriceRange.value);
+        
+        console.log('Updating prices:', minValue, maxValue); // Отладочный вывод
+        
+        minPriceDisplay.textContent = minValue.toLocaleString('ru-RU');
+        maxPriceDisplay.textContent = maxValue.toLocaleString('ru-RU');
     }
 
     // Функция получения цены продукта
@@ -308,8 +313,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция фильтрации продуктов
     function filterProducts() {
-        const minPrice = parseFloat(minPriceRange.value);
-        const maxPrice = parseFloat(maxPriceRange.value);
+        const minPrice = parseInt(minPriceRange.value);
+        const maxPrice = parseInt(maxPriceRange.value);
         let visibleProducts = 0;
 
         productCards.forEach(card => {
@@ -334,8 +339,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обработчик изменения ползунков
     function handleRangeInput(e) {
-        const minVal = parseFloat(minPriceRange.value);
-        const maxVal = parseFloat(maxPriceRange.value);
+        console.log('Range input event:', e.target.id, e.target.value); // Отладочный вывод
+        
+        const minVal = parseInt(minPriceRange.value);
+        const maxVal = parseInt(maxPriceRange.value);
 
         // Предотвращаем пересечение значений
         if (e.target === minPriceRange && minVal > maxVal) {
@@ -351,10 +358,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Добавляем обработчики событий для постоянного обновления
-    ['input', 'change'].forEach(eventType => {
-        minPriceRange.addEventListener(eventType, handleRangeInput);
-        maxPriceRange.addEventListener(eventType, handleRangeInput);
-    });
+    minPriceRange.addEventListener('input', handleRangeInput);
+    maxPriceRange.addEventListener('input', handleRangeInput);
     
     // Обработчик изменения категорий
     categoryFilters.forEach(checkbox => {
