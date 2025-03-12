@@ -93,53 +93,42 @@
 
 /* Стили для ползунков цены */
 .price-range-wrapper {
-    padding: 20px 10px;
+    padding: 20px;
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
 .price-display {
-    font-weight: 500;
+    margin-bottom: 15px;
 }
 
-.price-from, .price-to {
-    padding: 8px 15px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    font-size: 0.9rem;
+.slider-group {
+    margin-bottom: 15px;
 }
 
-.price-from span, .price-to span {
-    color: #0d6efd;
+.slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.price-value {
     font-weight: 600;
-}
-
-.sliders-container {
-    position: relative;
-    height: 50px;
-}
-
-.slider-wrapper {
-    position: absolute;
-    width: 50%;
-    padding: 0 10px;
-}
-
-.left-slider {
-    left: 0;
-}
-
-.right-slider {
-    right: 0;
+    color: #0d6efd;
+    min-width: 80px;
+    text-align: right;
 }
 
 .form-range {
-    height: 6px;
-    border-radius: 3px;
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
     background: #e9ecef;
     outline: none;
     -webkit-appearance: none;
+    margin: 10px 0;
 }
 
 .form-range::-webkit-slider-thumb {
@@ -147,64 +136,15 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #fff;
-    border: 2px solid #0d6efd;
+    background: #0d6efd;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     transition: all 0.2s ease;
 }
 
 .form-range::-webkit-slider-thumb:hover {
-    background: #0d6efd;
     transform: scale(1.1);
-}
-
-.form-range::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #0d6efd;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-}
-
-.form-range::-moz-range-thumb:hover {
-    background: #0d6efd;
-    transform: scale(1.1);
-}
-
-.form-range::-webkit-slider-runnable-track {
-    height: 6px;
-    border-radius: 3px;
-    background: #e9ecef;
-}
-
-.form-range::-moz-range-track {
-    height: 6px;
-    border-radius: 3px;
-    background: #e9ecef;
-}
-
-#minPriceRange::-webkit-slider-thumb {
-    background: #0d6efd;
-    border-color: #fff;
-}
-
-#maxPriceRange::-webkit-slider-thumb {
-    background: #0d6efd;
-    border-color: #fff;
-}
-
-#minPriceRange::-moz-range-thumb {
-    background: #0d6efd;
-    border-color: #fff;
-}
-
-#maxPriceRange::-moz-range-thumb {
-    background: #0d6efd;
-    border-color: #fff;
+    box-shadow: 0 2px 8px rgba(13,110,253,0.4);
 }
 
 /* Медиа-запросы */
@@ -239,22 +179,20 @@
                     {% endfor %}
 
                     <h5 class="mt-4">Цена</h5>
-                    <div class="price-range-wrapper mb-3">
-                        <div class="price-display d-flex justify-content-between mb-4">
-                            <div class="price-from">
-                                От: <span id="minPriceDisplay">0</span> ₴
+                    <div class="price-range-wrapper">
+                        <div class="slider-group">
+                            <div class="slider-label">
+                                <span>От:</span>
+                                <span class="price-value"><span id="minPriceDisplay">0</span> ₴</span>
                             </div>
-                            <div class="price-to">
-                                До: <span id="maxPriceDisplay">20000</span> ₴
-                            </div>
+                            <input type="range" class="form-range" id="minPriceRange" min="0" max="20000" value="0" step="100">
                         </div>
-                        <div class="sliders-container">
-                            <div class="slider-wrapper left-slider">
-                                <input type="range" class="form-range" id="minPriceRange" min="0" max="20000" value="0" step="100">
+                        <div class="slider-group">
+                            <div class="slider-label">
+                                <span>До:</span>
+                                <span class="price-value"><span id="maxPriceDisplay">20000</span> ₴</span>
                             </div>
-                            <div class="slider-wrapper right-slider">
-                                <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="20000" step="100">
-                            </div>
+                            <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="20000" step="100">
                         </div>
                     </div>
                 </form>
@@ -334,7 +272,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для получения цены из элемента товара
     function getProductPrice(productCard) {
         const priceElement = productCard.querySelector('.price');
-        return parseFloat(priceElement.textContent.replace('₴', '').trim());
+        const priceText = priceElement.textContent.replace('₴', '').trim();
+        return parseFloat(priceText.replace(/\s+/g, ''));
     }
     
     // Функция для проверки категории товара
@@ -349,44 +288,33 @@ document.addEventListener('DOMContentLoaded', function() {
         const minPrice = parseInt(minPriceRange.value);
         const maxPrice = parseInt(maxPriceRange.value);
         
-        // Получаем выбранные категории
-        const selectedCategories = Array.from(categoryFilters)
-            .filter(checkbox => checkbox.checked)
-            .map(checkbox => checkbox.value);
+        console.log('Фильтрация по цене:', minPrice, 'до', maxPrice); // Отладочный вывод
         
         let visibleCount = 0;
         const container = document.querySelector('.row.g-4');
         const productArray = Array.from(productCards);
         
-        // Фильтруем и сортируем товары
-        const filteredProducts = productArray.filter(card => {
-            const price = getProductPrice(card);
-            const categoryMatch = checkProductCategory(card, selectedCategories);
-            return price >= minPrice && price <= maxPrice && categoryMatch;
-        });
-        
-        // Сортируем по цене
-        filteredProducts.sort((a, b) => getProductPrice(a) - getProductPrice(b));
-        
-        // Скрываем все карточки
+        // Фильтруем товары
         productArray.forEach(card => {
-            card.closest('.col-md-4').style.display = 'none';
+            const price = getProductPrice(card);
+            const cardElement = card.closest('.col-md-4');
+            console.log('Товар:', card.querySelector('.card-title').textContent, 'Цена:', price); // Отладочный вывод
+            
+            if (price >= minPrice && price <= maxPrice) {
+                cardElement.style.display = '';
+                visibleCount++;
+            } else {
+                cardElement.style.display = 'none';
+            }
         });
         
-        // Показываем отфильтрованные и отсортированные карточки
-        filteredProducts.forEach(card => {
-            card.closest('.col-md-4').style.display = '';
-            container.appendChild(card.closest('.col-md-4'));
-            visibleCount++;
-        });
-        
-        // Показываем или скрываем сообщение о том, что товары не найдены
+        // Показываем сообщение если нет товаров
         const noProductsMessage = document.querySelector('.no-products-message');
         if (visibleCount === 0) {
             if (!noProductsMessage) {
                 const message = document.createElement('div');
                 message.className = 'text-center mt-5 no-products-message';
-                message.innerHTML = '<h5>Товары не найдены</h5><p>Попробуйте изменить параметры фильтрации</p>';
+                message.innerHTML = '<h5>Товары не найдены</h5><p>Попробуйте изменить диапазон цен</p>';
                 container.appendChild(message);
             }
         } else if (noProductsMessage) {
@@ -405,13 +333,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Проверяем и корректируем значения
         if (e.target === minPriceRange && minVal > maxVal) {
-            e.target.value = maxVal;
+            minPriceRange.value = maxVal;
         }
         if (e.target === maxPriceRange && maxVal < minVal) {
-            e.target.value = minVal;
+            maxPriceRange.value = minVal;
         }
         
-        // Фильтруем и сортируем товары
+        // Фильтруем товары
         filterAndSortProducts();
     }
     
