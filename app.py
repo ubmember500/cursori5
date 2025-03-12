@@ -756,6 +756,45 @@ def subscribe_newsletter():
     
     return redirect(url_for('home'))
 
+# Добавляем избранное в сессию, если его нет
+@app.before_request
+def before_request():
+    if 'favorites' not in session:
+        session['favorites'] = []
+    if 'cart' not in session:
+        session['cart'] = []
+
+@app.route('/favorites')
+def favorites():
+    # Получаем список избранных товаров
+    favorite_products = []
+    for product_id in session.get('favorites', []):
+        product = next((p for p in products if p['id'] == product_id), None)
+        if product:
+            favorite_products.append(product)
+    return render_template('favorites.html', favorites=favorite_products)
+
+@app.route('/add_to_favorites/<int:product_id>')
+def add_to_favorites(product_id):
+    if 'favorites' not in session:
+        session['favorites'] = []
+    
+    if product_id not in session['favorites']:
+        session['favorites'].append(product_id)
+        flash('Товар добавлен в избранное!', 'success')
+    else:
+        flash('Товар уже в избранном!', 'info')
+    
+    return redirect(request.referrer or url_for('products'))
+
+@app.route('/remove_from_favorites/<int:product_id>')
+def remove_from_favorites(product_id):
+    if product_id in session['favorites']:
+        session['favorites'].remove(product_id)
+        flash('Товар удален из избранного!', 'success')
+    
+    return redirect(request.referrer or url_for('favorites'))
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
 

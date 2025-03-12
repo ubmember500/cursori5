@@ -291,11 +291,19 @@
                     </div>
 
                     <!-- Кнопки действий -->
-                    <div class="action-buttons">
-                        <button type="submit" class="btn btn-primary">Добавить в корзину</button>
-                        <button type="button" class="btn btn-outline-primary">
-                            <i class="far fa-heart"></i> В избранное
+                    <div class="d-flex gap-2 mt-4">
+                        <button class="btn btn-primary" onclick="addToCart({{ product.id }})">
+                            <i class="fas fa-shopping-cart me-2"></i>В корзину
                         </button>
+                        <a href="{{ url_for('add_to_favorites', product_id=product.id) }}" 
+                           class="btn btn-outline-danger">
+                            <i class="fas fa-heart me-2"></i>
+                            {% if product.id in session.get('favorites', []) %}
+                                Убрать из избранного
+                            {% else %}
+                                В избранное
+                            {% endif %}
+                        </a>
                     </div>
                 </form>
             </div>

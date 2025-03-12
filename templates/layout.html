@@ -225,6 +225,12 @@
                     </li>
                 </ul>
                 <div class="d-flex">
+                    <a href="{{ url_for('favorites') }}" class="btn btn-outline-light me-2">
+                        <i class="fas fa-heart"></i>
+                        {% if session.favorites %}
+                            <span class="badge bg-danger">{{ session.favorites|length }}</span>
+                        {% endif %}
+                    </a>
                     <a href="{{ url_for('cart') }}" class="btn btn-outline-light me-2">
                         <i class="fas fa-shopping-cart"></i>
                         {% if session.cart %}
