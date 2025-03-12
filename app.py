@@ -352,8 +352,10 @@ def products():
     category_id = request.args.get('category_id', type=int)
     search_query = request.args.get('q')
     sort = request.args.get('sort', 'default')
+    
+    # Получаем параметры цены из URL
     min_price = request.args.get('min_price', type=float, default=0)
-    max_price = request.args.get('max_price', type=float, default=float('inf'))
+    max_price = request.args.get('max_price', type=float, default=20000)
     
     # Базовый запрос
     query = Product.query
@@ -385,7 +387,7 @@ def products():
     products = query.all()
     categories = Category.query.all()
     
-    # Находим минимальную и максимальную цену среди всех товаров (не только отфильтрованных)
+    # Находим минимальную и максимальную цену среди всех товаров
     all_prices = [p.price for p in Product.query.all()]
     min_price_all = min(all_prices) if all_prices else 0
     max_price_all = max(all_prices) if all_prices else 20000
