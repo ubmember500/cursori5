@@ -291,7 +291,18 @@ def products():
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
     product = Product.query.get_or_404(product_id)
-    return render_template('product_detail.html', product=product)
+    # Получаем похожие товары из той же категории
+    similar_products = Product.query.filter(
+        Product.category_id == product.category_id,
+        Product.id != product_id
+    ).limit(4).all()
+    
+    # Обновляем изображения
+    product.image = get_random_product_image(product.category_id)
+    for similar_product in similar_products:
+        similar_product.image = get_random_product_image(similar_product.category_id)
+    
+    return render_template('product_detail.html', product=product, similar_products=similar_products)
 
 
 @app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])

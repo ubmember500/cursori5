@@ -262,45 +262,45 @@
         <div class="col-md-6">
             <div class="product-info">
                 <h1 class="product-title">{{ product.name }}</h1>
-                <p class="product-price">{{ "%.2f"|format(product.price) }} ₴</p>
+                <div class="product-price">{{ "%.2f"|format(product.price) }} ₴</div>
                 <p class="product-description">{{ product.description }}</p>
 
-                <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="POST">
-                    <input type="hidden" name="product_id" value="{{ product.id }}">
-                    <!-- Выбор размера -->
-                    <div class="size-selector">
-                        <h5>Размер:</h5>
-                        {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
-                        <input type="radio" name="size" id="size-{{ size }}" value="{{ size }}" required>
-                        <label for="size-{{ size }}">{{ size }}</label>
-                        {% endfor %}
-                    </div>
+                <!-- Выбор размера -->
+                <div class="size-selector">
+                    <h5>Размер:</h5>
+                    {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
+                    <input type="radio" name="size" id="size-{{ size }}" value="{{ size }}" required>
+                    <label for="size-{{ size }}">{{ size }}</label>
+                    {% endfor %}
+                </div>
 
-                    <!-- Выбор цвета -->
-                    <div class="color-selector">
-                        <h5>Цвет:</h5>
-                        {% for color in ['Белый', 'Черный', 'Синий', 'Красный'] %}
-                        <input type="radio" name="color" id="color-{{ color }}" value="{{ color }}" required>
-                        <label for="color-{{ color }}">{{ color }}</label>
-                        {% endfor %}
-                    </div>
+                <!-- Выбор цвета -->
+                <div class="color-selector">
+                    <h5>Цвет:</h5>
+                    {% for color in ['Белый', 'Черный', 'Синий', 'Красный'] %}
+                    <input type="radio" name="color" id="color-{{ color }}" value="{{ color }}" required>
+                    <label for="color-{{ color }}">{{ color }}</label>
+                    {% endfor %}
+                </div>
 
-                    <!-- Выбор количества -->
-                    <div class="quantity-selector">
-                        <h5>Количество:</h5>
-                        <input type="number" name="quantity" value="1" min="1" max="10">
-                    </div>
+                <!-- Выбор количества -->
+                <div class="quantity-selector">
+                    <h5>Количество:</h5>
+                    <input type="number" name="quantity" value="1" min="1" max="10">
+                </div>
 
-                    <!-- Кнопки действий -->
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary flex-grow-1" formaction="{{ url_for('checkout') }}">
-                            <i class="fas fa-credit-card me-2"></i>Купить
-                        </button>
-                        <button type="submit" class="btn btn-outline-dark flex-grow-1" formaction="{{ url_for('add_to_cart', product_id=product.id) }}">
-                            <i class="fas fa-shopping-cart me-2"></i>В корзину
-                        </button>
-                    </div>
-                </form>
+                <!-- Кнопки действий -->
+                <div class="action-buttons">
+                    <form method="POST" action="{{ url_for('checkout') }}" class="flex-grow-1">
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="btn btn-primary w-100">Купить</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" class="flex-grow-1">
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="btn btn-outline-dark w-100">В корзину</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -389,8 +389,10 @@
                         <div class="btn-group">
                             <a href="{{ url_for('product_detail', product_id=product.id) }}" 
                                class="btn btn-outline-primary">Подробнее</a>
-                            <a href="{{ url_for('add_to_cart', product_id=product.id) }}" 
-                               class="btn btn-primary">В корзину</a>
+                            <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-primary w-100">В корзину</button>
+                            </form>
                         </div>
                     </div>
                 </div>
