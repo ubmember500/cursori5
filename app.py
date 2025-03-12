@@ -490,6 +490,7 @@ def cart():
     # Проверяем, нужно ли очистить корзину
     if request.args.get('clear') == 'true':
         session['cart'] = []
+        session.modified = True  # Явно указываем, что сессия была изменена
         flash('Корзина очищена', 'success')
         return redirect(url_for('cart'))
 
