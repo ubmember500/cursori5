@@ -10,7 +10,6 @@ body .product-info a.btn-outline-secondary,
 body .product-info [class*="bi-heart"],
 body .product-info button:has(> .bi-heart),
 body .product-info a:has(> .bi-heart),
-body .product-info #add-to-favorites,
 body .product-info .btn:has(> .bi-heart),
 body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
     display: none !important;
@@ -256,15 +255,79 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
 /* Дополнительные стили для защиты от внешних изменений */
 #action-buttons {
     contain: content;
+    isolation: isolate;
 }
-#action-buttons > *:not(.buy-now-button):not(.add-to-cart-button) {
+#action-buttons > *:not(.action-buttons-wrapper) {
     display: none !important;
 }
-/* Запрещаем добавление новых элементов через JavaScript */
+.action-buttons-wrapper > *:not(.buy-now-button):not(.add-to-cart-button) {
+    display: none !important;
+}
+/* Запрещаем добавление новых элементов */
+#action-buttons::before,
 #action-buttons::after,
-#action-buttons::before {
+.action-buttons-wrapper::before,
+.action-buttons-wrapper::after {
     display: none !important;
     content: none !important;
+}
+/* Принудительно показываем нужные кнопки */
+.buy-now-button,
+.add-to-cart-button {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    pointer-events: auto !important;
+}
+
+.isolated-buttons-component {
+    --button-primary-color: #0d6efd;
+    --button-secondary-color: #6c757d;
+    --button-hover-brightness: 0.9;
+    
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 2rem 0;
+    isolation: isolate;
+}
+
+.isolated-button-wrapper {
+    position: relative;
+    isolation: isolate;
+}
+
+.isolated-button {
+    width: 100%;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.2s;
+    position: relative;
+    isolation: isolate;
+}
+
+.isolated-button:hover {
+    filter: brightness(var(--button-hover-brightness));
+}
+
+.isolated-button:active {
+    transform: translateY(1px);
+}
+
+.isolated-button--primary {
+    background-color: var(--button-primary-color);
+    color: white;
+}
+
+.isolated-button--secondary {
+    background-color: white;
+    color: var(--button-secondary-color);
+    border: 2px solid var(--button-secondary-color);
 }
 </style>
 {% endblock %}
@@ -327,15 +390,74 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
                     <input type="number" id="quantity" name="quantity" value="1" min="1" max="10">
                 </div>
 
-                <!-- Кнопки действий -->
-                <div class="d-grid gap-2" id="action-buttons">
-                    <button type="button" class="btn btn-primary btn-lg buy-now-button" onclick="submitForm('checkout')">
-                        <i class="fas fa-credit-card me-2"></i>Купить сейчас
-                    </button>
-                    <button type="button" class="btn btn-outline-primary btn-lg add-to-cart-button" onclick="submitForm('cart')">
-                        <i class="fas fa-shopping-cart me-2"></i>Добавить в корзину
-                    </button>
+                <!-- Кнопки действий (полностью изолированный компонент) -->
+                <div class="isolated-buttons-component">
+                    <div class="isolated-button-wrapper">
+                        <button type="button" 
+                                class="isolated-button isolated-button--primary" 
+                                onclick="handleBuyNow()">
+                            Купить сейчас
+                        </button>
+                    </div>
+                    <div class="isolated-button-wrapper">
+                        <button type="button" 
+                                class="isolated-button isolated-button--secondary" 
+                                onclick="handleAddToCart()">
+                            В корзину
+                        </button>
+                    </div>
                 </div>
+
+                <style>
+                    .isolated-buttons-component {
+                        --button-primary-color: #0d6efd;
+                        --button-secondary-color: #6c757d;
+                        --button-hover-brightness: 0.9;
+                        
+                        display: grid;
+                        grid-template-columns: 1fr;
+                        gap: 1rem;
+                        margin: 2rem 0;
+                        isolation: isolate;
+                    }
+
+                    .isolated-button-wrapper {
+                        position: relative;
+                        isolation: isolate;
+                    }
+
+                    .isolated-button {
+                        width: 100%;
+                        padding: 1rem 2rem;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 1.1rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: filter 0.2s;
+                        position: relative;
+                        isolation: isolate;
+                    }
+
+                    .isolated-button:hover {
+                        filter: brightness(var(--button-hover-brightness));
+                    }
+
+                    .isolated-button:active {
+                        transform: translateY(1px);
+                    }
+
+                    .isolated-button--primary {
+                        background-color: var(--button-primary-color);
+                        color: white;
+                    }
+
+                    .isolated-button--secondary {
+                        background-color: white;
+                        color: var(--button-secondary-color);
+                        border: 2px solid var(--button-secondary-color);
+                    }
+                </style>
 
                 <!-- Скрытые формы для отправки -->
                 <form id="checkoutForm" method="POST" action="{{ url_for('checkout') }}" style="display: none;">
@@ -352,61 +474,133 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
                 </form>
 
                 <script>
-                function submitForm(type) {
-                    const quantity = document.getElementById('quantity').value;
-                    const selectedSize = document.querySelector('input[name="size"]:checked')?.value || '';
-                    const selectedColor = document.querySelector('input[name="color"]:checked')?.value || '';
-                    
-                    const form = document.getElementById(type === 'checkout' ? 'checkoutForm' : 'cartForm');
-                    form.querySelector('input[name="quantity"]').value = quantity;
-                    
-                    if (type === 'checkout') {
-                        document.getElementById('checkout_size').value = selectedSize;
-                        document.getElementById('checkout_color').value = selectedColor;
-                    } else {
-                        document.getElementById('cart_size').value = selectedSize;
-                        document.getElementById('cart_color').value = selectedColor;
+                // Функция для удаления нежелательных кнопок
+                function removeUnwantedButtons() {
+                    // Селекторы для поиска кнопок
+                    const buttonSelectors = [
+                        'button:has(i.fa-heart)',
+                        'button:has(i.fas.fa-heart)',
+                        'button:has(i.bi-heart)',
+                        'button.btn-outline-dark',
+                        'button.btn-outline-secondary',
+                        'a:has(i.fa-heart)',
+                        'a:has(i.fas.fa-heart)',
+                        'a:has(i.bi-heart)',
+                        '[id*="favorite"]',
+                        '[class*="favorite"]',
+                        '[data-favorite]',
+                        '[data-favorites]',
+                        'button:contains("В избранное")',
+                        'a:contains("В избранное")',
+                        '.btn:contains("В избранное")',
+                        'button.btn-outline-dark.btn-lg'
+                    ];
+
+                    // Удаляем все найденные элементы
+                    buttonSelectors.forEach(selector => {
+                        document.querySelectorAll(selector).forEach(element => {
+                            element.remove();
+                        });
+                    });
+
+                    // Дополнительная проверка по тексту кнопки
+                    document.querySelectorAll('button, a, .btn').forEach(element => {
+                        if (element.textContent.includes('В избранное') || 
+                            element.textContent.includes('избранное') ||
+                            element.textContent.includes('favorite') ||
+                            element.textContent.includes('Favorite')) {
+                            element.remove();
+                        }
+                    });
+                }
+
+                // Удаляем кнопки при загрузке страницы
+                document.addEventListener('DOMContentLoaded', () => {
+                    // Немедленное удаление при загрузке
+                    removeUnwantedButtons();
+
+                    // Наблюдаем за изменениями в DOM
+                    const observer = new MutationObserver((mutations) => {
+                        mutations.forEach(mutation => {
+                            // Если добавлены новые узлы
+                            if (mutation.addedNodes.length) {
+                                removeUnwantedButtons();
+                            }
+                        });
+                    });
+
+                    // Настраиваем наблюдение за всем документом
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true,
+                        attributes: true,
+                        characterData: true
+                    });
+
+                    // Дополнительная проверка каждые 100мс в течение первых 5 секунд
+                    let checkCount = 0;
+                    const interval = setInterval(() => {
+                        removeUnwantedButtons();
+                        checkCount++;
+                        if (checkCount >= 50) { // 5 секунд (50 * 100мс)
+                            clearInterval(interval);
+                        }
+                    }, 100);
+                });
+
+                // Блокируем добавление новых элементов через innerHTML
+                const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+                Object.defineProperty(Element.prototype, 'innerHTML', {
+                    set: function(value) {
+                        originalInnerHTML.set.call(this, value);
+                        removeUnwantedButtons();
                     }
+                });
+
+                // Блокируем добавление через insertAdjacentHTML
+                const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
+                Element.prototype.insertAdjacentHTML = function(position, text) {
+                    originalInsertAdjacentHTML.call(this, position, text);
+                    removeUnwantedButtons();
+                };
+
+                function handleBuyNow() {
+                    const quantity = document.getElementById('quantity').value;
+                    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
+                    const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
                     
                     if (!selectedSize || !selectedColor) {
                         alert('Пожалуйста, выберите размер и цвет');
                         return;
                     }
                     
+                    const form = document.getElementById('checkoutForm');
+                    form.querySelector('input[name="quantity"]').value = quantity;
+                    document.getElementById('checkout_size').value = selectedSize;
+                    document.getElementById('checkout_color').value = selectedColor;
                     form.submit();
                 }
 
-                // Удаляем любые кнопки избранного, если они появятся
-                document.addEventListener('DOMContentLoaded', function() {
-                    function removeUnwantedButtons() {
-                        const unwantedSelectors = [
-                            'button:has(> .fa-heart)',
-                            'button:has(> .fas.fa-heart)',
-                            'button.btn-outline-dark:has(i.fas.fa-heart)',
-                            '.btn:has(> .fa-heart)',
-                            'button:contains("В избранное")'
-                        ];
-                        
-                        unwantedSelectors.forEach(selector => {
-                            document.querySelectorAll(selector).forEach(button => {
-                                button.remove();
-                            });
-                        });
+                function handleAddToCart() {
+                    const quantity = document.getElementById('quantity').value;
+                    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
+                    const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
+                    
+                    if (!selectedSize || !selectedColor) {
+                        alert('Пожалуйста, выберите размер и цвет');
+                        return;
                     }
+                    
+                    const form = document.getElementById('cartForm');
+                    form.querySelector('input[name="quantity"]').value = quantity;
+                    document.getElementById('cart_size').value = selectedSize;
+                    document.getElementById('cart_color').value = selectedColor;
+                    form.submit();
+                }
 
-                    // Удаляем при загрузке
-                    removeUnwantedButtons();
-
-                    // Наблюдаем за изменениями в DOM
-                    const observer = new MutationObserver(function(mutations) {
-                        removeUnwantedButtons();
-                    });
-
-                    observer.observe(document.body, {
-                        childList: true,
-                        subtree: true
-                    });
-                });
+                function changeImage(src) {
+                    document.getElementById('mainImage').src = src;
+                }
                 </script>
             </div>
         </div>
@@ -508,10 +702,4 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
         </div>
     </div>
 </div>
-
-<script>
-function changeImage(src) {
-    document.getElementById('mainImage').src = src;
-}
-</script>
 {% endblock %}
