@@ -756,7 +756,6 @@ def subscribe_newsletter():
     
     return redirect(url_for('home'))
 
-# Добавляем избранное и корзину в сессию, если их нет
 @app.before_request
 def load_user_data():
     user_id = session.get('user_id')
@@ -773,51 +772,9 @@ def load_user_data():
             session['username'] = user.username
             session.permanent = True
     
-    # Инициализируем избранное и корзину
-    if 'favorites' not in session:
-        session['favorites'] = []
+    # Инициализируем корзину
     if 'cart' not in session:
         session['cart'] = []
-
-@app.route('/favorites')
-def favorites():
-    # Получаем список избранных товаров из базы данных
-    favorite_products = []
-    for product_id in session.get('favorites', []):
-        product = Product.query.get(product_id)
-        if product:
-            # Получаем правильное изображение для продукта
-            product.image = get_random_product_image(product.category_id)
-            favorite_products.append(product)
-    return render_template('favorites.html', favorites=favorite_products)
-
-@app.route('/add_to_favorites/<int:product_id>')
-def add_to_favorites(product_id):
-    if 'favorites' not in session:
-        session['favorites'] = []
-    
-    # Проверяем, существует ли продукт
-    product = Product.query.get_or_404(product_id)
-    
-    if product_id not in session['favorites']:
-        session['favorites'].append(product_id)
-        session.modified = True
-        flash('Товар добавлен в избранное!', 'success')
-    else:
-        session['favorites'].remove(product_id)
-        session.modified = True
-        flash('Товар удален из избранного!', 'success')
-    
-    return redirect(request.referrer or url_for('products'))
-
-@app.route('/remove_from_favorites/<int:product_id>')
-def remove_from_favorites(product_id):
-    if product_id in session['favorites']:
-        session['favorites'].remove(product_id)
-        session.modified = True
-        flash('Товар удален из избранного!', 'success')
-    
-    return redirect(request.referrer or url_for('favorites'))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

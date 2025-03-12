@@ -292,19 +292,12 @@
 
                     <!-- Кнопки действий -->
                     <div class="d-flex gap-2 mt-4">
-                        <a href="{{ url_for('add_to_cart', product_id=product.id) }}" 
-                           class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" formaction="{{ url_for('checkout') }}">
+                            <i class="fas fa-credit-card me-2"></i>Купить
+                        </button>
+                        <button type="submit" class="btn btn-outline-dark" formaction="{{ url_for('add_to_cart', product_id=product.id) }}">
                             <i class="fas fa-shopping-cart me-2"></i>В корзину
-                        </a>
-                        <a href="{{ url_for('add_to_favorites', product_id=product.id) }}" 
-                           class="btn btn-outline-danger">
-                            <i class="fas fa-heart me-2"></i>
-                            {% if product.id in session.get('favorites', []) %}
-                                Убрать из избранного
-                            {% else %}
-                                В избранное
-                            {% endif %}
-                        </a>
+                        </button>
                     </div>
                 </form>
             </div>

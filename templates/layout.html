@@ -59,17 +59,15 @@
             color: #0d6efd;
         }
 
-        /* Стили для корзины и избранного */
-        .cart-icon,
-        .favorites-icon {
+        /* Стили для корзины */
+        .cart-icon {
             position: relative;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .cart-count,
-        .favorites-count {
+        .cart-count {
             position: absolute;
             top: -8px;
             right: -8px;
@@ -236,14 +234,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('products') }}">Магазин</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('favorites') }}">
-                            <i class="fas fa-heart"></i> Избранное
-                            {% if session.favorites %}
-                                <span class="badge bg-danger">{{ session.favorites|length }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             Категории
@@ -256,12 +246,6 @@
                     </li>
                 </ul>
                 <div class="d-flex">
-                    <a href="{{ url_for('favorites') }}" class="btn btn-outline-light me-2 favorites-icon">
-                        <i class="fas fa-heart"></i>
-                        {% if session.favorites %}
-                            <span class="badge bg-danger favorites-count">{{ session.favorites|length }}</span>
-                        {% endif %}
-                    </a>
                     <a href="{{ url_for('cart') }}" class="btn btn-outline-light me-2">
                         <i class="fas fa-shopping-cart"></i>
                         {% if session.cart %}
