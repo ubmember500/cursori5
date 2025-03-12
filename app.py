@@ -280,7 +280,11 @@ class Session(db.Model):
 # Create database tables
 def init_db():
     with app.app_context():
+        # Создаем все таблицы
         db.create_all()
+        
+        # Только после создания таблиц пытаемся очистить сессии
+        cleanup_old_sessions()
         
         # Add sample data if the database is empty
         if not Category.query.first():
@@ -318,6 +322,7 @@ def init_db():
             ]
             db.session.add_all(products)
             db.session.commit()
+        print("Database initialized successfully!")
 
 
 @app.context_processor
@@ -378,6 +383,7 @@ def cleanup_old_sessions():
         for session in sessions:
             db.session.delete(session)
         db.session.commit()
+        print("Session cleanup completed")
     except Exception as e:
         app.logger.error(f'Error cleaning up sessions: {str(e)}')
         db.session.rollback()
