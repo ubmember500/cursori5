@@ -31,6 +31,10 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///shop.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Отключаем кэширование шаблонов
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
 # Настройка CSP
 csp = {
     'default-src': "'none'",  # Запрещаем все по умолчанию
@@ -1073,6 +1077,14 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
+
+# Функция для отключения кэширования
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
