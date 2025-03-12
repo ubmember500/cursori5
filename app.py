@@ -756,9 +756,24 @@ def subscribe_newsletter():
     
     return redirect(url_for('home'))
 
-# Добавляем избранное в сессию, если его нет
+# Добавляем избранное и корзину в сессию, если их нет
 @app.before_request
-def before_request():
+def load_user_data():
+    user_id = session.get('user_id')
+    if user_id is None:
+        g.user = None
+    else:
+        user = User.query.get(user_id)
+        if user is None:
+            g.user = None
+            session.clear()
+        else:
+            g.user = user
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session.permanent = True
+    
+    # Инициализируем избранное и корзину
     if 'favorites' not in session:
         session['favorites'] = []
     if 'cart' not in session:

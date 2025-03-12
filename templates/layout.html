@@ -59,12 +59,17 @@
             color: #0d6efd;
         }
 
-        /* Стили для корзины */
-        .cart-icon {
+        /* Стили для корзины и избранного */
+        .cart-icon,
+        .favorites-icon {
             position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .cart-count {
+        .cart-count,
+        .favorites-count {
             position: absolute;
             top: -8px;
             right: -8px;
@@ -75,6 +80,24 @@
             font-size: 0.75rem;
             min-width: 1.5rem;
             text-align: center;
+        }
+
+        .btn-outline-light {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-outline-light i {
+            font-size: 1.1rem;
+        }
+
+        .btn-outline-light .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
         }
 
         /* Стили для уведомлений */
@@ -213,6 +236,14 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('products') }}">Магазин</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('favorites') }}">
+                            <i class="fas fa-heart"></i> Избранное
+                            {% if session.favorites %}
+                                <span class="badge bg-danger">{{ session.favorites|length }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             Категории
@@ -225,10 +256,10 @@
                     </li>
                 </ul>
                 <div class="d-flex">
-                    <a href="{{ url_for('favorites') }}" class="btn btn-outline-light me-2">
+                    <a href="{{ url_for('favorites') }}" class="btn btn-outline-light me-2 favorites-icon">
                         <i class="fas fa-heart"></i>
                         {% if session.favorites %}
-                            <span class="badge bg-danger">{{ session.favorites|length }}</span>
+                            <span class="badge bg-danger favorites-count">{{ session.favorites|length }}</span>
                         {% endif %}
                     </a>
                     <a href="{{ url_for('cart') }}" class="btn btn-outline-light me-2">
