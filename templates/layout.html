@@ -325,5 +325,120 @@
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}{% endblock %}
+
+    <!-- Глобальный скрипт для удаления кнопки избранного -->
+    <script>
+        // Функция для удаления кнопки избранного
+        function removeFavoriteButton() {
+            // Все возможные селекторы для кнопки избранного
+            const selectors = [
+                'button.btn.btn-outline-dark.btn-lg',
+                'button:has(i.fas.fa-heart)',
+                'button:has(i.fa-heart)',
+                'button.btn-outline-dark:has(i.fas.fa-heart)',
+                'button.btn-outline-dark:has(.fa-heart)',
+                'button:has(.fa-heart)',
+                '[class*="favorite"]',
+                '[id*="favorite"]',
+                'button:contains("В избранное")',
+                'a:contains("В избранное")',
+                '.btn:contains("В избранное")',
+                'button.btn-outline-dark',
+                'button.btn-lg:has(i.fas.fa-heart)',
+                'button:has(i.fas.fa-heart.me-2)',
+                'button.btn.btn-outline-dark'
+            ];
+
+            // Проходим по всем селекторам
+            selectors.forEach(selector => {
+                try {
+                    document.querySelectorAll(selector).forEach(element => {
+                        // Дополнительная проверка на содержимое
+                        const text = element.textContent.toLowerCase().trim();
+                        const hasHeartIcon = element.querySelector('i.fas.fa-heart, i.fa-heart');
+                        if (text.includes('избранное') || text.includes('favorite') || hasHeartIcon) {
+                            element.remove();
+                        }
+                    });
+                } catch (e) {
+                    // Игнорируем ошибки с невалидными селекторами
+                }
+            });
+
+            // Дополнительная проверка по тексту для всех кнопок
+            document.querySelectorAll('button, a, .btn').forEach(element => {
+                const text = element.textContent.toLowerCase().trim();
+                if (text.includes('избранное') || text.includes('favorite')) {
+                    element.remove();
+                }
+            });
+        }
+
+        // Функция для блокировки добавления кнопки
+        function blockFavoriteButton() {
+            // Переопределяем методы добавления элементов
+            const originalCreateElement = document.createElement;
+            document.createElement = function(tagName) {
+                const element = originalCreateElement.call(document, tagName);
+                if (tagName.toLowerCase() === 'button') {
+                    const originalSetAttribute = element.setAttribute;
+                    element.setAttribute = function(name, value) {
+                        if ((name === 'class' && value.includes('btn-outline-dark')) ||
+                            (name === 'class' && value.includes('btn-lg'))) {
+                            return;
+                        }
+                        return originalSetAttribute.call(this, name, value);
+                    };
+                }
+                return element;
+            };
+        }
+
+        // Основная функция инициализации
+        function initFavoriteButtonRemoval() {
+            // Немедленное удаление при загрузке
+            removeFavoriteButton();
+            blockFavoriteButton();
+
+            // Наблюдатель за изменениями в DOM
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach(mutation => {
+                    if (mutation.addedNodes.length || mutation.type === 'attributes') {
+                        removeFavoriteButton();
+                    }
+                });
+            });
+
+            // Настраиваем наблюдение за всем документом
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                characterData: true
+            });
+
+            // Проверка каждые 100мс в течение 10 секунд
+            let checkCount = 0;
+            const interval = setInterval(() => {
+                removeFavoriteButton();
+                checkCount++;
+                if (checkCount >= 100) { // 10 секунд (100 * 100мс)
+                    clearInterval(interval);
+                }
+            }, 100);
+
+            // Дополнительные триггеры
+            document.addEventListener('scroll', removeFavoriteButton);
+            document.addEventListener('click', removeFavoriteButton);
+            document.addEventListener('mousemove', removeFavoriteButton);
+        }
+
+        // Запускаем при загрузке страницы
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initFavoriteButtonRemoval);
+        } else {
+            initFavoriteButtonRemoval();
+        }
+    </script>
 </body>
 </html>
