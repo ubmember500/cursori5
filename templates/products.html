@@ -170,6 +170,7 @@
                                    class="btn btn-outline-primary">Подробнее</a>
                                 <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;">
                                     <input type="hidden" name="quantity" value="1">
+                                    <input type="hidden" name="image" value="img/products/{{ product.image }}">
                                     <button type="submit" class="btn btn-primary w-100">В корзину</button>
                                 </form>
                             </div>

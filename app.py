@@ -491,6 +491,8 @@ def add_to_cart(product_id):
     # Убеждаемся, что у нас есть изображение
     if not image or image == 'None':
         image = get_random_product_image(product.category_id)
+    elif not image.startswith('img/products/'):
+        image = f'img/products/{image}'
 
     # Check if product is already in cart
     for item in cart:
@@ -549,7 +551,9 @@ def cart():
                 'price': item['price'],
                 'quantity': item['quantity'],
                 'total': item_total,
-                'image': image
+                'image': image,
+                'size': item.get('size'),
+                'color': item.get('color')
             })
             total += item_total
 
