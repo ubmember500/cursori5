@@ -211,7 +211,64 @@
     <!-- Наши стили -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     
-    {% block extra_css %}{% endblock %}
+    {% block extra_css %}
+    <style>
+    /* Максимально строгие правила для скрытия кнопки избранного */
+    body *:has(i[class*="heart"]),
+    body *:has(i[class*="favorite"]),
+    body *:has(svg[class*="heart"]),
+    body *:has(svg[class*="favorite"]),
+    body *[class*="heart"],
+    body *[class*="favorite"],
+    body *[id*="heart"],
+    body *[id*="favorite"],
+    body button:has(> [class*="heart"]),
+    body a:has(> [class*="heart"]),
+    body .btn:has(> [class*="heart"]),
+    body button:has(> [class*="favorite"]),
+    body a:has(> [class*="favorite"]),
+    body .btn:has(> [class*="favorite"]),
+    body *:has(> [class*="heart"]),
+    body *:has(> [class*="favorite"]),
+    body *[onclick*="favorite"],
+    body *[onclick*="heart"],
+    body *[href*="favorite"],
+    body *[href*="wishlist"],
+    body *[data-action*="favorite"],
+    body *[data-action*="wishlist"],
+    body *[aria-label*="favorite"],
+    body *[aria-label*="wishlist"],
+    body *[title*="favorite"],
+    body *[title*="wishlist"],
+    body *:has(text="В избранное"),
+    body *:contains("В избранное"),
+    body *[class*="wishlist"],
+    body *[id*="wishlist"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        clip: rect(0 0 0 0) !important;
+        clip-path: inset(50%) !important;
+        z-index: -9999 !important;
+        transform: scale(0) !important;
+        max-width: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        position: fixed !important;
+        top: -9999px !important;
+        right: -9999px !important;
+        bottom: -9999px !important;
+    }
+    </style>
+    {% endblock %}
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -328,68 +385,137 @@
 
     <!-- Глобальный скрипт для удаления кнопки избранного -->
     <script>
-        function removeFavoriteButton() {
-            // Находим все элементы на странице
-            const walker = document.createTreeWalker(
-                document.body,
-                NodeFilter.SHOW_ELEMENT,
-                null,
-                false
-            );
+    // Функция для глубокого удаления элементов избранного
+    function deepRemoveFavoriteElements(root = document.body) {
+        const selectors = [
+            '[class*="heart"]',
+            '[class*="favorite"]',
+            '[id*="heart"]',
+            '[id*="favorite"]',
+            '[class*="wishlist"]',
+            '[id*="wishlist"]',
+            'button:has(i[class*="heart"])',
+            'a:has(i[class*="heart"])',
+            '.btn:has(i[class*="heart"])',
+            '*:has(text="В избранное")',
+            '*[onclick*="favorite"]',
+            '*[onclick*="heart"]',
+            '*[href*="favorite"]',
+            '*[href*="wishlist"]',
+            '*[data-action*="favorite"]',
+            '*[data-action*="wishlist"]'
+        ];
 
-            const elementsToRemove = [];
-            let node;
+        // Находим все элементы по селекторам
+        selectors.forEach(selector => {
+            try {
+                const elements = root.querySelectorAll(selector);
+                elements.forEach(el => {
+                    try {
+                        el.remove();
+                    } catch (e) {}
+                });
+            } catch (e) {}
+        });
 
-            // Собираем все элементы, содержащие текст "В избранное"
-            while (node = walker.nextNode()) {
-                const text = node.textContent.trim();
-                if (text === 'В избранное') {
-                    elementsToRemove.push(node);
-                    // Также проверяем родительский элемент
-                    if (node.parentElement) {
-                        elementsToRemove.push(node.parentElement);
-                    }
+        // Поиск по тексту
+        const walker = document.createTreeWalker(
+            root,
+            NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode: function(node) {
+                    const text = node.textContent.toLowerCase();
+                    return (text.includes('избранное') || 
+                           text.includes('favorite') || 
+                           text.includes('wishlist') || 
+                           text.includes('сердц') || 
+                           text.includes('heart'))
+                        ? NodeFilter.FILTER_ACCEPT 
+                        : NodeFilter.FILTER_SKIP;
                 }
             }
+        );
 
-            // Удаляем найденные элементы
-            elementsToRemove.forEach(element => {
-                try {
-                    element.remove();
-                } catch (e) {
-                    // Игнорируем ошибки
-                }
-            });
-        }
-
-        // Запускаем удаление сразу
-        removeFavoriteButton();
-
-        // Запускаем после загрузки DOM
-        document.addEventListener('DOMContentLoaded', removeFavoriteButton);
-
-        // Наблюдаем за изменениями в DOM
-        const observer = new MutationObserver((mutations) => {
-            removeFavoriteButton();
+        const textNodes = [];
+        while(walker.nextNode()) textNodes.push(walker.currentNode);
+        textNodes.forEach(node => {
+            try {
+                node.remove();
+            } catch (e) {}
         });
+    }
 
-        // Настраиваем наблюдение за всем документом
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            characterData: true
+    // Защита от модификации прототипов
+    const secureCreateElement = document.createElement.bind(document);
+    const secureAppendChild = Element.prototype.appendChild;
+    const secureInsertBefore = Element.prototype.insertBefore;
+    const secureReplaceChild = Element.prototype.replaceChild;
+    const secureInsertAdjacentElement = Element.prototype.insertAdjacentElement;
+    const secureInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
+
+    // Перехватываем все методы создания/вставки элементов
+    document.createElement = function() {
+        const element = secureCreateElement.apply(this, arguments);
+        setTimeout(() => deepRemoveFavoriteElements(element), 0);
+        return element;
+    };
+
+    Element.prototype.appendChild = function() {
+        const result = secureAppendChild.apply(this, arguments);
+        setTimeout(() => deepRemoveFavoriteElements(result), 0);
+        return result;
+    };
+
+    Element.prototype.insertBefore = function() {
+        const result = secureInsertBefore.apply(this, arguments);
+        setTimeout(() => deepRemoveFavoriteElements(result), 0);
+        return result;
+    };
+
+    Element.prototype.replaceChild = function() {
+        const result = secureReplaceChild.apply(this, arguments);
+        setTimeout(() => deepRemoveFavoriteElements(result), 0);
+        return result;
+    };
+
+    Element.prototype.insertAdjacentElement = function() {
+        const result = secureInsertAdjacentElement.apply(this, arguments);
+        setTimeout(() => deepRemoveFavoriteElements(result), 0);
+        return result;
+    };
+
+    Element.prototype.insertAdjacentHTML = function() {
+        const result = secureInsertAdjacentHTML.apply(this, arguments);
+        setTimeout(() => deepRemoveFavoriteElements(this), 0);
+        return result;
+    };
+
+    // Запускаем удаление при загрузке
+    document.addEventListener('DOMContentLoaded', () => deepRemoveFavoriteElements());
+
+    // Наблюдаем за изменениями в DOM
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+            if (mutation.addedNodes.length) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) { // ELEMENT_NODE
+                        deepRemoveFavoriteElements(node);
+                    }
+                });
+            }
         });
+    });
 
-        // Проверяем каждые 100мс
-        setInterval(removeFavoriteButton, 100);
+    // Настраиваем наблюдение
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true
+    });
 
-        // Перехватываем создание новых элементов
-        const originalCreateElement = document.createElement;
-        document.createElement = function() {
-            const element = originalCreateElement.apply(this, arguments);
-            setTimeout(removeFavoriteButton, 0);
-            return element;
-        };
+    // Запускаем проверку периодически
+    setInterval(() => deepRemoveFavoriteElements(), 100);
     </script>
 </body>
 </html>
