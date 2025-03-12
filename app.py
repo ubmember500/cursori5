@@ -16,7 +16,6 @@ from flask_caching import Cache
 from functools import lru_cache, wraps
 from threading import Thread
 from dotenv import load_dotenv
-from flask_talisman import Talisman  # Добавляем Talisman для CSP
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
 import bleach
@@ -349,7 +348,8 @@ def home():
 
 @app.route('/products')
 def products():
-    category_id = request.args.get('category_id', type=int)
+    # Получаем параметры фильтрации
+    categories = request.args.getlist('category')  # Получаем список выбранных категорий
     search_query = request.args.get('q')
     sort = request.args.get('sort', 'default')
     
@@ -360,9 +360,9 @@ def products():
     # Базовый запрос
     query = Product.query
     
-    # Фильтр по категории
-    if category_id:
-        query = query.filter_by(category_id=category_id)
+    # Фильтр по категориям
+    if categories:
+        query = query.filter(Product.category_id.in_([int(cat) for cat in categories]))
     
     # Фильтр по поиску
     if search_query:

@@ -203,7 +203,7 @@
         <div class="col-md-9">
             <div class="sort-section d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Товары</h4>
-                <select class="form-select" style="width: auto;" onchange="updateURLWithParams({sort: this.value})">
+                <select class="form-select" style="width: auto;" onchange="const params = new URLSearchParams(window.location.search); params.set('sort', this.value); window.location.href = `${window.location.pathname}?${params.toString()}`">
                     <option value="default" {% if not request.args.get('sort') or request.args.get('sort') == 'default' %}selected{% endif %}>По умолчанию</option>
                     <option value="price_asc" {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>По возрастанию цены</option>
                     <option value="price_desc" {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>По убыванию цены</option>
@@ -270,39 +270,33 @@ document.addEventListener('DOMContentLoaded', function() {
         maxDisplay.textContent = formatNumber(maxSlider.value);
     }
 
-    // Функция для получения текущих параметров URL
+    // Получение текущих параметров URL
     function getCurrentUrlParams() {
         const params = new URLSearchParams(window.location.search);
-        return {
-            categories: params.getAll('category'),
-            min_price: params.get('min_price') || '0',
-            max_price: params.get('max_price') || '20000',
-            sort: params.get('sort'),
-            q: params.get('q')
-        };
+        const categories = params.getAll('category');
+        const sort = params.get('sort');
+        const q = params.get('q');
+        return { categories, sort, q };
     }
 
-    // Функция для обновления URL с сохранением всех параметров
-    function updateURLWithParams(newParams = {}) {
-        const currentParams = getCurrentUrlParams();
+    // Обновление URL с сохранением параметров
+    function updateURL() {
+        const { categories, sort, q } = getCurrentUrlParams();
         const params = new URLSearchParams();
 
         // Добавляем категории
-        const categories = newParams.categories || currentParams.categories;
-        if (categories && categories.length > 0) {
+        if (categories.length > 0) {
             categories.forEach(cat => params.append('category', cat));
         }
 
         // Добавляем цены
-        params.append('min_price', newParams.min_price !== undefined ? newParams.min_price : currentParams.min_price);
-        params.append('max_price', newParams.max_price !== undefined ? newParams.max_price : currentParams.max_price);
+        params.append('min_price', minSlider.value);
+        params.append('max_price', maxSlider.value);
 
         // Добавляем сортировку
-        const sort = newParams.sort || currentParams.sort;
-        if (sort && sort !== 'default') params.append('sort', sort);
+        if (sort) params.append('sort', sort);
 
-        // Сохраняем поиск
-        const q = newParams.q || currentParams.q;
+        // Добавляем поиск
         if (q) params.append('q', q);
 
         // Обновляем URL и перезагружаем страницу
@@ -317,12 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDisplays();
     });
 
-    minSlider.addEventListener('change', function() {
-        updateURLWithParams({
-            min_price: this.value,
-            max_price: maxSlider.value
-        });
-    });
+    minSlider.addEventListener('change', updateURL);
 
     maxSlider.addEventListener('input', function() {
         if (parseInt(this.value) < parseInt(minSlider.value)) {
@@ -331,12 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDisplays();
     });
 
-    maxSlider.addEventListener('change', function() {
-        updateURLWithParams({
-            min_price: minSlider.value,
-            max_price: this.value
-        });
-    });
+    maxSlider.addEventListener('change', updateURL);
 
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(checkbox => {
@@ -344,9 +328,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
                 .map(cb => cb.value);
             
-            updateURLWithParams({
-                categories: checkedCategories
-            });
+            const params = new URLSearchParams(window.location.search);
+            
+            // Очищаем старые категории
+            params.delete('category');
+            
+            // Добавляем выбранные категории
+            checkedCategories.forEach(cat => params.append('category', cat));
+            
+            // Обновляем URL и перезагружаем страницу
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
         });
     });
 
