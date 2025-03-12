@@ -32,10 +32,17 @@ INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
 if not os.path.exists(INSTANCE_DIR):
     os.makedirs(INSTANCE_DIR, mode=0o777)
 
+# Конфигурация социальных сетей
+SOCIAL_MEDIA = {
+    'instagram': 'https://www.instagram.com/greleolxpw',
+    'telegram': 'https://t.me/Cursor_shop'
+}
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{os.path.join(INSTANCE_DIR, "shop.db")}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SOCIAL_MEDIA'] = SOCIAL_MEDIA
 
 # Отключаем кэширование шаблонов
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -339,6 +346,9 @@ def init_db():
 def inject_categories():
     return dict(categories=Category.query.all())
 
+@app.context_processor
+def inject_social_media():
+    return dict(social_media=SOCIAL_MEDIA)
 
 def get_random_product_image(category_id):
     try:
