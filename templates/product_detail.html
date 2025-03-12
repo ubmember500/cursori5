@@ -11,7 +11,12 @@ body .product-info [class*="bi-heart"],
 body .product-info button:has(> .bi-heart),
 body .product-info a:has(> .bi-heart),
 body .product-info .btn:has(> .bi-heart),
-body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
+body .product-info .btn.btn-outline-secondary:has(> .bi-heart),
+body button.btn.btn-outline-dark.btn-lg,
+body button.btn-outline-dark:has(i.fa-heart),
+body button:has(> i.fas.fa-heart),
+body .btn:has(> i.fas.fa-heart.me-2),
+body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
@@ -493,7 +498,11 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
                         'button:contains("В избранное")',
                         'a:contains("В избранное")',
                         '.btn:contains("В избранное")',
-                        'button.btn-outline-dark.btn-lg'
+                        'button.btn-outline-dark.btn-lg',
+                        'button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart)',
+                        'button:has(i.fas.fa-heart.me-2)',
+                        '.btn-outline-dark:has(.fa-heart)',
+                        'button.btn.btn-outline-dark'
                     ];
 
                     // Удаляем все найденные элементы
@@ -601,6 +610,38 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
                 function changeImage(src) {
                     document.getElementById('mainImage').src = src;
                 }
+
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Функция для удаления кнопки избранного
+                    function removeFavoriteButton() {
+                        const buttons = document.querySelectorAll('button');
+                        buttons.forEach(button => {
+                            if (button.classList.contains('btn-outline-dark') && 
+                                button.classList.contains('btn-lg') && 
+                                button.querySelector('i.fas.fa-heart')) {
+                                button.remove();
+                            }
+                        });
+                    }
+
+                    // Удаляем кнопку при загрузке страницы
+                    removeFavoriteButton();
+
+                    // Наблюдаем за изменениями в DOM
+                    const observer = new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            if (mutation.addedNodes.length) {
+                                removeFavoriteButton();
+                            }
+                        });
+                    });
+
+                    // Настраиваем наблюдение за всем документом
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                });
                 </script>
             </div>
         </div>
