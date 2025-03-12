@@ -4,6 +4,7 @@
 body {
     font-family: 'Poppins', sans-serif;
     color: #333;
+    contain: content;
 }
 
 /* Стили для ссылок, исключая специальные кнопки */
@@ -135,26 +136,24 @@ footer {
     }
 }
 
-/* Скрываем кнопку избранного */
+/* Максимально строгие правила для скрытия нежелательных кнопок */
+body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(i[class*="heart"]),
+body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(i[class*="fa-heart"]),
+body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(span:contains("В избранное")),
+body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(> .bi-heart),
+body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(> .fa-heart),
+body *:not(.buy-now-button):not(.add-to-cart-button).btn-outline-dark,
+body *:not(.buy-now-button):not(.add-to-cart-button).btn-outline-secondary,
 #add-to-favorites,
-.btn-outline-secondary,
-[class*="bi-heart"],
-button:has(> .bi-heart),
-a:has(> .bi-heart),
-.btn-outline-secondary:has(> .bi-heart),
-.product-detail button:has(> .bi-heart),
-.product-detail a:has(> .bi-heart),
-.product-detail .btn-outline-secondary:has(> .bi-heart),
-.product-detail [class*="bi-heart"],
-.product-detail #add-to-favorites,
-.product-detail .btn-outline-secondary,
-button.btn-outline-dark:has(> i.fas.fa-heart),
-button.btn-outline-dark:has(> i.fa-heart),
-.btn:has(> .fa-heart),
-button:has(> .fas.fa-heart),
-button:has(> i[class*="heart"]),
-.btn-outline-dark:has(i.fas.fa-heart),
-button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
+[data-favorite],
+[data-favorites],
+[data-add-to-favorites],
+[data-remove-from-favorites],
+[class*="favorite"],
+[id*="favorite"],
+button:has(i.fa-heart),
+a:has(i.fa-heart),
+.btn:has(i.fa-heart) {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
@@ -168,12 +167,26 @@ button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart) {
     border: 0 !important;
     clip: rect(0 0 0 0) !important;
     clip-path: inset(50%) !important;
+    z-index: -9999 !important;
+    transform: scale(0) !important;
 }
 
-/* Дополнительно скрываем через атрибуты */
-[data-favorite],
-[data-favorites],
-[data-add-to-favorites],
-[data-remove-from-favorites] {
-    display: none !important;
+/* Защита от динамического добавления */
+body {
+    contain: content;
+}
+
+/* Разрешаем только нужные кнопки */
+.buy-now-button,
+.add-to-cart-button {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    clip: auto !important;
+    clip-path: none !important;
+    z-index: auto !important;
+    transform: none !important;
 }

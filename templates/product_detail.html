@@ -252,6 +252,20 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
         height: 200px;
     }
 }
+
+/* Дополнительные стили для защиты от внешних изменений */
+#action-buttons {
+    contain: content;
+}
+#action-buttons > *:not(.buy-now-button):not(.add-to-cart-button) {
+    display: none !important;
+}
+/* Запрещаем добавление новых элементов через JavaScript */
+#action-buttons::after,
+#action-buttons::before {
+    display: none !important;
+    content: none !important;
+}
 </style>
 {% endblock %}
 
@@ -314,16 +328,13 @@ body .product-info .btn.btn-outline-secondary:has(> .bi-heart) {
                 </div>
 
                 <!-- Кнопки действий -->
-                <div class="d-grid gap-2">
-                    {% set buttons %}
-                    <button type="button" class="btn btn-primary btn-lg" onclick="submitForm('checkout')">
+                <div class="d-grid gap-2" id="action-buttons">
+                    <button type="button" class="btn btn-primary btn-lg buy-now-button" onclick="submitForm('checkout')">
                         <i class="fas fa-credit-card me-2"></i>Купить сейчас
                     </button>
-                    <button type="button" class="btn btn-outline-primary btn-lg" onclick="submitForm('cart')">
+                    <button type="button" class="btn btn-outline-primary btn-lg add-to-cart-button" onclick="submitForm('cart')">
                         <i class="fas fa-shopping-cart me-2"></i>Добавить в корзину
                     </button>
-                    {% endset %}
-                    {{ buttons|safe }}
                 </div>
 
                 <!-- Скрытые формы для отправки -->
