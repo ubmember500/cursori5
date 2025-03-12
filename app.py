@@ -1,6 +1,6 @@
 # from liqpay import LiqPay  # Temporarily commented out
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, g, make_response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, g, make_response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import os
@@ -13,38 +13,175 @@ import requests
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 from flask_caching import Cache
-from functools import lru_cache
+from functools import lru_cache, wraps
 from threading import Thread
 from dotenv import load_dotenv
+from flask_talisman import Talisman  # Добавляем Talisman для CSP
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_migrate import Migrate
+import bleach
+import re
 
 # Загрузка переменных окружения
 load_dotenv()
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///shop.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Session configuration
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-app.config['SESSION_TYPE'] = 'filesystem'
+# Настройка CSP
+csp = {
+    'default-src': "'none'",  # Запрещаем все по умолчанию
+    'script-src': [
+        "'self'",
+        "'unsafe-inline'",  # Только для встроенных скриптов
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js'  # Только Bootstrap
+    ],
+    'style-src': [
+        "'self'",
+        "'unsafe-inline'",
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+    ],
+    'font-src': [
+        "'self'",
+        'https://cdnjs.cloudflare.com'  # Только для Font Awesome
+    ],
+    'img-src': [
+        "'self'",
+        'data:',
+        'https:'  # Разрешаем загрузку изображений по HTTPS
+    ],
+    'connect-src': "'none'",  # Запрещаем все сетевые подключения
+    'frame-src': "'none'",    # Запрещаем фреймы
+    'frame-ancestors': "'none'",  # Запрещаем встраивание сайта в iframe
+    'form-action': "'self'",  # Разрешаем отправку форм только на наш домен
+    'base-uri': "'none'",     # Запрещаем изменение base URI
+    'object-src': "'none'",   # Запрещаем загрузку объектов
+    'manifest-src': "'none'", # Запрещаем манифесты
+    'media-src': "'none'",    # Запрещаем медиа
+    'worker-src': "'none'",   # Запрещаем веб-воркеры
+    'child-src': "'none'",    # Запрещаем дочерние фреймы
+    'prefetch-src': "'none'"  # Запрещаем предзагрузку
+}
+
+# Применяем CSP и другие заголовки безопасности
+talisman = Talisman(
+    app,
+    force_https=True,
+    strict_transport_security=True,
+    session_cookie_secure=True,
+    session_cookie_http_only=True,
+    feature_policy={
+        'geolocation': "'none'",
+        'midi': "'none'",
+        'notifications': "'none'",
+        'push': "'none'",
+        'sync-xhr': "'none'",
+        'microphone': "'none'",
+        'camera': "'none'",
+        'magnetometer': "'none'",
+        'gyroscope': "'none'",
+        'speaker': "'none'",
+        'vibrate': "'none'",
+        'fullscreen': "'none'",
+        'payment': "'none'"
+    },
+    content_security_policy=csp,
+    content_security_policy_nonce_in=['script-src'],
+    referrer_policy='strict-origin-when-cross-origin',
+    permissions_policy={
+        'accelerometer': [],
+        'ambient-light-sensor': [],
+        'autoplay': [],
+        'battery': [],
+        'camera': [],
+        'display-capture': [],
+        'document-domain': [],
+        'encrypted-media': [],
+        'execution-while-not-rendered': [],
+        'execution-while-out-of-viewport': [],
+        'fullscreen': [],
+        'geolocation': [],
+        'gyroscope': [],
+        'magnetometer': [],
+        'microphone': [],
+        'midi': [],
+        'navigation-override': [],
+        'payment': [],
+        'picture-in-picture': [],
+        'publickey-credentials-get': [],
+        'screen-wake-lock': [],
+        'sync-xhr': [],
+        'usb': [],
+        'web-share': [],
+        'xr-spatial-tracking': []
+    }
+)
+
+# Настройка безопасной сессии
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
-# Database configuration
-basedir = os.path.abspath(os.path.dirname(__file__))
-db_path = os.path.expanduser('~/cursor_shop.db')  # Изменяем путь на домашнюю директорию
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key')
-
-# Email configuration
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
+# Настройка почты
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
 mail = Mail(app)
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+# Настройка Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Middleware для защиты от XSS
+def xss_protection_middleware():
+    def sanitize_input(text):
+        if isinstance(text, str):
+            # Очистка HTML-тегов
+            text = bleach.clean(text, tags=[], attributes={}, strip=True)
+            # Экранирование специальных символов
+            text = bleach.linkify(text)
+            return text
+        return text
+
+    @app.before_request
+    def before_request():
+        # Защита данных формы
+        if request.form:
+            request.form = {k: sanitize_input(v) for k, v in request.form.items()}
+        # Защита параметров URL
+        if request.args:
+            request.args = {k: sanitize_input(v) for k, v in request.args.items()}
+        # Защита JSON данных
+        if request.is_json:
+            json_data = request.get_json()
+            if isinstance(json_data, dict):
+                request._cached_json = {k: sanitize_input(v) for k, v in json_data.items()}
+
+    @app.after_request
+    def after_request(response):
+        # Добавляем дополнительные заголовки безопасности
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+
+# Активируем middleware
+xss_protection_middleware()
 
 # LiqPay configuration
 # LIQPAY_PUBLIC_KEY = os.getenv('LIQPAY_PUBLIC_KEY')

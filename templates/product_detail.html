@@ -306,11 +306,14 @@ body .btn:contains("В избранное") {
     gap: 1rem;
     margin: 2rem 0;
     isolation: isolate;
+    contain: content;
+    position: relative;
 }
 
 .isolated-button-wrapper {
     position: relative;
     isolation: isolate;
+    contain: content;
 }
 
 .isolated-button {
@@ -324,6 +327,7 @@ body .btn:contains("В избранное") {
     transition: filter 0.2s;
     position: relative;
     isolation: isolate;
+    contain: content;
 }
 
 .isolated-button:hover {
@@ -338,6 +342,19 @@ body .btn:contains("В избранное") {
     background-color: white;
     color: var(--button-secondary-color);
     border: 2px solid var(--button-secondary-color);
+}
+
+/* Запрещаем добавление любых элементов кроме нашей кнопки */
+.isolated-buttons-component > *:not(.isolated-button-wrapper),
+.isolated-button-wrapper > *:not(.isolated-button),
+.isolated-button > *:not(.isolated-button-text) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    position: absolute !important;
+    pointer-events: none !important;
 }
 </style>
 {% endblock %}
@@ -378,40 +395,42 @@ body .btn:contains("В избранное") {
 
                 <!-- Выбор размера -->
                 <div class="size-selector">
-                    <h5>Размер:</h5>
+                <h5>Размер:</h5>
                     {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
                     <input type="radio" name="size" id="size-{{ size }}" value="{{ size }}" required>
                     <label for="size-{{ size }}">{{ size }}</label>
                     {% endfor %}
-                </div>
+            </div>
 
                 <!-- Выбор цвета -->
                 <div class="color-selector">
-                    <h5>Цвет:</h5>
+                <h5>Цвет:</h5>
                     {% for color in ['Белый', 'Черный', 'Синий', 'Красный'] %}
                     <input type="radio" name="color" id="color-{{ color }}" value="{{ color }}" required>
                     <label for="color-{{ color }}">{{ color }}</label>
                     {% endfor %}
-                </div>
+            </div>
 
                 <!-- Выбор количества -->
                 <div class="quantity-selector">
-                    <h5>Количество:</h5>
+                <h5>Количество:</h5>
                     <input type="number" id="quantity" name="quantity" value="1" min="1" max="10">
-                </div>
+            </div>
 
                 <!-- Кнопки действий (полностью изолированный компонент) -->
-                <div class="isolated-buttons-component">
-                    <div class="isolated-button-wrapper">
+                <div class="isolated-buttons-component" style="contain: content; isolation: isolate;">
+                    <div class="isolated-button-wrapper" style="contain: content; isolation: isolate;">
                         <button type="button" 
                                 class="isolated-button isolated-button--secondary" 
-                                onclick="handleAddToCart()">
+                                onclick="handleAddToCart()"
+                                style="contain: content; isolation: isolate;">
                             В корзину
-                        </button>
-                    </div>
+                </button>
+            </div>
                 </div>
 
                 <style>
+                    /* Изолируем компонент с кнопками */
                     .isolated-buttons-component {
                         --button-primary-color: #0d6efd;
                         --button-secondary-color: #6c757d;
@@ -422,11 +441,27 @@ body .btn:contains("В избранное") {
                         gap: 1rem;
                         margin: 2rem 0;
                         isolation: isolate;
+                        contain: content;
+                        position: relative;
+                    }
+
+                    /* Запрещаем добавление любых элементов кроме нашей кнопки */
+                    .isolated-buttons-component > *:not(.isolated-button-wrapper),
+                    .isolated-button-wrapper > *:not(.isolated-button),
+                    .isolated-button > *:not(.isolated-button-text) {
+                        display: none !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                        width: 0 !important;
+                        height: 0 !important;
+                        position: absolute !important;
+                        pointer-events: none !important;
                     }
 
                     .isolated-button-wrapper {
                         position: relative;
                         isolation: isolate;
+                        contain: content;
                     }
 
                     .isolated-button {
@@ -440,6 +475,7 @@ body .btn:contains("В избранное") {
                         transition: filter 0.2s;
                         position: relative;
                         isolation: isolate;
+                        contain: content;
                     }
 
                     .isolated-button:hover {
@@ -465,6 +501,23 @@ body .btn:contains("В избранное") {
                 </form>
 
                 <script>
+                // Блокируем добавление новых элементов в компонент с кнопками
+                const buttonsComponent = document.querySelector('.isolated-buttons-component');
+                const buttonWrapper = document.querySelector('.isolated-button-wrapper');
+                const cartButton = document.querySelector('.isolated-button');
+
+                // Защищаем от изменений
+                Object.freeze(buttonsComponent);
+                Object.freeze(buttonWrapper);
+                Object.freeze(cartButton);
+
+                // Блокируем добавление через innerHTML
+                const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+                Object.defineProperty(buttonsComponent, 'innerHTML', {
+                    set: function() { return; },
+                    get: function() { return originalInnerHTML.get.call(this); }
+                });
+
                 function handleAddToCart() {
                     const quantity = document.getElementById('quantity').value;
                     const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
@@ -543,11 +596,11 @@ body .btn:contains("В избранное") {
                         <div class="review-header">
                             <h5>Анна М.</h5>
                             <div class="review-rating">
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
                             </div>
                         </div>
                         <p>Отличное качество! Размер соответствует указанному. Очень довольна покупкой!</p>

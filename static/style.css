@@ -4,10 +4,9 @@
 body {
     font-family: 'Poppins', sans-serif;
     color: #333;
-    contain: content;
 }
 
-/* Стили для ссылок, исключая специальные кнопки */
+/* Стили для ссылок */
 a:not([class]) {
     text-decoration: none;
     color: inherit;
@@ -134,59 +133,4 @@ footer {
     .product-detail .product-image-container {
         height: 300px;
     }
-}
-
-/* Максимально строгие правила для скрытия нежелательных кнопок */
-body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(i[class*="heart"]),
-body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(i[class*="fa-heart"]),
-body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(span:contains("В избранное")),
-body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(> .bi-heart),
-body *:not(.buy-now-button):not(.add-to-cart-button)[class*="btn"]:has(> .fa-heart),
-body *:not(.buy-now-button):not(.add-to-cart-button).btn-outline-dark,
-body *:not(.buy-now-button):not(.add-to-cart-button).btn-outline-secondary,
-#add-to-favorites,
-[data-favorite],
-[data-favorites],
-[data-add-to-favorites],
-[data-remove-from-favorites],
-[class*="favorite"],
-[id*="favorite"],
-button:has(i.fa-heart),
-a:has(i.fa-heart),
-.btn:has(i.fa-heart) {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    position: absolute !important;
-    left: -9999px !important;
-    width: 0 !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: 0 !important;
-    clip: rect(0 0 0 0) !important;
-    clip-path: inset(50%) !important;
-    z-index: -9999 !important;
-    transform: scale(0) !important;
-}
-
-/* Защита от динамического добавления */
-body {
-    contain: content;
-}
-
-/* Разрешаем только нужные кнопки */
-.buy-now-button,
-.add-to-cart-button {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: static !important;
-    width: auto !important;
-    height: auto !important;
-    clip: auto !important;
-    clip-path: none !important;
-    z-index: auto !important;
-    transform: none !important;
 }
