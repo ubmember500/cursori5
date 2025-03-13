@@ -234,6 +234,16 @@ class NewsletterSubscription(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
 
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='pending')  # pending, processing, shipped, delivered, cancelled
+    total_amount = db.Column(db.Float, nullable=False)
+    items = db.Column(db.JSON)  # Хранит список товаров в формате JSON
+    user = db.relationship('User', backref='orders')
+
+
 class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.String(255), unique=True)
@@ -713,20 +723,15 @@ def checkout():
 
     if request.method == 'POST':
         try:
-            # Создаем новый заказ
-            new_order = {
-                'id': len(session.get('orders', [])) + 1,
-                'created_at': datetime.now().strftime('%d.%m.%Y %H:%M'),
-                'status': 'pending',
-                'total_amount': total,
-                'items': cart_items
-            }
+            # Создаем новый заказ в базе данных
+            new_order = Order(
+                user_id=g.user.id,
+                total_amount=total,
+                items=cart_items  # JSON-совместимый список товаров
+            )
             
-            # Добавляем заказ в список заказов в сессии
-            if 'orders' not in session:
-                session['orders'] = []
-            session['orders'].append(new_order)
-            session.modified = True
+            db.session.add(new_order)
+            db.session.commit()
             
             # Очищаем корзину
             session.pop('cart', None)
@@ -735,6 +740,7 @@ def checkout():
             return redirect(url_for('my_orders'))
             
         except Exception as e:
+            db.session.rollback()
             print(f"Ошибка при создании заказа: {str(e)}")
             flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
             return redirect(url_for('cart'))
@@ -1330,9 +1336,21 @@ def quick_order():
 @login_required
 def my_orders():
     try:
-        # Получаем заказы из сессии
-        orders = session.get('orders', [])
-        return render_template('my_orders.html', orders=orders)
+        # Получаем заказы текущего пользователя из базы данных
+        orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
+        
+        # Преобразуем заказы в формат, ожидаемый шаблоном
+        orders_data = []
+        for order in orders:
+            orders_data.append({
+                'id': order.id,
+                'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
+                'status': order.status,
+                'total_amount': order.total_amount,
+                'items': order.items
+            })
+        
+        return render_template('my_orders.html', orders=orders_data)
     except Exception as e:
         print(f"Ошибка при получении заказов: {str(e)}")
         flash('Произошла ошибка при загрузке заказов', 'error')
