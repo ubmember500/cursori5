@@ -216,7 +216,9 @@ class Order(db.Model):
     email = db.Column(db.String(120), nullable=False)
     address = db.Column(db.Text, nullable=False)
     payment_method = db.Column(db.String(20), nullable=False)
-    messenger = db.Column(db.String(100))
+    contact_phone = db.Column(db.String(20))
+    telegram = db.Column(db.String(100))
+    viber = db.Column(db.String(100))
     total_price = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     items = db.relationship('OrderItem', backref='order', lazy=True)
@@ -1152,15 +1154,20 @@ def quick_order():
         email = request.form.get('email')
         address = request.form.get('address')
         payment_method = request.form.get('payment_method')
-        messenger = request.form.get('messenger')
+        contact_phone = request.form.get('contact_phone')
+        telegram = request.form.get('telegram')
+        viber = request.form.get('viber')
 
         # Проверяем обязательные поля
         if not all([product_id, size, color, quantity, name, phone, email, address, payment_method]):
             return jsonify({'success': False, 'error': 'Все поля обязательны для заполнения'})
 
-        # Проверяем поле messenger для оплаты картой
-        if payment_method == 'card' and not messenger:
-            return jsonify({'success': False, 'error': 'Пожалуйста, укажите ваш Telegram или Viber'})
+        # Проверяем поля контактной информации для оплаты картой
+        if payment_method == 'card':
+            if not contact_phone:
+                return jsonify({'success': False, 'error': 'Пожалуйста, укажите номер телефона для связи'})
+            if not telegram and not viber:
+                return jsonify({'success': False, 'error': 'Пожалуйста, укажите хотя бы один способ связи (Telegram или Viber)'})
 
         # Создаем заказ в базе данных
         order = Order(
@@ -1171,7 +1178,9 @@ def quick_order():
             email=email,
             address=address,
             payment_method=payment_method,
-            messenger=messenger if payment_method == 'card' else None,
+            contact_phone=contact_phone if payment_method == 'card' else None,
+            telegram=telegram if payment_method == 'card' else None,
+            viber=viber if payment_method == 'card' else None,
             total_price=float(product_price) * int(quantity)
         )
         db.session.add(order)
@@ -1212,7 +1221,10 @@ def send_order_notification(order):
         Адрес: {order.address}
         
         Способ оплаты: {'Оплата картой' if order.payment_method == 'card' else 'Наложенный платеж при получении'}
-        {'Telegram/Viber: ' + order.messenger if order.payment_method == 'card' else ''}
+        {'Контактная информация для связи:' if order.payment_method == 'card' else ''}
+        {'Телефон для связи: ' + order.contact_phone if order.payment_method == 'card' and order.contact_phone else ''}
+        {'Telegram: ' + order.telegram if order.payment_method == 'card' and order.telegram else ''}
+        {'Viber: ' + order.viber if order.payment_method == 'card' and order.viber else ''}
         
         Сумма заказа: {order.total_price} ₴
         {'+ 60 ₴ доставка Новой почтой' if order.payment_method == 'cod' else ''}
