@@ -253,7 +253,12 @@ def init_db():
 
 @app.context_processor
 def inject_categories():
-    return dict(categories=Category.query.all())
+    try:
+        categories = Category.query.all()
+        return dict(categories=categories)
+    except Exception as e:
+        print(f"Ошибка при получении категорий: {e}")
+        return dict(categories=[])
 
 @app.context_processor
 def inject_social_media():
@@ -349,23 +354,22 @@ def home():
 @app.route('/products')
 def products():
     try:
-        print("Начало обработки запроса /products")  # Отладочный вывод
+        print("Начало обработки запроса /products")
         
         # Получаем параметры фильтрации
         categories = request.args.getlist('category')
         search_query = request.args.get('q')
         sort = request.args.get('sort', 'default')
         
-        print(f"Полученные параметры: categories={categories}, search={search_query}, sort={sort}")  # Отладочный вывод
+        print(f"Полученные параметры: categories={categories}, search={search_query}, sort={sort}")
         
         # Получаем и валидируем параметры цены
         try:
             min_price = request.args.get('min_price')
             max_price = request.args.get('max_price')
             
-            print(f"Исходные параметры цены: min_price={min_price}, max_price={max_price}")  # Отладочный вывод
+            print(f"Исходные параметры цены: min_price={min_price}, max_price={max_price}")
             
-            # Если параметры не указаны, используем значения по умолчанию
             if min_price is None:
                 min_price = 0
             else:
@@ -376,16 +380,15 @@ def products():
             else:
                 max_price = int(float(max_price))
             
-            print(f"Преобразованные параметры цены: min_price={min_price}, max_price={max_price}")  # Отладочный вывод
-                
-            # Проверяем и корректируем границы
+            print(f"Преобразованные параметры цены: min_price={min_price}, max_price={max_price}")
+            
             min_price = max(0, min(min_price, 20000))
             max_price = max(min_price, min(max_price, 20000))
             
-            print(f"Скорректированные параметры цены: min_price={min_price}, max_price={max_price}")  # Отладочный вывод
+            print(f"Скорректированные параметры цены: min_price={min_price}, max_price={max_price}")
             
         except (ValueError, TypeError) as e:
-            print(f"Ошибка при обработке параметров цены: {e}")  # Отладочный вывод
+            print(f"Ошибка при обработке параметров цены: {e}")
             min_price, max_price = 0, 20000
         
         # Базовый запрос
@@ -394,12 +397,16 @@ def products():
         # Фильтр по категориям
         if categories:
             try:
+                # Преобразуем строку в список, если передана одна категория
+                if isinstance(categories, str):
+                    categories = [categories]
+                
                 category_ids = [int(cat) for cat in categories if cat and cat.isdigit()]
                 if category_ids:
                     query = query.filter(Product.category_id.in_(category_ids))
-                print(f"Фильтрация по категориям: {category_ids}")  # Отладочный вывод
+                print(f"Фильтрация по категориям: {category_ids}")
             except Exception as e:
-                print(f"Ошибка при обработке категорий: {e}")  # Отладочный вывод
+                print(f"Ошибка при обработке категорий: {e}")
         
         # Фильтр по поиску
         if search_query:
@@ -421,19 +428,22 @@ def products():
         
         # Получаем все товары
         products = query.all()
-        print(f"Найдено товаров: {len(products)}")  # Отладочный вывод
+        print(f"Найдено товаров: {len(products)}")
         
         # Получаем все категории для фильтров
         all_categories = Category.query.all()
-        print(f"Всего категорий: {len(all_categories)}")  # Отладочный вывод
+        print(f"Всего категорий: {len(all_categories)}")
         
         response = make_response(render_template('products.html', 
                                               products=products, 
-                                              categories=all_categories))
+                                              categories=all_categories,
+                                              min_price=min_price,
+                                              max_price=max_price,
+                                              selected_categories=category_ids if 'category_ids' in locals() else []))
         return add_no_cache_headers(response)
         
     except Exception as e:
-        print(f"Критическая ошибка в route products: {e}")  # Отладочный вывод
+        print(f"Критическая ошибка в route products: {e}")
         return render_template('error.html', error="Произошла ошибка при загрузке товаров"), 500
 
 

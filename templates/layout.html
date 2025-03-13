@@ -257,7 +257,11 @@
                         </a>
                         <ul class="dropdown-menu">
                             {% for category in categories %}
-                            <li><a class="dropdown-item" href="{{ url_for('products', category=category.id) }}">{{ category.name }}</a></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('products', category=[category.id]) }}">
+                                    {{ category.name }}
+                                </a>
+                            </li>
                             {% endfor %}
                         </ul>
                     </li>
