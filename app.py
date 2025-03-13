@@ -244,11 +244,12 @@ class NewsletterSubscription(db.Model):
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='pending')  # pending, processing, shipped, delivered, cancelled
     total_amount = db.Column(db.Float, nullable=False)
     items = db.Column(db.JSON)  # Хранит список товаров в формате JSON
+    customer_info = db.Column(db.JSON)  # Хранит информацию о покупателе
     user = db.relationship('User', backref='orders')
 
 
@@ -735,7 +736,13 @@ def checkout():
                 user_id=current_user.id,
                 total_amount=total,
                 status='pending',
-                items=cart_items
+                items=cart_items,
+                customer_info={
+                    'name': current_user.first_name + ' ' + current_user.last_name,
+                    'phone': current_user.phone,
+                    'email': current_user.email,
+                    'address': current_user.address
+                }
             )
             
             # Уменьшаем количество товаров на складе
@@ -1088,7 +1095,14 @@ def subscribe_newsletter():
 @login_required
 def my_orders():
     try:
-        orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
+        # Получаем email текущего пользователя
+        user_email = current_user.email
+        
+        # Получаем все заказы, где customer_info содержит этот email
+        orders = Order.query.filter(
+            Order.customer_info['email'].astext == user_email
+        ).order_by(Order.created_at.desc()).all()
+        
         orders_with_items = []
         for order in orders:
             # Получаем товары из JSON-данных
@@ -1135,6 +1149,134 @@ def test_email():
     except Exception as e:
         print(f"\nОшибка при тестовой отправке: {str(e)}")
         return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'})
+
+@app.route('/quick_order', methods=['POST'])
+def quick_order():
+    try:
+        # Получаем данные из формы
+        product_id = request.form.get('product_id')
+        product_name = request.form.get('product_name')
+        price = float(request.form.get('price'))
+        size = request.form.get('size')
+        color = request.form.get('color')
+        quantity = int(request.form.get('quantity'))
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        address = request.form.get('address')
+        payment_method = request.form.get('payment_method')
+        telegram = request.form.get('telegram')
+        viber = request.form.get('viber')
+
+        # Проверяем наличие товара
+        product = Product.query.get_or_404(product_id)
+        if quantity > product.stock:
+            return jsonify({
+                'success': False,
+                'message': 'Извините, данного количества товара нет в наличии'
+            })
+
+        # Создаем новый заказ
+        new_order = Order(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            total_amount=price * quantity,
+            status='pending',
+            items=[{
+                'name': product_name,
+                'price': price,
+                'quantity': quantity,
+                'total': price * quantity,
+                'size': size,
+                'color': color
+            }],
+            customer_info={
+                'name': name,
+                'phone': phone,
+                'email': email,
+                'address': address,
+                'payment_method': payment_method,
+                'telegram': telegram,
+                'viber': viber
+            }
+        )
+
+        # Уменьшаем количество товара на складе
+        product.stock -= quantity
+
+        # Сохраняем заказ в базу данных
+        db.session.add(new_order)
+        db.session.commit()
+
+        # Отправляем email с подтверждением
+        send_order_confirmation_email(email, new_order)
+
+        return jsonify({
+            'success': True,
+            'message': 'Заказ успешно оформлен'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Ошибка при создании быстрого заказа: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Произошла ошибка при оформлении заказа. Попробуйте позже.'
+        })
+
+def send_order_confirmation_email(email, order):
+    try:
+        # Формируем тему письма
+        subject = f'Подтверждение заказа #{order.id}'
+        
+        # Формируем тело письма
+        body = f"""
+        Уважаемый покупатель!
+        
+        Спасибо за ваш заказ в нашем магазине. Мы получили ваш заказ и обработаем его в ближайшее время.
+        
+        Детали заказа:
+        Номер заказа: #{order.id}
+        Дата заказа: {order.created_at.strftime('%d.%m.%Y %H:%M')}
+        Статус: {order.status}
+        
+        Товары в заказе:
+        """
+        
+        # Добавляем информацию о товарах
+        for item in order.items:
+            body += f"""
+            - {item['name']}
+              Размер: {item['size']}
+              Цвет: {item['color']}
+              Количество: {item['quantity']}
+              Цена: {item['price']} грн
+              Сумма: {item['total']} грн
+            """
+        
+        body += f"""
+        
+        Общая сумма заказа: {order.total_amount} грн
+        
+        Мы свяжемся с вами в ближайшее время для подтверждения заказа.
+        
+        С уважением,
+        Команда Cursor Shop
+        """
+        
+        # Создаем объект сообщения
+        msg = Message(
+            subject=subject,
+            recipients=[email],
+            body=body
+        )
+        
+        # Отправляем письмо
+        mail.send(msg)
+        return True
+        
+    except Exception as e:
+        print(f"Ошибка при отправке email: {str(e)}")
+        return False
 
 if __name__ == '__main__':
     init_db()
