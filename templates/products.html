@@ -188,7 +188,7 @@
                     <h5>Категории</h5>
                     {% for category in categories %}
                     <div class="form-check">
-                        <input class="form-check-input category-filter" type="checkbox" name="category" value="{{ category.id }}" 
+                        <input class="form-check-input category-filter" type="radio" name="category" value="{{ category.id }}" 
                                id="category{{ category.id }}" {% if category.id|string == request.args.get('category') %}checked{% endif %}>
                         <label class="form-check-label" for="category{{ category.id }}">
                             {{ category.name }}
@@ -225,7 +225,7 @@
         <div class="col-md-9">
             <div class="sort-section d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Товары</h4>
-                <select class="form-select" style="width: auto;">
+                <select class="form-select" id="sortSelect" style="width: auto;">
                     <option value="default" {% if not request.args.get('sort') or request.args.get('sort') == 'default' %}selected{% endif %}>По умолчанию</option>
                     <option value="price_asc" {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>По возрастанию цены</option>
                     <option value="price_desc" {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>По убыванию цены</option>
@@ -252,7 +252,7 @@
                                    class="btn btn-outline-primary">Подробнее</a>
                                 <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;">
                                     <input type="hidden" name="quantity" value="1">
-                                    <input type="hidden" name="image" value="img/products/{{ product.image }}">
+                                    <input type="hidden" name="image" value="{{ product.image }}">
                                     <button type="submit" class="btn btn-primary w-100">В корзину</button>
                                 </form>
                             </div>
@@ -281,6 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const minDisplay = document.getElementById('minPriceDisplay');
     const maxDisplay = document.getElementById('maxPriceDisplay');
     const filterForm = document.getElementById('filterForm');
+    const sortSelect = document.getElementById('sortSelect');
     let debounceTimer;
 
     // Предотвращаем отправку формы
@@ -313,27 +314,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обновление URL с сохранением всех параметров
     function updateURLWithParams(newParams = {}) {
         try {
-            console.log('Обновление URL с параметрами:', newParams);
             const params = getCurrentParams();
             
             // Очищаем старые параметры категорий
             params.delete('category');
             
+            // Очищаем старые параметры цены
+            params.delete('min_price');
+            params.delete('max_price');
+            
+            // Очищаем старый параметр сортировки
+            params.delete('sort');
+            
+            // Добавляем новые параметры
             Object.entries(newParams).forEach(([key, value]) => {
-                if (value === null) {
-                    params.delete(key);
-                } else if (Array.isArray(value)) {
-                    value.forEach(v => params.append(key, v));
-                } else {
+                if (value !== null && value !== undefined && value !== '') {
                     params.set(key, value);
                 }
             });
-
-            console.log('Итоговые параметры URL:', params.toString());
             
             // Формируем новый URL
             const newUrl = `${window.location.pathname}?${params.toString()}`;
-            console.log('Новый URL:', newUrl);
             
             // Перезагружаем страницу с новыми параметрами
             window.location.href = newUrl;
@@ -344,29 +345,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Обработчики для категорий
-    document.querySelectorAll('.category-filter').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
+    document.querySelectorAll('.category-filter').forEach(radio => {
+        radio.addEventListener('change', function() {
             try {
-                console.log('Изменение категории:', this.value, this.checked);
-                
-                // Снимаем выделение с других чекбоксов
-                document.querySelectorAll('.category-filter').forEach(cb => {
-                    if (cb !== this) {
-                        cb.checked = false;
-                    }
-                });
-                
-                // Если чекбокс отмечен, отправляем его значение, иначе null
                 const categoryValue = this.checked ? this.value : null;
-                console.log('Значение категории для отправки:', categoryValue);
-                
                 const minValue = parseInt(minSlider.value);
                 const maxValue = parseInt(maxSlider.value);
+                const sortValue = sortSelect.value;
                 
                 updateURLWithParams({
                     category: categoryValue,
                     min_price: minValue,
-                    max_price: maxValue
+                    max_price: maxValue,
+                    sort: sortValue
                 });
             } catch (error) {
                 console.error('Ошибка при обработке категорий:', error);
@@ -395,11 +386,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const maxValue = parseInt(maxSlider.value);
             updateDisplays(minValue, maxValue);
 
+            // Получаем текущую категорию
+            const selectedCategory = document.querySelector('.category-filter:checked');
+            const categoryValue = selectedCategory ? selectedCategory.value : null;
+
             // Обновляем URL и данные с задержкой
             debounceUpdate(() => {
                 updateURLWithParams({
                     min_price: minValue,
-                    max_price: maxValue
+                    max_price: maxValue,
+                    category: categoryValue,
+                    sort: sortSelect.value
                 });
             });
         } catch (error) {
@@ -417,17 +414,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Обработчик для сортировки
-    const sortSelect = document.querySelector('.sort-section select');
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
             try {
                 const minValue = parseInt(minSlider.value);
                 const maxValue = parseInt(maxSlider.value);
+                const selectedCategory = document.querySelector('.category-filter:checked');
+                const categoryValue = selectedCategory ? selectedCategory.value : null;
                 
                 updateURLWithParams({
                     sort: this.value,
                     min_price: minValue,
-                    max_price: maxValue
+                    max_price: maxValue,
+                    category: categoryValue
                 });
             } catch (error) {
                 console.error('Ошибка при изменении сортировки:', error);

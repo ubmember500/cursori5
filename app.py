@@ -373,24 +373,29 @@ def products():
             
             print(f"Исходные параметры цены: min_price={min_price}, max_price={max_price}")
             
-            if min_price is None:
+            # Преобразуем и валидируем минимальную цену
+            if min_price is None or min_price == '':
                 min_price = 0
             else:
-                min_price = int(float(min_price))
-                
-            if max_price is None:
+                try:
+                    min_price = int(float(min_price))
+                except (ValueError, TypeError):
+                    min_price = 0
+                min_price = max(0, min(min_price, 20000))
+            
+            # Преобразуем и валидируем максимальную цену
+            if max_price is None or max_price == '':
                 max_price = 20000
             else:
-                max_price = int(float(max_price))
-            
-            print(f"Преобразованные параметры цены: min_price={min_price}, max_price={max_price}")
-            
-            min_price = max(0, min(min_price, 20000))
-            max_price = max(min_price, min(max_price, 20000))
+                try:
+                    max_price = int(float(max_price))
+                except (ValueError, TypeError):
+                    max_price = 20000
+                max_price = max(min_price, min(max_price, 20000))
             
             print(f"Скорректированные параметры цены: min_price={min_price}, max_price={max_price}")
             
-        except (ValueError, TypeError) as e:
+        except Exception as e:
             print(f"Ошибка при обработке параметров цены: {e}")
             min_price, max_price = 0, 20000
         
@@ -434,7 +439,7 @@ def products():
         print(f"Найдено товаров: {len(products)}")
         print("Список найденных товаров:")
         for product in products:
-            print(f"- {product.name} (категория: {product.category_id})")
+            print(f"- {product.name} (категория: {product.category_id}, цена: {product.price})")
         
         # Получаем все категории для фильтров
         all_categories = Category.query.all()
@@ -454,7 +459,7 @@ def products():
                                               categories=all_categories,
                                               min_price=min_price,
                                               max_price=max_price,
-                                              selected_category=category_id if 'category_id' in locals() else None))
+                                              selected_category=category if category else None))
         return add_no_cache_headers(response)
         
     except Exception as e:
