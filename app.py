@@ -1239,98 +1239,52 @@ def send_email_smtp(to_email, subject, body):
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
-        print("\n=== Начало обработки быстрого заказа ===")
-        
-        # Получаем данные из формы
         form_data = dict(request.form)
-        print("\nПолученные данные формы:")
-        for key, value in form_data.items():
-            print(f"{key}: {value}")
-
-        # Проверяем обязательные поля
-        required_fields = {
-            'product_id': 'ID товара',
-            'product_name': 'Название товара',
-            'size': 'Размер',
-            'color': 'Цвет',
-            'quantity': 'Количество',
-            'price': 'Цена',
-            'name': 'Имя',
-            'phone': 'Телефон',
-            'email': 'Email',
-            'address': 'Адрес',
-            'payment_method': 'Способ оплаты'
-        }
+        logger.info(f"Получены данные формы: {form_data}")
         
-        missing_fields = []
-        for field, display_name in required_fields.items():
-            if not form_data.get(field):
-                missing_fields.append(display_name)
-        
+        # Валидация обязательных полей
+        required_fields = ['name', 'phone', 'email', 'address', 'payment_method']
+        missing_fields = [field for field in required_fields if not form_data.get(field)]
         if missing_fields:
-            error_msg = f"Пожалуйста, заполните следующие поля: {', '.join(missing_fields)}"
-            print(f"\nОшибка: {error_msg}")
-            return jsonify({'success': False, 'message': error_msg})
-
-        # Получаем и валидируем данные
+            logger.error(f"Отсутствуют обязательные поля: {missing_fields}")
+            return jsonify({'success': False, 'message': f'Пожалуйста, заполните все обязательные поля: {", ".join(missing_fields)}'})
+        
+        # Получаем данные о товаре
         product_id = form_data.get('product_id')
         product_name = form_data.get('product_name')
+        price = form_data.get('price')
         size = form_data.get('size')
         color = form_data.get('color')
-        quantity = int(form_data.get('quantity', 1))
-        price = float(form_data.get('price', 0))
+        quantity = form_data.get('quantity')
+        
+        # Получаем данные о покупателе
         name = form_data.get('name')
         phone = form_data.get('phone')
         email = form_data.get('email')
         address = form_data.get('address')
         payment_method = form_data.get('payment_method')
+        
+        # Получаем данные о мессенджере для оплаты картой
         telegram = form_data.get('telegram')
         viber = form_data.get('viber')
-
-        print(f"\nОбработанные данные заказа:")
-        print(f"Товар ID: {product_id}")
-        print(f"Название: {product_name}")
-        print(f"Размер: {size}")
-        print(f"Цвет: {color}")
-        print(f"Количество: {quantity}")
-        print(f"Цена: {price}")
-        print(f"Имя: {name}")
-        print(f"Телефон: {phone}")
-        print(f"Email: {email}")
-        print(f"Адрес: {address}")
-        print(f"Способ оплаты: {payment_method}")
-        print(f"Telegram: {telegram}")
-        print(f"Viber: {viber}")
-
-        # Проверяем наличие товара
-        product = Product.query.get_or_404(product_id)
-        if product.stock < quantity:
-            error_msg = f"Недостаточно товара на складе. Требуется: {quantity}, В наличии: {product.stock}"
-            print(f"\nОшибка: {error_msg}")
-            return jsonify({'success': False, 'message': error_msg})
-
-        # Проверяем дополнительные поля для оплаты картой
+        
+        # Проверяем данные для оплаты картой
         if payment_method == 'card':
             if not telegram and not viber:
-                error_msg = "Для оплаты картой необходимо указать контакт в Telegram или Viber"
-                print(f"\nОшибка: {error_msg}")
-                return jsonify({'success': False, 'message': error_msg})
-
-        print("\nФормирование текста письма...")
-        # Формируем текст письма
-        email_body = f"""
+                logger.error("Не указан мессенджер для оплаты картой")
+                return jsonify({'success': False, 'message': 'Для оплаты картой необходимо указать контакт в Telegram или Viber'})
+        
+        # Формируем сообщение для администратора
+        admin_message = f"""
         Новый заказ:
         
         Товар: {product_name}
         Размер: {size}
         Цвет: {color}
         Количество: {quantity}
-        Цена за единицу: {price} ₴
-        Сумма: {price * quantity} ₴
-        Доставка: 60 ₴
-        Итого: {price * quantity + 60} ₴
+        Цена: {price} грн
         
-        Данные покупателя:
+        Покупатель:
         Имя: {name}
         Телефон: {phone}
         Email: {email}
@@ -1339,35 +1293,54 @@ def quick_order():
         """
         
         if payment_method == 'card':
-            messenger = 'Telegram' if telegram else 'Viber'
-            username = telegram if telegram else viber
-            email_body += f"\nМессенджер для связи: {messenger}\nUsername: {username}"
-
-        print("\nОтправка email с информацией о заказе...")
-        # Отправляем email через SMTP
-        if not send_email_smtp(app.config['ADMIN_EMAIL'], 'Новый заказ', email_body):
-            error_msg = "Ошибка отправки уведомления о заказе"
-            print(f"\nОшибка: {error_msg}")
-            return jsonify({'success': False, 'message': error_msg})
-
-        print("Email успешно отправлен")
-
-        # Уменьшаем количество товара на складе
-        product.stock -= quantity
-        db.session.commit()
-        print("Количество товара на складе обновлено")
-
-        print("=== Заказ успешно оформлен ===")
+            admin_message += f"""
+            Контакт для связи:
+            {'Telegram: ' + telegram if telegram else ''}
+            {'Viber: ' + viber if viber else ''}
+            """
+        
+        # Отправляем уведомление администратору
+        try:
+            send_email(
+                subject='Новый заказ',
+                body=admin_message,
+                recipients=[Config.MAIL_DEFAULT_SENDER]
+            )
+            logger.info("Уведомление администратору отправлено успешно")
+        except Exception as e:
+            logger.error(f"Ошибка отправки уведомления администратору: {str(e)}")
+        
+        # Формируем сообщение для покупателя
+        customer_message = f"""
+        Спасибо за ваш заказ!
+        
+        Детали заказа:
+        Товар: {product_name}
+        Размер: {size}
+        Цвет: {color}
+        Количество: {quantity}
+        Цена: {price} грн
+        Способ оплаты: {'Оплата картой' if payment_method == 'card' else 'Оплата при получении'}
+        
+        Мы свяжемся с вами в ближайшее время для подтверждения заказа.
+        """
+        
+        # Отправляем уведомление покупателю
+        try:
+            send_email(
+                subject='Подтверждение заказа',
+                body=customer_message,
+                recipients=[email]
+            )
+            logger.info("Уведомление покупателю отправлено успешно")
+        except Exception as e:
+            logger.error(f"Ошибка отправки уведомления покупателю: {str(e)}")
+        
         return jsonify({'success': True, 'message': 'Заказ успешно оформлен'})
-
+        
     except Exception as e:
-        error_msg = f"Произошла ошибка при оформлении заказа: {str(e)}"
-        print(f"\n❌ Ошибка при оформлении заказа:")
-        print(f"Тип ошибки: {type(e).__name__}")
-        print(f"Сообщение: {str(e)}")
-        import traceback
-        print(f"Полный стек ошибки:\n{traceback.format_exc()}")
-        return jsonify({'success': False, 'message': error_msg})
+        logger.error(f"Ошибка при обработке быстрого заказа: {str(e)}")
+        return jsonify({'success': False, 'message': 'Произошла ошибка при оформлении заказа'})
 
 @app.route('/test_email')
 def test_email():
