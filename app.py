@@ -224,25 +224,6 @@ class NewsletterSubscription(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
 
-class Order(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    total_amount = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, processing, shipped, delivered, cancelled
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    items = db.relationship('OrderItem', backref='order', lazy=True)
-    user = db.relationship('User', backref='orders')
-
-
-class OrderItem(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    quantity = db.Column(db.Integer, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    product = db.relationship('Product', backref='order_items')
-
-
 class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.String(255), unique=True)
@@ -722,34 +703,20 @@ def checkout():
 
     if request.method == 'POST':
         try:
-            # Создаем заказ
-            order = Order(
-                user_id=g.user.id,
-                total_amount=total,
-                status='pending'
-            )
-            db.session.add(order)
+            # Создаем новый заказ
+            new_order = {
+                'id': len(session.get('orders', [])) + 1,
+                'created_at': datetime.now().strftime('%d.%m.%Y %H:%M'),
+                'status': 'pending',
+                'total_amount': total,
+                'items': cart_items
+            }
             
-            # Добавляем товары к заказу
-            for item in cart_items:
-                product = Product.query.get(item['id'])
-                if product.stock < item['quantity']:
-                    db.session.rollback()
-                    flash(f'Извините, товар {item["name"]} закончился', 'error')
-                    return redirect(url_for('cart'))
-                
-                order_item = OrderItem(
-                    order=order,
-                    product_id=item['id'],
-                    quantity=item['quantity'],
-                    price=item['price']
-                )
-                db.session.add(order_item)
-                
-                # Уменьшаем количество товара на складе
-                product.stock -= item['quantity']
-            
-            db.session.commit()
+            # Добавляем заказ в список заказов в сессии
+            if 'orders' not in session:
+                session['orders'] = []
+            session['orders'].append(new_order)
+            session.modified = True
             
             # Очищаем корзину
             session.pop('cart', None)
@@ -758,8 +725,7 @@ def checkout():
             return redirect(url_for('my_orders'))
             
         except Exception as e:
-            db.session.rollback()
-            app.logger.error(f'Error creating order: {str(e)}')
+            print(f"Ошибка при создании заказа: {str(e)}")
             flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
             return redirect(url_for('cart'))
 
@@ -1354,30 +1320,9 @@ def quick_order():
 @login_required
 def my_orders():
     try:
-        # Получаем все заказы пользователя, отсортированные по дате создания (новые сверху)
-        orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
-        
-        # Для каждого заказа получаем его товары
-        orders_with_items = []
-        for order in orders:
-            order_items = []
-            for item in order.items:
-                product = Product.query.get(item.product_id)
-                if product:
-                    order_items.append({
-                        'product': product,
-                        'quantity': item.quantity,
-                        'price': item.price,
-                        'total': item.quantity * item.price
-                    })
-            
-            orders_with_items.append({
-                'order': order,
-                'items': order_items
-            })
-        
-        return render_template('my_orders.html', orders=orders_with_items)
-        
+        # Получаем заказы из сессии
+        orders = session.get('orders', [])
+        return render_template('my_orders.html', orders=orders)
     except Exception as e:
         print(f"Ошибка при получении заказов: {str(e)}")
         flash('Произошла ошибка при загрузке заказов', 'error')
