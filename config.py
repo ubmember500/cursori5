@@ -4,7 +4,7 @@ SMTP_CONFIG = {
     'MAIL_PORT': 587,
     'MAIL_USE_TLS': True,
     'MAIL_USERNAME': 'defensivelox@gmail.com',
-    'MAIL_PASSWORD': 'pgqmxxglsrsscaue',
+    'MAIL_PASSWORD': 'fmxx qexg xlpn lvbz',
     'MAIL_DEFAULT_SENDER': 'defensivelox@gmail.com',
     'ADMIN_EMAIL': 'defensivelox@gmail.com'
 } 

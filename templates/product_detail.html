@@ -712,7 +712,7 @@ body .btn:contains("В избранное") {
                                     <h4>Детали заказа</h4>
                                     <div class="order-item">
                                         <span>Товар:</span>
-                                        <span id="order_product_name"></span>
+                                        <span id="order_product_name">{{ product.name }}</span>
                                     </div>
                                     <div class="order-item">
                                         <span>Размер:</span>
@@ -742,35 +742,35 @@ body .btn:contains("В избранное") {
 
                                 <form id="quickOrderForm" onsubmit="handleQuickOrder(event)">
                                     <input type="hidden" name="product_id" value="{{ product.id }}">
-                                    <input type="hidden" name="product_name" id="cart_product_name">
-                                    <input type="hidden" name="size" id="cart_size">
-                                    <input type="hidden" name="color" id="cart_color">
-                                    <input type="hidden" name="quantity" id="cart_quantity">
-                                    <input type="hidden" name="price" id="cart_price">
-                                    <input type="hidden" name="telegram" id="telegram">
-                                    <input type="hidden" name="viber" id="viber">
+                                    <input type="hidden" name="product_name" value="{{ product.name }}">
+                                    <input type="hidden" name="size" id="quick_size">
+                                    <input type="hidden" name="color" id="quick_color">
+                                    <input type="hidden" name="quantity" id="quick_quantity">
+                                    <input type="hidden" name="price" id="quick_price" value="{{ product.price }}">
+                                    <input type="hidden" name="telegram" id="telegram_field">
+                                    <input type="hidden" name="viber" id="viber_field">
                                     
-                                    <div class="form-group">
+                                    <div class="form-group mb-3">
                                         <label for="name">Ваше имя *</label>
                                         <input type="text" class="form-control" id="name" name="name" required>
                                     </div>
                                     
-                                    <div class="form-group">
+                                    <div class="form-group mb-3">
                                         <label for="phone">Телефон *</label>
                                         <input type="tel" class="form-control" id="phone" name="phone" required>
                                     </div>
                                     
-                                    <div class="form-group">
+                                    <div class="form-group mb-3">
                                         <label for="email">Email *</label>
                                         <input type="email" class="form-control" id="email" name="email" required>
                                     </div>
                                     
-                                    <div class="form-group">
+                                    <div class="form-group mb-3">
                                         <label for="address">Адрес доставки *</label>
                                         <input type="text" class="form-control" id="address" name="address" required>
                                     </div>
 
-                                    <div class="form-group">
+                                    <div class="form-group mb-3">
                                         <label for="payment_method">Способ оплаты *</label>
                                         <select class="form-control" id="payment_method" name="payment_method" required onchange="togglePaymentFields()">
                                             <option value="">Выберите способ оплаты</option>
@@ -780,35 +780,27 @@ body .btn:contains("В избранное") {
                                     </div>
 
                                     <div id="card_payment_fields" style="display: none;">
-                                        <div class="form-group">
+                                        <div class="form-group mb-3">
                                             <label>Выберите мессенджер для связи *</label>
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="messenger" id="telegram" value="telegram">
-                                                <label class="form-check-label" for="telegram">
+                                                <input class="form-check-input" type="radio" name="messenger" id="telegram_radio" value="telegram">
+                                                <label class="form-check-label" for="telegram_radio">
                                                     Telegram
                                                 </label>
                                             </div>
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="messenger" id="viber" value="viber">
-                                                <label class="form-check-label" for="viber">
+                                                <input class="form-check-input" type="radio" name="messenger" id="viber_radio" value="viber">
+                                                <label class="form-check-label" for="viber_radio">
                                                     Viber
                                                 </label>
                                             </div>
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group mb-3">
                                             <label for="messenger_username">Ваш username в мессенджере *</label>
                                             <input type="text" class="form-control" id="messenger_username" name="messenger_username">
                                         </div>
                                     </div>
 
-                                    <div id="cod_payment_fields" style="display: none;">
-                                        <div class="order-details">
-                                            <p><strong>Стоимость товара:</strong> <span id="product_total">0.00</span> ₴</p>
-                                            <p><strong>Стоимость доставки:</strong> 60.00 ₴</p>
-                                            <p><strong>Итого к оплате:</strong> <span id="cod_total">0.00</span> ₴</p>
-                                        </div>
-                                    </div>
-                                    
                                     <button type="submit" class="btn btn-primary">Оформить заказ</button>
                                 </form>
                             </div>
@@ -929,18 +921,12 @@ function openQuickOrder() {
         return;
     }
 
-    const modal = document.getElementById('quickOrderModal');
-    const form = document.getElementById('quickOrderForm');
+    // Заполняем скрытые поля формы
+    document.getElementById('quick_size').value = size;
+    document.getElementById('quick_color').value = color;
+    document.getElementById('quick_quantity').value = quantity;
     
-    // Заполняем форму данными
-    form.querySelector('input[name="product_name"]').value = "{{ product.name }}";
-    form.querySelector('input[name="size"]').value = size;
-    form.querySelector('input[name="color"]').value = color;
-    form.querySelector('input[name="quantity"]').value = quantity;
-    form.querySelector('input[name="price"]').value = {{ product.price }};
-    
-    // Заполняем детали заказа
-    document.getElementById('order_product_name').textContent = "{{ product.name }}";
+    // Заполняем детали заказа для отображения
     document.getElementById('order_size').textContent = size;
     document.getElementById('order_color').textContent = color;
     document.getElementById('order_quantity').textContent = quantity;
@@ -948,8 +934,9 @@ function openQuickOrder() {
     document.getElementById('order_total').textContent = ({{ product.price }} * quantity + 60).toFixed(2);
     
     // Показываем модальное окно
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
+    const modal = document.getElementById('quickOrderModal');
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
 }
 
 function closeQuickOrder() {
@@ -1241,22 +1228,34 @@ function handleQuickOrder(event) {
 
     // Проверяем дополнительные поля для оплаты картой
     if (formData.get('payment_method') === 'card') {
-        if (!formData.get('messenger') || !formData.get('messenger_username')) {
+        const messenger = document.querySelector('input[name="messenger"]:checked');
+        const username = document.getElementById('messenger_username').value;
+        
+        if (!messenger || !username) {
             alert('Пожалуйста, укажите мессенджер и ваш username для связи с менеджером');
             return;
         }
         
         // Заполняем поля telegram и viber в зависимости от выбранного мессенджера
-        const messenger = formData.get('messenger');
-        const username = formData.get('messenger_username');
-        
-        if (messenger === 'telegram') {
+        if (messenger.value === 'telegram') {
             formData.set('telegram', username);
             formData.set('viber', '');
-        } else if (messenger === 'viber') {
+        } else if (messenger.value === 'viber') {
             formData.set('telegram', '');
             formData.set('viber', username);
         }
+    }
+
+    // Добавляем product_name в formData
+    formData.set('product_name', document.getElementById('order_product_name').textContent);
+    
+    // Добавляем цену в formData
+    const price = parseFloat(document.getElementById('order_price').textContent);
+    formData.set('price', price);
+
+    console.log('Отправляемые данные:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
     }
 
     // Отправляем данные на сервер
@@ -1273,7 +1272,7 @@ function handleQuickOrder(event) {
             const bsModal = bootstrap.Modal.getInstance(modal);
             bsModal.hide();
         } else {
-            alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.');
+            alert(data.message || 'Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.');
         }
     })
     .catch(error => {

@@ -95,19 +95,13 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
 # Настройка почты
-print("\n=== Загрузка настроек почты в конфигурацию Flask ===")
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-app.config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', 'defensivelox@gmail.com')
+print("\n=== Настройка SMTP ===")
+app.config.update(SMTP_CONFIG)
+GOOGLE_APP_PASSWORD = SMTP_CONFIG['MAIL_PASSWORD']
 
 print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
 print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
 print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
-print(f"MAIL_PASSWORD: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'Не установлен'}")
 print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
 print(f"ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
 print("================================================")
@@ -1190,11 +1184,10 @@ def send_email_smtp(to_email, subject, body):
         print(f"Сервер: {app.config['MAIL_SERVER']}")
         print(f"Порт: {app.config['MAIL_PORT']}")
         print(f"Пользователь: {app.config['MAIL_USERNAME']}")
-        print(f"Пароль: {'*' * len(app.config['MAIL_PASSWORD'])}")
         print(f"Отправитель: {app.config['MAIL_DEFAULT_SENDER']}")
         print(f"Получатель: {to_email}")
         print(f"Тема: {subject}")
-        
+            
         print("\nЭтап 1: Создание объекта сообщения...")
         msg = MIMEMultipart()
         msg['From'] = app.config['MAIL_USERNAME']
@@ -1213,7 +1206,7 @@ def send_email_smtp(to_email, subject, body):
             print("✓ TLS включен")
             
             print("\nЭтап 4: Авторизация...")
-            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+            server.login(app.config['MAIL_USERNAME'], GOOGLE_APP_PASSWORD)
             print("✓ Авторизация успешна")
             
             print("\nЭтап 5: Отправка сообщения...")
@@ -1246,7 +1239,40 @@ def send_email_smtp(to_email, subject, body):
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
+        print("\n=== Начало обработки быстрого заказа ===")
+        
         # Получаем данные из формы
+        form_data = request.form.to_dict()
+        print("\nПолученные данные формы:")
+        for key, value in form_data.items():
+            print(f"{key}: {value}")
+
+        # Проверяем обязательные поля
+        required_fields = {
+            'product_id': 'ID товара',
+            'product_name': 'Название товара',
+            'size': 'Размер',
+            'color': 'Цвет',
+            'quantity': 'Количество',
+            'price': 'Цена',
+            'name': 'Имя',
+            'phone': 'Телефон',
+            'email': 'Email',
+            'address': 'Адрес',
+            'payment_method': 'Способ оплаты'
+        }
+        
+        missing_fields = []
+        for field, display_name in required_fields.items():
+            if not request.form.get(field):
+                missing_fields.append(display_name)
+        
+        if missing_fields:
+            error_msg = f"Пожалуйста, заполните следующие поля: {', '.join(missing_fields)}"
+            print(f"\nОшибка: {error_msg}")
+            return jsonify({'success': False, 'message': error_msg})
+
+        # Получаем и валидируем данные
         product_id = request.form.get('product_id')
         product_name = request.form.get('product_name')
         size = request.form.get('size')
@@ -1261,15 +1287,36 @@ def quick_order():
         telegram = request.form.get('telegram')
         viber = request.form.get('viber')
 
-        # Проверяем обязательные поля
-        if not all([product_id, product_name, size, color, quantity, price, name, phone, email, address, payment_method]):
-            return jsonify({'success': False, 'message': 'Пожалуйста, заполните все обязательные поля'})
+        print(f"\nОбработанные данные заказа:")
+        print(f"Товар ID: {product_id}")
+        print(f"Название: {product_name}")
+        print(f"Размер: {size}")
+        print(f"Цвет: {color}")
+        print(f"Количество: {quantity}")
+        print(f"Цена: {price}")
+        print(f"Имя: {name}")
+        print(f"Телефон: {phone}")
+        print(f"Email: {email}")
+        print(f"Адрес: {address}")
+        print(f"Способ оплаты: {payment_method}")
+        print(f"Telegram: {telegram}")
+        print(f"Viber: {viber}")
 
         # Проверяем наличие товара
         product = Product.query.get_or_404(product_id)
         if product.stock < quantity:
-            return jsonify({'success': False, 'message': 'Недостаточно товара на складе'})
+            error_msg = f"Недостаточно товара на складе. Требуется: {quantity}, В наличии: {product.stock}"
+            print(f"\nОшибка: {error_msg}")
+            return jsonify({'success': False, 'message': error_msg})
 
+        # Проверяем дополнительные поля для оплаты картой
+        if payment_method == 'card':
+            if not telegram and not viber:
+                error_msg = "Для оплаты картой необходимо указать контакт в Telegram или Viber"
+                print(f"\nОшибка: {error_msg}")
+                return jsonify({'success': False, 'message': error_msg})
+
+        print("\nФормирование текста письма...")
         # Формируем текст письма
         email_body = f"""
         Новый заказ:
@@ -1296,22 +1343,31 @@ def quick_order():
             username = telegram if telegram else viber
             email_body += f"\nМессенджер для связи: {messenger}\nUsername: {username}"
 
-        # Отправляем email
-        msg = Message('Новый заказ',
-                     sender=app.config['MAIL_USERNAME'],
-                     recipients=['defensivelox@gmail.com'])
-        msg.body = email_body
-        mail.send(msg)
+        print("\nОтправка email с информацией о заказе...")
+        # Отправляем email через SMTP
+        if not send_email_smtp(app.config['ADMIN_EMAIL'], 'Новый заказ', email_body):
+            error_msg = "Ошибка отправки уведомления о заказе"
+            print(f"\nОшибка: {error_msg}")
+            return jsonify({'success': False, 'message': error_msg})
+
+        print("Email успешно отправлен")
 
         # Уменьшаем количество товара на складе
         product.stock -= quantity
         db.session.commit()
+        print("Количество товара на складе обновлено")
 
+        print("=== Заказ успешно оформлен ===")
         return jsonify({'success': True, 'message': 'Заказ успешно оформлен'})
 
     except Exception as e:
-        print(f"Error in quick_order: {str(e)}")
-        return jsonify({'success': False, 'message': 'Произошла ошибка при оформлении заказа'})
+        error_msg = f"Произошла ошибка при оформлении заказа: {str(e)}"
+        print(f"\n❌ Ошибка при оформлении заказа:")
+        print(f"Тип ошибки: {type(e).__name__}")
+        print(f"Сообщение: {str(e)}")
+        import traceback
+        print(f"Полный стек ошибки:\n{traceback.format_exc()}")
+        return jsonify({'success': False, 'message': error_msg})
 
 @app.route('/test_email')
 def test_email():
