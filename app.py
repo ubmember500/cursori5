@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from config import SMTP_CONFIG
 
 # Загрузка переменных окружения
 print("\n=== Проверка наличия файла .env ===")
@@ -94,6 +95,7 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
 # Настройка почты
+print("\n=== Загрузка настроек почты в конфигурацию Flask ===")
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = True
@@ -101,6 +103,14 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 app.config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', 'defensivelox@gmail.com')
+
+print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
+print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
+print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
+print(f"MAIL_PASSWORD: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'Не установлен'}")
+print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
+print(f"ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
+print("================================================")
 
 # Инициализация расширений
 db = SQLAlchemy(app)
@@ -1170,74 +1180,58 @@ def send_email_smtp(to_email, subject, body):
     try:
         print("\n=== Начало отправки email через SMTP ===")
         print(f"Настройки SMTP:")
-        print(f"Сервер: {app.config['MAIL_SERVER']}")
-        print(f"Порт: {app.config['MAIL_PORT']}")
-        print(f"Пользователь: {app.config['MAIL_USERNAME']}")
-        print(f"Пароль: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'Не установлен'}")
-        print(f"Отправитель: {app.config['MAIL_DEFAULT_SENDER']}")
+        print(f"Сервер: {SMTP_CONFIG['MAIL_SERVER']}")
+        print(f"Порт: {SMTP_CONFIG['MAIL_PORT']}")
+        print(f"Пользователь: {SMTP_CONFIG['MAIL_USERNAME']}")
+        print(f"Пароль: {'*' * len(SMTP_CONFIG['MAIL_PASSWORD'])}")
+        print(f"Отправитель: {SMTP_CONFIG['MAIL_DEFAULT_SENDER']}")
         print(f"Получатель: {to_email}")
         print(f"Тема: {subject}")
         
-        # Проверяем наличие всех необходимых настроек
-        required_settings = {
-            'MAIL_SERVER': app.config['MAIL_SERVER'],
-            'MAIL_PORT': app.config['MAIL_PORT'],
-            'MAIL_USERNAME': app.config['MAIL_USERNAME'],
-            'MAIL_PASSWORD': app.config['MAIL_PASSWORD']
-        }
-        
-        missing_settings = [key for key, value in required_settings.items() if not value]
-        if missing_settings:
-            print(f"\nОТСУТСТВУЮТ НАСТРОЙКИ SMTP:")
-            for setting in missing_settings:
-                print(f"- {setting}")
-            raise ValueError(f"Отсутствуют необходимые настройки SMTP: {', '.join(missing_settings)}")
-        
-        # Создаем объект сообщения
+        print("\nЭтап 1: Создание объекта сообщения...")
         msg = MIMEMultipart()
-        msg['From'] = app.config['MAIL_USERNAME']
+        msg['From'] = SMTP_CONFIG['MAIL_USERNAME']
         msg['To'] = to_email
         msg['Subject'] = subject
-
-        # Добавляем тело письма
         msg.attach(MIMEText(body, 'plain'))
+        print("✓ Объект сообщения создан успешно")
 
-        print("\nПодключение к SMTP серверу...")
+        print("\nЭтап 2: Подключение к SMTP серверу...")
         try:
-            # Подключаемся к SMTP серверу
-            server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
-            print("Соединение установлено")
+            server = smtplib.SMTP(SMTP_CONFIG['MAIL_SERVER'], SMTP_CONFIG['MAIL_PORT'])
+            print("✓ Соединение с сервером установлено")
             
-            print("Включение TLS...")
+            print("\nЭтап 3: Включение TLS...")
             server.starttls()
-            print("TLS включен")
+            print("✓ TLS включен")
             
-            print("Авторизация...")
-            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-            print("Авторизация успешна")
+            print("\nЭтап 4: Авторизация...")
+            server.login(SMTP_CONFIG['MAIL_USERNAME'], SMTP_CONFIG['MAIL_PASSWORD'])
+            print("✓ Авторизация успешна")
             
-            print("Отправка сообщения...")
-            # Отправляем письмо
+            print("\nЭтап 5: Отправка сообщения...")
             server.send_message(msg)
-            print("Сообщение отправлено")
+            print("✓ Сообщение отправлено")
             
-            print("Закрытие соединения...")
+            print("\nЭтап 6: Закрытие соединения...")
             server.quit()
-            print("Соединение закрыто")
+            print("✓ Соединение закрыто")
 
-            print("Email успешно отправлен через SMTP")
+            print("\n=== Email успешно отправлен через SMTP ===")
             return True
             
         except smtplib.SMTPException as e:
-            print(f"\nОшибка SMTP: {str(e)}")
+            print(f"\n❌ Ошибка SMTP на этапе {e.__class__.__name__}:")
             print(f"Тип ошибки: {type(e).__name__}")
+            print(f"Сообщение: {str(e)}")
             import traceback
             print(f"Полный стек ошибки:\n{traceback.format_exc()}")
             return False
             
     except Exception as e:
-        print(f"\nОбщая ошибка при отправке email: {str(e)}")
+        print(f"\n❌ Критическая ошибка при отправке email:")
         print(f"Тип ошибки: {type(e).__name__}")
+        print(f"Сообщение: {str(e)}")
         import traceback
         print(f"Полный стек ошибки:\n{traceback.format_exc()}")
         return False
@@ -1247,12 +1241,12 @@ def quick_order():
     try:
         # Проверяем настройки почты
         print("\n=== Проверка настроек почты ===")
-        print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
-        print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
-        print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
-        print(f"MAIL_PASSWORD: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'Не установлен'}")
-        print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
-        print(f"ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
+        print(f"MAIL_SERVER: {SMTP_CONFIG['MAIL_SERVER']}")
+        print(f"MAIL_PORT: {SMTP_CONFIG['MAIL_PORT']}")
+        print(f"MAIL_USERNAME: {SMTP_CONFIG['MAIL_USERNAME']}")
+        print(f"MAIL_PASSWORD: {'*' * len(SMTP_CONFIG['MAIL_PASSWORD'])}")
+        print(f"MAIL_DEFAULT_SENDER: {SMTP_CONFIG['MAIL_DEFAULT_SENDER']}")
+        print(f"ADMIN_EMAIL: {SMTP_CONFIG['ADMIN_EMAIL']}")
         print("=============================")
 
         # Получаем данные из формы
@@ -1340,12 +1334,13 @@ def quick_order():
             """
 
             print("\nПодготовка к отправке email:")
-            print(f"Получатель: {app.config['ADMIN_EMAIL']}")
+            print(f"Получатель: {SMTP_CONFIG['ADMIN_EMAIL']}")
             print(f"Тема: Новый заказ от {name}")
             print(f"Текст письма:\n{email_body}")
 
             # Отправляем email через SMTP
-            if send_email_smtp(app.config['ADMIN_EMAIL'], f'Новый заказ от {name}', email_body):
+            if send_email_smtp(SMTP_CONFIG['ADMIN_EMAIL'], f'Новый заказ от {name}', email_body):
+                print("\nEmail успешно отправлен")
                 return jsonify({'success': True})
             else:
                 raise Exception("Не удалось отправить email через SMTP")
@@ -1357,6 +1352,32 @@ def quick_order():
     except Exception as e:
         print(f"\nОбщая ошибка при создании заказа: {str(e)}")
         return jsonify({'success': False, 'error': f'Произошла ошибка при оформлении заказа: {str(e)}'})
+
+@app.route('/test_email')
+def test_email():
+    try:
+        print("\n=== Тестовая отправка email ===")
+        print(f"Настройки SMTP:")
+        print(f"Сервер: {app.config['MAIL_SERVER']}")
+        print(f"Порт: {app.config['MAIL_PORT']}")
+        print(f"Пользователь: {app.config['MAIL_USERNAME']}")
+        print(f"Пароль: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'Не установлен'}")
+        print(f"Отправитель: {app.config['MAIL_DEFAULT_SENDER']}")
+        print(f"Получатель: {app.config['ADMIN_EMAIL']}")
+        
+        # Отправляем тестовое письмо
+        if send_email_smtp(
+            app.config['ADMIN_EMAIL'],
+            'Тестовое письмо от Cursor Shop',
+            'Это тестовое письмо для проверки работы SMTP.'
+        ):
+            return jsonify({'success': True, 'message': 'Тестовое письмо успешно отправлено'})
+        else:
+            return jsonify({'success': False, 'message': 'Не удалось отправить тестовое письмо'})
+            
+    except Exception as e:
+        print(f"\nОшибка при тестовой отправке: {str(e)}")
+        return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'})
 
 if __name__ == '__main__':
     init_db()
