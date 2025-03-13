@@ -823,4 +823,197 @@ function closeQuickOrder() {
     document.body.style.overflow = '';
 }
 
+function handleQuickOrder(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    // Проверяем обязательные поля
+    const requiredFields = {
+        'quick_size': 'Размер',
+        'quick_color': 'Цвет',
+        'quick_quantity': 'Количество',
+        'name': 'Имя',
+        'phone': 'Телефон',
+        'email': 'Email',
+        'address': 'Адрес доставки',
+        'payment_method': 'Способ оплаты'
+    };
+    
+    let missingFields = [];
+    for (let field in requiredFields) {
+        if (!formData.get(field)) {
+            missingFields.push(requiredFields[field]);
+        }
+    }
+    
+    if (missingFields.length > 0) {
+        alert('Пожалуйста, заполните следующие поля:\n' + missingFields.join('\n'));
+        return;
+    }
+    
+    // Проверяем поля для оплаты картой
+    if (formData.get('payment_method') === 'card') {
+        const telegram = formData.get('telegram');
+        const viber = formData.get('viber');
+        if (!telegram && !viber) {
+            alert('Для оплаты картой необходимо указать хотя бы один способ связи (Telegram или Viber)');
+            return;
+        }
+    }
+    
+    // Показываем индикатор загрузки
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Отправка...';
+    
+    // Отправляем данные на сервер
+    fetch('/quick_order', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Показываем сообщение об успехе
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success mt-3';
+            successMessage.textContent = 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.';
+            form.appendChild(successMessage);
+            
+            // Закрываем модальное окно через 2 секунды
+            setTimeout(() => {
+                closeQuickOrder();
+            }, 2000);
+        } else {
+            throw new Error(data.error || 'Произошла ошибка при оформлении заказа.');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        // Показываем сообщение об ошибке
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'alert alert-danger mt-3';
+        errorMessage.textContent = error.message || 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.';
+        form.appendChild(errorMessage);
+        
+        // Удаляем сообщение об ошибке через 5 секунд
+        setTimeout(() => {
+            errorMessage.remove();
+        }, 5000);
+    })
+    .finally(() => {
+        // Восстанавливаем кнопку
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    });
+}
+
+function handleAddToCart() {
+    const quantity = document.getElementById('quantity').value;
+    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
+    const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
+    
+    if (!selectedSize || !selectedColor) {
+        alert('Пожалуйста, выберите размер и цвет');
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    const submitButton = document.querySelector('button[onclick="handleAddToCart()"]');
+    const originalText = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Добавление...';
+    
+    const form = document.getElementById('cartForm');
+    document.getElementById('cart_quantity').value = quantity;
+    document.getElementById('cart_size').value = selectedSize;
+    document.getElementById('cart_color').value = selectedColor;
+    
+    // Отправляем форму через fetch
+    fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Ошибка при добавлении товара в корзину');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Показываем сообщение об успехе
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success mt-3';
+            successMessage.textContent = 'Товар успешно добавлен в корзину!';
+            form.appendChild(successMessage);
+            
+            // Удаляем сообщение через 3 секунды
+            setTimeout(() => {
+                successMessage.remove();
+            }, 3000);
+        } else {
+            throw new Error(data.error || 'Ошибка при добавлении товара в корзину');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        // Показываем сообщение об ошибке
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'alert alert-danger mt-3';
+        errorMessage.textContent = error.message || 'Произошла ошибка при добавлении товара в корзину';
+        form.appendChild(errorMessage);
+        
+        // Удаляем сообщение через 3 секунды
+        setTimeout(() => {
+            errorMessage.remove();
+        }, 3000);
+    })
+    .finally(() => {
+        // Восстанавливаем кнопку
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    });
+}
+
+function changeImage(src) {
+    document.getElementById('mainImage').src = src;
+}
+
+function togglePaymentFields() {
+    const cardFields = document.getElementById('card_payment_fields');
+    const codFields = document.getElementById('cod_payment_fields');
+    const productPrice = parseFloat('{{ product.price }}');
+    const quantity = parseInt(document.getElementById('quick_quantity').value);
+    const productTotal = productPrice * quantity;
+    
+    if (document.getElementById('payment_card').checked) {
+        cardFields.style.display = 'block';
+        codFields.style.display = 'none';
+    } else if (document.getElementById('payment_cod').checked) {
+        cardFields.style.display = 'none';
+        codFields.style.display = 'block';
+        document.getElementById('product_total').textContent = productTotal.toFixed(2);
+        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
+    }
+}
+
+// Добавляем обработчик изменения количества для обновления суммы при наложенном платеже
+document.getElementById('quick_quantity').addEventListener('change', function() {
+    if (document.getElementById('payment_cod').checked) {
+        const productPrice = parseFloat('{{ product.price }}');
+        const quantity = parseInt(this.value);
+        const productTotal = productPrice * quantity;
+        document.getElementById('product_total').textContent = productTotal.toFixed(2);
+        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
+    }
+});
+
 {% endblock %}
