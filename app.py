@@ -357,11 +357,11 @@ def products():
         print("Начало обработки запроса /products")
         
         # Получаем параметры фильтрации
-        categories = request.args.getlist('category')
+        category = request.args.get('category')
         search_query = request.args.get('q')
         sort = request.args.get('sort', 'default')
         
-        print(f"Полученные параметры: categories={categories}, search={search_query}, sort={sort}")
+        print(f"Полученные параметры: category={category}, search={search_query}, sort={sort}")
         
         # Получаем и валидируем параметры цены
         try:
@@ -394,19 +394,14 @@ def products():
         # Базовый запрос
         query = Product.query
         
-        # Фильтр по категориям
-        if categories:
+        # Фильтр по категории
+        if category:
             try:
-                # Преобразуем строку в список, если передана одна категория
-                if isinstance(categories, str):
-                    categories = [categories]
-                
-                category_ids = [int(cat) for cat in categories if cat and cat.isdigit()]
-                if category_ids:
-                    query = query.filter(Product.category_id.in_(category_ids))
-                print(f"Фильтрация по категориям: {category_ids}")
-            except Exception as e:
-                print(f"Ошибка при обработке категорий: {e}")
+                category_id = int(category)
+                query = query.filter(Product.category_id == category_id)
+                print(f"Фильтрация по категории: {category_id}")
+            except (ValueError, TypeError) as e:
+                print(f"Ошибка при обработке категории: {e}")
         
         # Фильтр по поиску
         if search_query:
@@ -434,12 +429,16 @@ def products():
         all_categories = Category.query.all()
         print(f"Всего категорий: {len(all_categories)}")
         
+        # Обновляем изображения для товаров
+        for product in products:
+            product.image = get_random_product_image(product.category_id)
+        
         response = make_response(render_template('products.html', 
                                               products=products, 
                                               categories=all_categories,
                                               min_price=min_price,
                                               max_price=max_price,
-                                              selected_categories=category_ids if 'category_ids' in locals() else []))
+                                              selected_category=category_id if 'category_id' in locals() else None))
         return add_no_cache_headers(response)
         
     except Exception as e:
