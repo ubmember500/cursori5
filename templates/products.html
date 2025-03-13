@@ -42,8 +42,8 @@
                             <label class="form-label">Цена</label>
                             <div class="price-range">
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span id="minPriceDisplay">{{ min_price }}</span>
-                                    <span id="maxPriceDisplay">{{ max_price }}</span>
+                                    <span id="minPriceDisplay">0</span>
+                                    <span id="maxPriceDisplay">20 000</span>
                                 </div>
                                 <input type="range" class="form-range" id="minPriceRange" min="0" max="20000" value="{{ min_price }}">
                                 <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="{{ max_price }}">
@@ -72,16 +72,6 @@
         </div>
     </div>
 </div>
-
-<!-- Отладочная информация -->
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Отладочная информация</h5>
-            <pre id="debugInfo"></pre>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -96,7 +86,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('filterForm');
     const sortSelect = document.getElementById('sortSelect');
     const productsContainer = document.getElementById('productsContainer');
-    const debugInfo = document.getElementById('debugInfo');
     let debounceTimer;
 
     // Проверка наличия элементов
@@ -146,18 +135,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const newProducts = doc.querySelector('#productsContainer');
             
             if (newProducts) {
-                // Обновляем содержимое контейнера
                 productsContainer.innerHTML = newProducts.innerHTML;
                 console.log('Товары обновлены');
-                
-                // Обновляем отладочную информацию
-                if (debugInfo) {
-                    debugInfo.textContent = JSON.stringify({
-                        params: Object.fromEntries(params),
-                        productsCount: productsContainer.children.length,
-                        timestamp: new Date().toISOString()
-                    }, null, 2);
-                }
             } else {
                 console.error('Не найден контейнер с товарами в ответе');
             }
@@ -264,15 +243,6 @@ document.addEventListener('DOMContentLoaded', function() {
             sort: this.value
         });
     });
-
-    // Инициализация отладочной информации
-    if (debugInfo) {
-        debugInfo.textContent = JSON.stringify({
-            initialParams: Object.fromEntries(new URLSearchParams(window.location.search)),
-            productsCount: productsContainer.children.length,
-            timestamp: new Date().toISOString()
-        }, null, 2);
-    }
 });
 </script>
 {% endblock %}
