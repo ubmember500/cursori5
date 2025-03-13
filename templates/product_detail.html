@@ -780,22 +780,38 @@ body .btn:contains("В избранное") {
                     const form = event.target;
                     const formData = new FormData(form);
                     
+                    // Показываем индикатор загрузки
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    const originalText = submitButton.textContent;
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Отправка...';
+                    
                     fetch('/quick_order', {
                         method: 'POST',
                         body: formData
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.success) {
                             alert('Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.');
                             closeQuickOrder();
                         } else {
-                            alert(data.error || 'Произошла ошибка при оформлении заказа.');
+                            throw new Error(data.error || 'Произошла ошибка при оформлении заказа.');
                         }
                     })
                     .catch(error => {
                         console.error('Ошибка:', error);
-                        alert('Произошла ошибка при оформлении заказа.');
+                        alert(error.message || 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.');
+                    })
+                    .finally(() => {
+                        // Восстанавливаем кнопку
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalText;
                     });
                 }
 
