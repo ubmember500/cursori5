@@ -487,7 +487,7 @@ body .btn:contains("В избранное") {
                                 <button type="submit" class="btn btn-primary w-100">Заказать</button>
                             </form>
                         </div>
-                    </div>
+            </div>
                 </div>
 
                 <style>
@@ -495,13 +495,18 @@ body .btn:contains("В избранное") {
                     display: none;
                     position: fixed;
                     top: 0;
-                    right: 0;
+                    right: -400px; /* Начинаем за пределами экрана */
                     bottom: 0;
                     width: 400px;
                     background: white;
                     box-shadow: -2px 0 5px rgba(0,0,0,0.2);
                     z-index: 1050;
                     overflow-y: auto;
+                    transition: right 0.3s ease-in-out; /* Добавляем плавную анимацию */
+                }
+
+                .quick-order-modal.show {
+                    right: 0; /* Конечная позиция */
                 }
 
                 .quick-order-content {
@@ -556,23 +561,46 @@ body .btn:contains("В избранное") {
                     bottom: 0;
                     background: rgba(0,0,0,0.5);
                     z-index: 1040;
+                    opacity: 0;
+                    transition: opacity 0.3s ease-in-out;
+                }
+
+                .modal-backdrop.show {
+                    opacity: 1;
                 }
                 </style>
 
                 <script>
                 function openQuickOrder() {
-                    document.getElementById('quickOrderModal').style.display = 'block';
-                    document.body.insertAdjacentHTML('beforeend', '<div class="modal-backdrop"></div>');
+                    const modal = document.getElementById('quickOrderModal');
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop';
+                    document.body.appendChild(backdrop);
+                    
+                    // Запускаем анимацию
+                    requestAnimationFrame(() => {
+                        modal.style.display = 'block';
+                        backdrop.classList.add('show');
+                        modal.classList.add('show');
+                    });
+                    
                     document.body.style.overflow = 'hidden';
                 }
 
                 function closeQuickOrder() {
-                    document.getElementById('quickOrderModal').style.display = 'none';
+                    const modal = document.getElementById('quickOrderModal');
                     const backdrop = document.querySelector('.modal-backdrop');
-                    if (backdrop) {
+                    
+                    // Запускаем анимацию закрытия
+                    modal.classList.remove('show');
+                    backdrop.classList.remove('show');
+                    
+                    // Ждем окончания анимации и скрываем элементы
+                    setTimeout(() => {
+                        modal.style.display = 'none';
                         backdrop.remove();
-                    }
-                    document.body.style.overflow = '';
+                        document.body.style.overflow = '';
+                    }, 300);
                 }
 
                 function handleQuickOrder(event) {
