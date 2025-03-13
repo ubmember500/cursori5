@@ -819,50 +819,147 @@ body .btn:contains("В избранное") {
 
 <script>
 function openQuickOrder() {
-    // Синхронизируем значения из основной формы
-    const selectedSize = document.querySelector('input[name="size"]:checked');
-    const selectedColor = document.querySelector('input[name="color"]:checked');
-    const quantity = document.getElementById('quantity').value;
+    try {
+        // Синхронизируем значения из основной формы
+        const selectedSize = document.querySelector('input[name="size"]:checked');
+        const selectedColor = document.querySelector('input[name="color"]:checked');
+        const quantity = document.getElementById('quantity').value;
 
-    if (!selectedSize || !selectedColor) {
-        alert('Пожалуйста, выберите размер и цвет перед оформлением заказа');
-        return;
+        if (!selectedSize || !selectedColor) {
+            showError(document.querySelector('.action-buttons'), 'Пожалуйста, выберите размер и цвет перед оформлением заказа');
+            return;
+        }
+
+        // Устанавливаем значения в модальном окне
+        try {
+            document.querySelector(`input[name="quick_size"][value="${selectedSize.value}"]`).checked = true;
+            document.querySelector(`input[name="quick_color"][value="${selectedColor.value}"]`).checked = true;
+            document.getElementById('quick_quantity').value = quantity;
+        } catch (e) {
+            console.error('Ошибка при установке значений в модальном окне:', e);
+            showError(document.querySelector('.action-buttons'), 'Произошла ошибка при открытии формы заказа');
+            return;
+        }
+
+        const modal = document.getElementById('quickOrderModal');
+        if (!modal) {
+            console.error('Модальное окно не найдено');
+            return;
+        }
+
+        // Удаляем старый backdrop, если есть
+        const oldBackdrop = document.querySelector('.modal-backdrop');
+        if (oldBackdrop) {
+            oldBackdrop.remove();
+        }
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        document.body.appendChild(backdrop);
+        
+        // Сначала добавляем стили
+        modal.style.display = 'block';
+        backdrop.style.display = 'block';
+        
+        // Затем запускаем анимацию
+        requestAnimationFrame(() => {
+            backdrop.classList.add('show');
+            modal.classList.add('show');
+        });
+        
+        document.body.style.overflow = 'hidden';
+
+        // Добавляем обработчик клика вне модального окна
+        backdrop.addEventListener('click', closeQuickOrder);
+        
+        // Добавляем обработчик клавиши Escape
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeQuickOrder();
+            }
+        });
+
+        // Обновляем сумму заказа
+        updateOrderTotal();
+    } catch (e) {
+        console.error('Ошибка при открытии модального окна:', e);
+        showError(document.querySelector('.action-buttons'), 'Произошла ошибка при открытии формы заказа');
     }
-
-    // Устанавливаем значения в модальном окне
-    document.querySelector(`input[name="quick_size"][value="${selectedSize.value}"]`).checked = true;
-    document.querySelector(`input[name="quick_color"][value="${selectedColor.value}"]`).checked = true;
-    document.getElementById('quick_quantity').value = quantity;
-
-    const modal = document.getElementById('quickOrderModal');
-    const backdrop = document.createElement('div');
-    backdrop.className = 'modal-backdrop';
-    document.body.appendChild(backdrop);
-    
-    modal.style.display = 'block';
-    backdrop.style.display = 'block';
-    
-    setTimeout(() => {
-        backdrop.classList.add('show');
-        modal.classList.add('show');
-    }, 50);
-    
-    document.body.style.overflow = 'hidden';
 }
 
 function closeQuickOrder() {
     const modal = document.getElementById('quickOrderModal');
     const backdrop = document.querySelector('.modal-backdrop');
     
-    // Добавляем класс для отключения анимации
-    modal.classList.add('hiding');
-    backdrop.classList.add('hiding');
+    if (modal) {
+        modal.classList.remove('show');
+        modal.classList.add('hiding');
+    }
     
-    // Мгновенно скрываем элементы
-    modal.style.display = 'none';
-    backdrop.remove();
-    document.body.style.overflow = '';
+    if (backdrop) {
+        backdrop.classList.remove('show');
+        backdrop.classList.add('hiding');
+    }
+    
+    // Даем время на анимацию
+    setTimeout(() => {
+        if (modal) modal.style.display = 'none';
+        if (backdrop) backdrop.remove();
+        document.body.style.overflow = '';
+        
+        // Удаляем классы hiding
+        if (modal) modal.classList.remove('hiding');
+    }, 300);
 }
+
+function updateOrderTotal() {
+    const quantity = parseInt(document.getElementById('quick_quantity').value) || 1;
+    const productPrice = parseFloat('{{ product.price }}');
+    const productTotal = productPrice * quantity;
+    
+    const productTotalElement = document.getElementById('product_total');
+    const codTotalElement = document.getElementById('cod_total');
+    
+    if (productTotalElement) {
+        productTotalElement.textContent = productTotal.toFixed(2);
+    }
+    
+    if (codTotalElement) {
+        codTotalElement.textContent = (productTotal + 60).toFixed(2);
+    }
+}
+
+// Добавляем обработчики событий при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчик изменения количества товара
+    const quantityInput = document.getElementById('quantity');
+    if (quantityInput) {
+        quantityInput.addEventListener('change', function() {
+            document.getElementById('cart_quantity').value = this.value;
+            updateOrderTotal();
+        });
+    }
+
+    // Обработчики изменения размера
+    document.querySelectorAll('input[name="size"]').forEach(input => {
+        input.addEventListener('change', function() {
+            document.getElementById('cart_size').value = this.value;
+        });
+    });
+
+    // Обработчики изменения цвета
+    document.querySelectorAll('input[name="color"]').forEach(input => {
+        input.addEventListener('change', function() {
+            document.getElementById('cart_color').value = this.value;
+        });
+    });
+
+    // Обработчик изменения количества в модальном окне
+    const quickQuantityInput = document.getElementById('quick_quantity');
+    if (quickQuantityInput) {
+        quickQuantityInput.addEventListener('change', updateOrderTotal);
+    }
+});
 
 function showError(element, message) {
     const errorDiv = document.createElement('div');

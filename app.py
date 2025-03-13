@@ -1246,112 +1246,92 @@ def send_email_smtp(to_email, subject, body):
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
-        # Проверяем настройки почты
-        print("\n=== Проверка настроек почты ===")
-        print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
-        print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
-        print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
-        print(f"MAIL_PASSWORD: {'*' * len(app.config['MAIL_PASSWORD'])}")
-        print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
-        print(f"ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
-        print("=============================")
-
         # Получаем данные из формы
-        product_id = request.form.get('product_id')
-        product_name = request.form.get('product_name')
-        product_price = request.form.get('product_price')
-        size = request.form.get('quick_size')
-        color = request.form.get('quick_color')
-        quantity = request.form.get('quick_quantity')
-        name = request.form.get('name')
-        phone = request.form.get('phone')
-        email = request.form.get('email')
-        address = request.form.get('address')
-        payment_method = request.form.get('payment_method')
-        telegram = request.form.get('telegram')
-        viber = request.form.get('viber')
+        form_data = {
+            'product_id': request.form.get('product_id'),
+            'product_name': request.form.get('product_name'),
+            'product_price': request.form.get('product_price'),
+            'size': request.form.get('quick_size'),
+            'color': request.form.get('quick_color'),
+            'quantity': request.form.get('quick_quantity'),
+            'name': request.form.get('name'),
+            'phone': request.form.get('phone'),
+            'email': request.form.get('email'),
+            'address': request.form.get('address'),
+            'payment_method': request.form.get('payment_method'),
+            'telegram': request.form.get('telegram'),
+            'viber': request.form.get('viber')
+        }
 
         print("\n=== Начало обработки быстрого заказа ===")
-        print(f"Получены данные формы:")
-        print(f"- product_id: {product_id}")
-        print(f"- product_name: {product_name}")
-        print(f"- product_price: {product_price}")
-        print(f"- size: {size}")
-        print(f"- color: {color}")
-        print(f"- quantity: {quantity}")
-        print(f"- name: {name}")
-        print(f"- phone: {phone}")
-        print(f"- email: {email}")
-        print(f"- address: {address}")
-        print(f"- payment_method: {payment_method}")
-        print(f"- telegram: {telegram}")
-        print(f"- viber: {viber}")
+        print("Получены данные формы:", form_data)
 
         # Проверяем обязательные поля
         required_fields = {
-            'product_id': product_id,
-            'size': size,
-            'color': color,
-            'quantity': quantity,
-            'name': name,
-            'phone': phone,
-            'email': email,
-            'address': address,
-            'payment_method': payment_method
+            'product_id': 'ID товара',
+            'size': 'Размер',
+            'color': 'Цвет',
+            'quantity': 'Количество',
+            'name': 'Имя',
+            'phone': 'Телефон',
+            'email': 'Email',
+            'address': 'Адрес',
+            'payment_method': 'Способ оплаты'
         }
 
-        missing_fields = [field for field, value in required_fields.items() if not value]
+        missing_fields = [label for field, label in required_fields.items() if not form_data.get(field)]
         if missing_fields:
-            error_message = f"Отсутствуют обязательные поля: {', '.join(missing_fields)}"
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': False, 'error': error_message})
-            flash(error_message, 'error')
-            return redirect(request.referrer or url_for('products'))
+            error_message = f"Пожалуйста, заполните следующие поля: {', '.join(missing_fields)}"
+            return jsonify({'success': False, 'error': error_message})
 
         # Проверяем поля для оплаты картой
-        if payment_method == 'card':
-            if not telegram and not viber:
-                error_message = 'Для оплаты картой необходимо указать хотя бы один способ связи (Telegram или Viber)'
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return jsonify({'success': False, 'error': error_message})
-                flash(error_message, 'error')
-                return redirect(request.referrer or url_for('products'))
+        if form_data['payment_method'] == 'card' and not (form_data['telegram'] or form_data['viber']):
+            return jsonify({
+                'success': False,
+                'error': 'Для оплаты картой необходимо указать хотя бы один способ связи (Telegram или Viber)'
+            })
 
-        # Получаем товар
-        product = Product.query.get_or_404(product_id)
+        # Получаем товар из базы данных
+        product = Product.query.get_or_404(form_data['product_id'])
         
         # Проверяем наличие товара
-        if int(quantity) > product.stock:
-            error_message = 'Извините, данного количества товара нет в наличии'
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': False, 'error': error_message})
-            flash(error_message, 'error')
-            return redirect(request.referrer or url_for('products'))
+        try:
+            quantity = int(form_data['quantity'])
+            if quantity > product.stock:
+                return jsonify({
+                    'success': False,
+                    'error': f'Извините, доступно только {product.stock} шт.'
+                })
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'error': 'Некорректное количество товара'
+            })
 
         # Формируем текст письма
         email_text = f"""
         Новый быстрый заказ:
         
-        Товар: {product_name}
-        Размер: {size}
-        Цвет: {color}
-        Количество: {quantity}
-        Цена: {product_price} ₴
+        Товар: {form_data['product_name']}
+        Размер: {form_data['size']}
+        Цвет: {form_data['color']}
+        Количество: {form_data['quantity']}
+        Цена: {form_data['product_price']} ₴
         
         Данные клиента:
-        Имя: {name}
-        Телефон: {phone}
-        Email: {email}
-        Адрес: {address}
+        Имя: {form_data['name']}
+        Телефон: {form_data['phone']}
+        Email: {form_data['email']}
+        Адрес: {form_data['address']}
         
-        Способ оплаты: {'Оплата картой' if payment_method == 'card' else 'Наложенный платеж'}
+        Способ оплаты: {'Оплата картой' if form_data['payment_method'] == 'card' else 'Наложенный платеж'}
         """
         
-        if payment_method == 'card':
+        if form_data['payment_method'] == 'card':
             email_text += f"""
             Контактные данные для связи:
-            Telegram: {telegram or 'Не указан'}
-            Viber: {viber or 'Не указан'}
+            Telegram: {form_data['telegram'] or 'Не указан'}
+            Viber: {form_data['viber'] or 'Не указан'}
             """
 
         # Отправляем email
@@ -1363,27 +1343,30 @@ def quick_order():
             )
             mail.send(msg)
             print("Email успешно отправлен")
+
+            # Уменьшаем количество товара на складе
+            product.stock -= quantity
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'message': 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.'
+            })
+
         except Exception as e:
             print(f"Ошибка при отправке email: {e}")
-            error_message = 'Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.'
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': False, 'error': error_message})
-            flash(error_message, 'error')
-            return redirect(request.referrer or url_for('products'))
-
-        success_message = 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.'
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': True, 'message': success_message})
-        flash(success_message, 'success')
-        return redirect(url_for('products'))
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'error': 'Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.'
+            })
 
     except Exception as e:
         print(f"Ошибка при обработке быстрого заказа: {e}")
-        error_message = 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.'
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'error': error_message})
-        flash(error_message, 'error')
-        return redirect(request.referrer or url_for('products'))
+        return jsonify({
+            'success': False,
+            'error': 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.'
+        })
 
 @app.route('/test_email')
 def test_email():
