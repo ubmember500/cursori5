@@ -208,34 +208,6 @@ class Session(db.Model):
     expiry = db.Column(db.DateTime)
 
 
-class Order(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    status = db.Column(db.String(20), default='new')
-    name = db.Column(db.String(100), nullable=False)
-    phone = db.Column(db.String(20), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
-    address = db.Column(db.Text, nullable=False)
-    payment_method = db.Column(db.String(20), nullable=False)
-    contact_phone = db.Column(db.String(20))
-    telegram = db.Column(db.String(100))
-    viber = db.Column(db.String(100))
-    total_price = db.Column(db.Float, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    items = db.relationship('OrderItem', backref='order', lazy=True)
-
-
-class OrderItem(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    quantity = db.Column(db.Integer, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    size = db.Column(db.String(10), nullable=False)
-    color = db.Column(db.String(20), nullable=False)
-    product = db.relationship('Product', backref='order_items')
-
-
 # Create database tables
 def init_db():
     with app.app_context():
@@ -1186,111 +1158,56 @@ def quick_order():
             return jsonify({'success': False, 'error': 'Пожалуйста, укажите хотя бы один способ связи (Telegram или Viber)'})
 
         try:
-            # Создаем заказ в базе данных
-            order = Order(
-                user_id=current_user.id if current_user.is_authenticated else None,
-                status='new',
-                name=name,
-                phone=phone,
-                email=email,
-                address=address,
-                payment_method=payment_method,
-                telegram=telegram if payment_method == 'card' else None,
-                viber=viber if payment_method == 'card' else None,
-                total_price=float(product_price) * int(quantity)
-            )
-            db.session.add(order)
-            db.session.flush()  # Получаем id заказа
-            print(f"Создан заказ с ID: {order.id}")
+            # Формируем текст письма
+            email_body = f"""
+            Новый заказ
 
-            # Добавляем товар в заказ
-            order_item = OrderItem(
-                order_id=order.id,
-                product_id=product_id,
-                quantity=quantity,
-                price=float(product_price),
-                size=size,
-                color=color
+            Информация о покупателе:
+            Имя: {name}
+            Email: {email}
+            Телефон: {phone}
+            Адрес: {address}
+            Способ оплаты: {'Оплата картой' if payment_method == 'card' else 'Наложенный платеж при получении'}
+            """
+
+            if payment_method == 'card':
+                email_body += f"""
+                Контактная информация:
+                Telegram: {telegram}
+                Viber: {viber}
+                """
+
+            email_body += f"""
+            Информация о товаре:
+            Название: {product_name}
+            Размер: {size}
+            Цвет: {color}
+            Количество: {quantity}
+            Цена за единицу: {product_price} ₴
+            Общая сумма: {float(product_price) * int(quantity)} ₴
+            """
+
+            print(f"Отправка уведомления на email: {app.config['ADMIN_EMAIL']}")
+            print(f"Текст письма: {email_body}")
+
+            # Отправляем уведомление
+            msg = Message(
+                subject=f'Новый заказ от {name}',
+                recipients=[app.config['ADMIN_EMAIL']],
+                body=email_body
             )
-            db.session.add(order_item)
-            print("Добавлен товар в заказ")
             
-            # Отправляем уведомление администратору
-            try:
-                send_order_notification(order)
-                print("Уведомление отправлено успешно")
-            except Exception as e:
-                print(f"Ошибка при отправке уведомления: {str(e)}")
-                # Продолжаем выполнение, даже если не удалось отправить уведомление
-            
-            db.session.commit()
-            print("Заказ успешно сохранен в базе данных")
+            mail.send(msg)
+            print("Уведомление успешно отправлено")
             return jsonify({'success': True})
 
         except Exception as e:
-            db.session.rollback()
-            print(f"Ошибка при работе с базой данных: {str(e)}")
-            return jsonify({'success': False, 'error': f'Ошибка при сохранении заказа: {str(e)}'})
+            print(f"Ошибка при отправке уведомления: {str(e)}")
+            return jsonify({'success': False, 'error': f'Ошибка при отправке уведомления: {str(e)}'})
 
     except Exception as e:
         print(f"Общая ошибка при создании заказа: {str(e)}")
         return jsonify({'success': False, 'error': f'Произошла ошибка при оформлении заказа: {str(e)}'})
-
-def send_order_notification(order):
-    try:
-        # Получаем информацию о товарах в заказе
-        order_items = OrderItem.query.filter_by(order_id=order.id).all()
-        items_info = []
-        
-        for item in order_items:
-            product = Product.query.get(item.product_id)
-            if product:
-                items_info.append(f"- {product.name} (Размер: {item.size}, Цвет: {item.color}, Количество: {item.quantity}, Цена: {item.price} ₴)")
-            else:
-                items_info.append(f"- Товар ID: {item.product_id} (Размер: {item.size}, Цвет: {item.color}, Количество: {item.quantity}, Цена: {item.price} ₴)")
-
-        # Формируем текст письма
-        email_body = f"""
-        Новый заказ #{order.id}
-
-        Информация о покупателе:
-        Имя: {order.name}
-        Email: {order.email}
-        Адрес: {order.address}
-        Способ оплаты: {'Оплата картой' if order.payment_method == 'card' else 'Наложенный платеж при получении'}
-        """
-
-        if order.payment_method == 'card':
-            email_body += f"""
-            Контактная информация:
-            Телефон: {order.phone}
-            Telegram: {order.telegram}
-            Viber: {order.viber}
-            """
-
-        email_body += f"""
-        Сумма заказа: {order.total_price} ₴
-
-        Товары в заказе:
-        {chr(10).join(items_info)}
-        """
-
-        print(f"Отправка уведомления на email: {app.config['ADMIN_EMAIL']}")
-        print(f"Текст письма: {email_body}")
-
-        # Отправляем уведомление
-        msg = Message(
-            subject=f'Новый заказ #{order.id}',
-            recipients=[app.config['ADMIN_EMAIL']],
-            body=email_body
-        )
-        
-        mail.send(msg)
-        print("Уведомление успешно отправлено")
-        
-    except Exception as e:
-        print(f"Ошибка при отправке уведомления: {str(e)}")
-        raise
 
 if __name__ == '__main__':
     init_db()

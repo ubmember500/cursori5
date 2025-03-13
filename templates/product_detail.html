@@ -494,6 +494,10 @@ body .btn:contains("В избранное") {
                                 </div>
                             </div>
                             <form id="quickOrderForm" onsubmit="handleQuickOrder(event)">
+                                <input type="hidden" name="product_id" value="{{ product.id }}">
+                                <input type="hidden" name="product_name" value="{{ product.name }}">
+                                <input type="hidden" name="product_price" value="{{ product.price }}">
+                                
                                 <div class="mb-3">
                                     <label class="form-label">Размер</label>
                                     <div class="size-selector">
@@ -574,7 +578,8 @@ body .btn:contains("В избранное") {
                                 <button type="submit" class="btn btn-primary w-100">Заказать</button>
                             </form>
                         </div>
-            </div>
+                </div>
+                    </div>
                 </div>
 
                 <style>
@@ -774,11 +779,6 @@ body .btn:contains("В избранное") {
                     event.preventDefault();
                     const form = event.target;
                     const formData = new FormData(form);
-                    
-                    // Добавляем информацию о товаре
-                    formData.append('product_id', '{{ product.id }}');
-                    formData.append('product_name', '{{ product.name }}');
-                    formData.append('product_price', '{{ product.price }}');
                     
                     fetch('/quick_order', {
                         method: 'POST',
