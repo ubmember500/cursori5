@@ -161,6 +161,24 @@
 {% endblock %}
 
 {% block content %}
+<!-- Отладочная информация -->
+<div class="container my-5" style="display: none;">
+    <div class="row">
+        <div class="col">
+            <h4>Отладочная информация:</h4>
+            <p>Текущая категория: {{ request.args.get('category') }}</p>
+            <p>Все параметры: {{ request.args }}</p>
+            <p>Количество товаров: {{ products|length }}</p>
+            <p>Категории:</p>
+            <ul>
+            {% for category in categories %}
+                <li>{{ category.name }} (ID: {{ category.id }})</li>
+            {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
 <div class="container my-5">
     <div class="row">
         <!-- Фильтры -->
@@ -171,7 +189,7 @@
                     {% for category in categories %}
                     <div class="form-check">
                         <input class="form-check-input category-filter" type="checkbox" name="category" value="{{ category.id }}" 
-                               id="category{{ category.id }}" {% if category.id|string in request.args.getlist('category') %}checked{% endif %}>
+                               id="category{{ category.id }}" {% if category.id|string == request.args.get('category') %}checked{% endif %}>
                         <label class="form-check-label" for="category{{ category.id }}">
                             {{ category.name }}
                         </label>
@@ -295,21 +313,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обновление URL с сохранением всех параметров
     function updateURLWithParams(newParams = {}) {
         try {
+            console.log('Обновление URL с параметрами:', newParams);
             const params = getCurrentParams();
+            
+            // Очищаем старые параметры категорий
+            params.delete('category');
             
             Object.entries(newParams).forEach(([key, value]) => {
                 if (value === null) {
                     params.delete(key);
                 } else if (Array.isArray(value)) {
-                    params.delete(key);
                     value.forEach(v => params.append(key, v));
                 } else {
                     params.set(key, value);
                 }
             });
 
+            console.log('Итоговые параметры URL:', params.toString());
+            
             // Формируем новый URL
             const newUrl = `${window.location.pathname}?${params.toString()}`;
+            console.log('Новый URL:', newUrl);
             
             // Перезагружаем страницу с новыми параметрами
             window.location.href = newUrl;
@@ -318,6 +342,38 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Произошла ошибка при обновлении фильтров. Пожалуйста, попробуйте еще раз.');
         }
     }
+
+    // Обработчики для категорий
+    document.querySelectorAll('.category-filter').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            try {
+                console.log('Изменение категории:', this.value, this.checked);
+                
+                // Снимаем выделение с других чекбоксов
+                document.querySelectorAll('.category-filter').forEach(cb => {
+                    if (cb !== this) {
+                        cb.checked = false;
+                    }
+                });
+                
+                // Если чекбокс отмечен, отправляем его значение, иначе null
+                const categoryValue = this.checked ? this.value : null;
+                console.log('Значение категории для отправки:', categoryValue);
+                
+                const minValue = parseInt(minSlider.value);
+                const maxValue = parseInt(maxSlider.value);
+                
+                updateURLWithParams({
+                    category: categoryValue,
+                    min_price: minValue,
+                    max_price: maxValue
+                });
+            } catch (error) {
+                console.error('Ошибка при обработке категорий:', error);
+                alert('Произошла ошибка при фильтрации по категориям. Пожалуйста, попробуйте еще раз.');
+            }
+        });
+    });
 
     // Обработчик изменения значения ползунка
     function handleSliderInput(currentSlider, otherSlider, isMin) {
@@ -358,31 +414,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     maxSlider.addEventListener('input', function() {
         handleSliderInput(maxSlider, minSlider, false);
-    });
-
-    // Обработчики для категорий
-    document.querySelectorAll('.category-filter').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            try {
-                const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked'))
-                    .map(cb => cb.value)
-                    .filter(value => value && !isNaN(parseInt(value)));
-                
-                console.log('Выбранные категории:', checkedCategories); // Отладочный вывод
-                
-                const minValue = parseInt(minSlider.value);
-                const maxValue = parseInt(maxSlider.value);
-                
-                updateURLWithParams({
-                    category: checkedCategories.length > 0 ? checkedCategories : null,
-                    min_price: minValue,
-                    max_price: maxValue
-                });
-            } catch (error) {
-                console.error('Ошибка при обработке категорий:', error);
-                alert('Произошла ошибка при фильтрации по категориям. Пожалуйста, попробуйте еще раз.');
-            }
-        });
     });
 
     // Обработчик для сортировки

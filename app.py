@@ -354,14 +354,17 @@ def home():
 @app.route('/products')
 def products():
     try:
-        print("Начало обработки запроса /products")
+        print("\n=== Начало обработки запроса /products ===")
+        print(f"Все параметры запроса: {request.args}")
         
         # Получаем параметры фильтрации
         category = request.args.get('category')
         search_query = request.args.get('q')
         sort = request.args.get('sort', 'default')
         
-        print(f"Полученные параметры: category={category}, search={search_query}, sort={sort}")
+        print(f"Параметр категории: {category}, тип: {type(category)}")
+        print(f"Параметр поиска: {search_query}")
+        print(f"Параметр сортировки: {sort}")
         
         # Получаем и валидируем параметры цены
         try:
@@ -393,23 +396,27 @@ def products():
         
         # Базовый запрос
         query = Product.query
+        print(f"Базовый SQL запрос: {query}")
         
         # Фильтр по категории
         if category:
             try:
                 category_id = int(category)
                 query = query.filter(Product.category_id == category_id)
-                print(f"Фильтрация по категории: {category_id}")
+                print(f"Применен фильтр по категории {category_id}")
+                print(f"SQL запрос после фильтрации по категории: {query}")
             except (ValueError, TypeError) as e:
                 print(f"Ошибка при обработке категории: {e}")
         
         # Фильтр по поиску
         if search_query:
             query = query.filter(Product.name.ilike(f'%{search_query}%'))
+            print(f"Применен фильтр по поиску: {search_query}")
         
         # Фильтр по цене
         query = query.filter(Product.price >= min_price)
         query = query.filter(Product.price <= max_price)
+        print(f"Применены фильтры по цене: {min_price} - {max_price}")
         
         # Сортировка
         if sort == 'price_asc':
@@ -420,18 +427,27 @@ def products():
             query = query.order_by(Product.name.asc())
         elif sort == 'name_desc':
             query = query.order_by(Product.name.desc())
+        print(f"Применена сортировка: {sort}")
         
         # Получаем все товары
         products = query.all()
         print(f"Найдено товаров: {len(products)}")
+        print("Список найденных товаров:")
+        for product in products:
+            print(f"- {product.name} (категория: {product.category_id})")
         
         # Получаем все категории для фильтров
         all_categories = Category.query.all()
         print(f"Всего категорий: {len(all_categories)}")
+        print("Список категорий:")
+        for category in all_categories:
+            print(f"- {category.name} (id: {category.id})")
         
         # Обновляем изображения для товаров
         for product in products:
             product.image = get_random_product_image(product.category_id)
+        
+        print("=== Завершение обработки запроса /products ===\n")
         
         response = make_response(render_template('products.html', 
                                               products=products, 
