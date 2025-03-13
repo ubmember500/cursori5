@@ -1095,19 +1095,39 @@ def subscribe_newsletter():
 @login_required
 def my_orders():
     try:
-        # Получаем email текущего пользователя
-        user_email = current_user.email
+        print("\n=== Начало получения заказов пользователя ===")
+        print(f"Текущий пользователь: {current_user.username} (ID: {current_user.id})")
         
-        # Получаем все заказы, где customer_info содержит этот email
-        orders = Order.query.filter(
-            Order.customer_info['email'].astext == user_email
-        ).order_by(Order.created_at.desc()).all()
+        # Проверяем, не заблокирован ли пользователь
+        if not current_user.is_active:
+            print("Ошибка: Пользователь заблокирован")
+            flash('Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.', 'error')
+            return redirect(url_for('home'))
+        
+        # Получаем заказы текущего пользователя по user_id
+        orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
+        print(f"Найдено заказов: {len(orders)}")
         
         orders_with_items = []
         for order in orders:
+            print(f"\nОбработка заказа #{order.id}:")
+            print(f"- Дата создания: {order.created_at}")
+            print(f"- Статус: {order.status}")
+            print(f"- Сумма: {order.total_amount}")
+            
+            # Проверяем корректность данных заказа
+            if not order.items or not isinstance(order.items, list):
+                print(f"Ошибка: Некорректные данные товаров в заказе #{order.id}")
+                continue
+                
+            if not order.customer_info or not isinstance(order.customer_info, dict):
+                print(f"Ошибка: Некорректные данные покупателя в заказе #{order.id}")
+                continue
+            
             # Получаем товары из JSON-данных
             items = order.items
             total = sum(item['total'] for item in items)
+            print(f"- Количество товаров: {len(items)}")
             
             orders_with_items.append({
                 'order': {
@@ -1118,6 +1138,8 @@ def my_orders():
                 },
                 'items': items
             })
+        
+        print("=== Завершение получения заказов пользователя ===\n")
         return render_template('my_orders.html', orders=orders_with_items)
     except Exception as e:
         print(f"Ошибка при получении заказов: {str(e)}")
@@ -1153,6 +1175,8 @@ def test_email():
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
+        print("\n=== Начало создания быстрого заказа ===")
+        
         # Получаем данные из формы
         product_id = request.form.get('product_id')
         product_name = request.form.get('product_name')
@@ -1168,17 +1192,71 @@ def quick_order():
         telegram = request.form.get('telegram')
         viber = request.form.get('viber')
 
+        print(f"Получены данные заказа:")
+        print(f"- Товар: {product_name} (ID: {product_id})")
+        print(f"- Цена: {price}")
+        print(f"- Размер: {size}")
+        print(f"- Цвет: {color}")
+        print(f"- Количество: {quantity}")
+        print(f"- Email покупателя: {email}")
+
+        # Проверяем наличие всех необходимых данных
+        if not all([product_id, product_name, price, size, color, quantity, name, phone, email, address, payment_method]):
+            print("Ошибка: Отсутствуют обязательные поля в форме")
+            return jsonify({
+                'success': False,
+                'message': 'Пожалуйста, заполните все обязательные поля'
+            })
+
+        # Проверяем корректность email
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            print("Ошибка: Некорректный формат email")
+            return jsonify({
+                'success': False,
+                'message': 'Пожалуйста, введите корректный email'
+            })
+
+        # Проверяем корректность телефона
+        if not re.match(r"^\+?[0-9]{10,15}$", phone.replace(" ", "")):
+            print("Ошибка: Некорректный формат телефона")
+            return jsonify({
+                'success': False,
+                'message': 'Пожалуйста, введите корректный номер телефона'
+            })
+
         # Проверяем наличие товара
         product = Product.query.get_or_404(product_id)
         if quantity > product.stock:
+            print(f"Ошибка: Недостаточно товара на складе. Запрошено: {quantity}, доступно: {product.stock}")
             return jsonify({
                 'success': False,
                 'message': 'Извините, данного количества товара нет в наличии'
             })
 
+        # Проверяем минимальное количество товара
+        if quantity < 1:
+            print("Ошибка: Некорректное количество товара")
+            return jsonify({
+                'success': False,
+                'message': 'Количество товара должно быть больше 0'
+            })
+
+        # Ищем пользователя по email
+        user = User.query.filter_by(email=email).first()
+        print(f"Поиск пользователя по email {email}: {'Найден' if user else 'Не найден'}")
+        if user:
+            print(f"ID пользователя: {user.id}")
+            # Проверяем, не заблокирован ли пользователь
+            if not user.is_active:
+                print("Ошибка: Пользователь заблокирован")
+                return jsonify({
+                    'success': False,
+                    'message': 'Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.'
+                })
+        
         # Создаем новый заказ
         new_order = Order(
-            user_id=current_user.id if current_user.is_authenticated else None,
+            user_id=user.id if user else None,
             total_amount=price * quantity,
             status='pending',
             items=[{
@@ -1206,13 +1284,21 @@ def quick_order():
         # Сохраняем заказ в базу данных
         db.session.add(new_order)
         db.session.commit()
+        print(f"Заказ успешно создан с ID: {new_order.id}")
+        print(f"Привязан к пользователю: {'Да' if new_order.user_id else 'Нет'}")
 
         # Отправляем email с подтверждением
-        send_order_confirmation_email(email, new_order)
+        email_sent = send_order_confirmation_email(email, new_order)
+        if not email_sent:
+            print(f"Ошибка при отправке email для заказа #{new_order.id}")
+            # Не отменяем заказ, если email не отправился
+            # Но логируем ошибку для администратора
 
+        print("=== Завершение создания быстрого заказа ===\n")
         return jsonify({
             'success': True,
-            'message': 'Заказ успешно оформлен'
+            'message': 'Заказ успешно оформлен',
+            'order_id': new_order.id
         })
 
     except Exception as e:

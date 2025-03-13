@@ -1293,6 +1293,10 @@ function handleQuickOrder(event) {
     submitButton.disabled = true;
     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Отправка...';
     
+    // Удаляем предыдущие сообщения об ошибках или успехе
+    const existingMessages = form.querySelectorAll('.alert');
+    existingMessages.forEach(msg => msg.remove());
+    
     // Отправляем данные на сервер
     fetch('/quick_order', {
         method: 'POST',
@@ -1300,7 +1304,7 @@ function handleQuickOrder(event) {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Ошибка сети');
+            throw new Error('Ошибка сети при отправке заказа');
         }
         return response.json();
     })
@@ -1309,17 +1313,23 @@ function handleQuickOrder(event) {
             // Показываем сообщение об успехе
             const successMessage = document.createElement('div');
             successMessage.className = 'alert alert-success mt-3';
-            successMessage.textContent = 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время. Пожалуйста, проверьте вашу почту - мы отправили вам подтверждение заказа. Если вы не нашли письмо, проверьте папку "Спам".';
+            successMessage.innerHTML = `
+                <h4 class="alert-heading">Заказ успешно оформлен!</h4>
+                <p>Номер вашего заказа: #${data.order_id}</p>
+                <p>Мы свяжемся с вами в ближайшее время для подтверждения заказа.</p>
+                <p>Пожалуйста, проверьте вашу почту - мы отправили вам подтверждение заказа.</p>
+                <p class="mb-0">Если вы не нашли письмо, проверьте папку "Спам".</p>
+            `;
             form.appendChild(successMessage);
             
             // Очищаем форму
             form.reset();
             
-            // Закрываем модальное окно через 2 секунды
+            // Закрываем модальное окно через 3 секунды
             setTimeout(() => {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
                 modal.hide();
-            }, 2000);
+            }, 3000);
         } else {
             throw new Error(data.message || 'Произошла ошибка при оформлении заказа');
         }
@@ -1329,7 +1339,11 @@ function handleQuickOrder(event) {
         // Показываем сообщение об ошибке
         const errorMessage = document.createElement('div');
         errorMessage.className = 'alert alert-danger mt-3';
-        errorMessage.textContent = error.message || 'Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.';
+        errorMessage.innerHTML = `
+            <h4 class="alert-heading">Ошибка при оформлении заказа</h4>
+            <p>${error.message}</p>
+            <p class="mb-0">Пожалуйста, попробуйте позже или свяжитесь с нашей службой поддержки.</p>
+        `;
         form.appendChild(errorMessage);
         
         // Удаляем сообщение об ошибке через 5 секунд
