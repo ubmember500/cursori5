@@ -871,7 +871,10 @@ function handleQuickOrder(event) {
     // Отправляем данные на сервер
     fetch('/quick_order', {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
     .then(response => {
         if (!response.ok) {
@@ -884,7 +887,7 @@ function handleQuickOrder(event) {
             // Показываем сообщение об успехе
             const successMessage = document.createElement('div');
             successMessage.className = 'alert alert-success mt-3';
-            successMessage.textContent = 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.';
+            successMessage.textContent = data.message || 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.';
             form.appendChild(successMessage);
             
             // Закрываем модальное окно через 2 секунды
@@ -939,7 +942,10 @@ function handleAddToCart() {
     // Отправляем форму через fetch
     fetch(form.action, {
         method: 'POST',
-        body: new FormData(form)
+        body: new FormData(form),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
     .then(response => {
         if (!response.ok) {
@@ -952,7 +958,7 @@ function handleAddToCart() {
             // Показываем сообщение об успехе
             const successMessage = document.createElement('div');
             successMessage.className = 'alert alert-success mt-3';
-            successMessage.textContent = 'Товар успешно добавлен в корзину!';
+            successMessage.textContent = data.message || 'Товар успешно добавлен в корзину!';
             form.appendChild(successMessage);
             
             // Удаляем сообщение через 3 секунды
