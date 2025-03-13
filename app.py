@@ -224,6 +224,25 @@ class NewsletterSubscription(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
 
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    total_amount = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, processing, shipped, delivered, cancelled
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    items = db.relationship('OrderItem', backref='order', lazy=True)
+    user = db.relationship('User', backref='orders')
+
+
+class OrderItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    product = db.relationship('Product', backref='order_items')
+
+
 class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.String(255), unique=True)
@@ -736,7 +755,7 @@ def checkout():
             session.pop('cart', None)
             
             flash('Заказ успешно оформлен!', 'success')
-            return redirect(url_for('order_confirmation', order_id=order.id))
+            return redirect(url_for('my_orders'))
             
         except Exception as e:
             db.session.rollback()
@@ -1330,6 +1349,39 @@ def quick_order():
     except Exception as e:
         print(f"Ошибка при обработке быстрого заказа: {str(e)}")
         return jsonify({'success': False, 'message': 'Произошла ошибка при оформлении заказа'})
+
+@app.route('/my_orders')
+@login_required
+def my_orders():
+    try:
+        # Получаем все заказы пользователя, отсортированные по дате создания (новые сверху)
+        orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
+        
+        # Для каждого заказа получаем его товары
+        orders_with_items = []
+        for order in orders:
+            order_items = []
+            for item in order.items:
+                product = Product.query.get(item.product_id)
+                if product:
+                    order_items.append({
+                        'product': product,
+                        'quantity': item.quantity,
+                        'price': item.price,
+                        'total': item.quantity * item.price
+                    })
+            
+            orders_with_items.append({
+                'order': order,
+                'items': order_items
+            })
+        
+        return render_template('my_orders.html', orders=orders_with_items)
+        
+    except Exception as e:
+        print(f"Ошибка при получении заказов: {str(e)}")
+        flash('Произошла ошибка при загрузке заказов', 'error')
+        return redirect(url_for('home'))
 
 @app.route('/test_email')
 def test_email():
