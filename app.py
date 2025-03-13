@@ -1,9 +1,19 @@
 import base64
+from functools import wraps
 
 def decode_smtp_password():
     # Кодированный пароль (base64)
     encoded = "Zm14eCBxZXhnIHhscG4gbHZieg=="
     return base64.b64decode(encoded).decode('utf-8')
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if g.user is None:
+            flash('Пожалуйста, войдите в систему для доступа к этой странице', 'warning')
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # from liqpay import LiqPay  # Temporarily commented out
 
