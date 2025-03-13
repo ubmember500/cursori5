@@ -1,3 +1,10 @@
+import base64
+
+def decode_smtp_password():
+    # Кодированный пароль (base64)
+    encoded = "Zm14eCBxZXhnIHhscG4gbHZieg=="
+    return base64.b64decode(encoded).decode('utf-8')
+
 # from liqpay import LiqPay  # Temporarily commented out
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, make_response, jsonify
@@ -23,7 +30,6 @@ from sqlalchemy.exc import IntegrityError
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import base64
 
 # Настройка путей
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -1140,11 +1146,6 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
-
-def decode_smtp_password():
-    # Кодированный пароль (base64)
-    encoded = "Zm14eCBxZXhnIHhscG4gbHZieg=="
-    return base64.b64decode(encoded).decode('utf-8')
 
 def send_email_smtp(to_email, subject, body):
     try:
