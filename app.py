@@ -23,6 +23,7 @@ from sqlalchemy.exc import IntegrityError
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import base64
 
 # Настройка путей
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -57,7 +58,7 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'defensivelox@gmail.com'
-app.config['MAIL_PASSWORD'] = 'fmxx qexg xlpn lvbz'
+app.config['MAIL_PASSWORD'] = decode_smtp_password()
 app.config['MAIL_DEFAULT_SENDER'] = 'defensivelox@gmail.com'
 app.config['ADMIN_EMAIL'] = 'defensivelox@gmail.com'
 
@@ -1139,6 +1140,11 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
+
+def decode_smtp_password():
+    # Кодированный пароль (base64)
+    encoded = "Zm14eCBxZXhnIHhscG4gbHZieg=="
+    return base64.b64decode(encoded).decode('utf-8')
 
 def send_email_smtp(to_email, subject, body):
     try:
