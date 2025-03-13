@@ -25,6 +25,15 @@ from sqlalchemy.exc import IntegrityError
 # Загрузка переменных окружения
 load_dotenv()
 
+# Отладочный вывод настроек почты
+print("=== Настройки почты ===")
+print(f"MAIL_SERVER: {os.getenv('MAIL_SERVER')}")
+print(f"MAIL_PORT: {os.getenv('MAIL_PORT')}")
+print(f"MAIL_USERNAME: {os.getenv('MAIL_USERNAME')}")
+print(f"MAIL_DEFAULT_SENDER: {os.getenv('MAIL_DEFAULT_SENDER')}")
+print(f"ADMIN_EMAIL: {os.getenv('ADMIN_EMAIL')}")
+print("=====================")
+
 # Настройка путей
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
@@ -1130,9 +1139,28 @@ def quick_order():
         telegram = request.form.get('telegram')
         viber = request.form.get('viber')
 
-        print(f"Получены данные формы: product_id={product_id}, name={name}, email={email}")
-        print(f"Настройки почты: MAIL_SERVER={app.config['MAIL_SERVER']}, MAIL_PORT={app.config['MAIL_PORT']}")
-        print(f"Отправитель: {app.config['MAIL_USERNAME']}, Получатель: {app.config['ADMIN_EMAIL']}")
+        print("\n=== Начало обработки быстрого заказа ===")
+        print(f"Получены данные формы:")
+        print(f"- product_id: {product_id}")
+        print(f"- product_name: {product_name}")
+        print(f"- product_price: {product_price}")
+        print(f"- size: {size}")
+        print(f"- color: {color}")
+        print(f"- quantity: {quantity}")
+        print(f"- name: {name}")
+        print(f"- phone: {phone}")
+        print(f"- email: {email}")
+        print(f"- address: {address}")
+        print(f"- payment_method: {payment_method}")
+        print(f"- telegram: {telegram}")
+        print(f"- viber: {viber}")
+
+        print("\nНастройки почты:")
+        print(f"- MAIL_SERVER: {app.config['MAIL_SERVER']}")
+        print(f"- MAIL_PORT: {app.config['MAIL_PORT']}")
+        print(f"- MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
+        print(f"- MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
+        print(f"- ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
 
         # Проверяем обязательные поля
         required_fields = {
@@ -1149,12 +1177,12 @@ def quick_order():
         
         missing_fields = [field for field, value in required_fields.items() if not value]
         if missing_fields:
-            print(f"Отсутствуют обязательные поля: {missing_fields}")
+            print(f"\nОтсутствуют обязательные поля: {missing_fields}")
             return jsonify({'success': False, 'error': f'Отсутствуют обязательные поля: {", ".join(missing_fields)}'})
 
         # Проверяем поля контактной информации для оплаты картой
         if payment_method == 'card' and not telegram and not viber:
-            print("Не указан способ связи для оплаты картой")
+            print("\nНе указан способ связи для оплаты картой")
             return jsonify({'success': False, 'error': 'Пожалуйста, укажите хотя бы один способ связи (Telegram или Viber)'})
 
         try:
@@ -1187,26 +1215,37 @@ def quick_order():
             Общая сумма: {float(product_price) * int(quantity)} ₴
             """
 
-            print(f"Отправка уведомления на email: {app.config['ADMIN_EMAIL']}")
-            print(f"Текст письма: {email_body}")
+            print("\nПодготовка к отправке email:")
+            print(f"Получатель: {app.config['ADMIN_EMAIL']}")
+            print(f"Тема: Новый заказ от {name}")
+            print(f"Текст письма:\n{email_body}")
 
-            # Отправляем уведомление
+            # Создаем объект сообщения
             msg = Message(
                 subject=f'Новый заказ от {name}',
                 recipients=[app.config['ADMIN_EMAIL']],
                 body=email_body
             )
             
-            mail.send(msg)
-            print("Уведомление успешно отправлено")
+            print("\nУстановка соединения с почтовым сервером...")
+            # Устанавливаем соединение с почтовым сервером
+            with app.app_context():
+                mail.connect()
+                print("Соединение установлено, отправка сообщения...")
+                mail.send(msg)
+                print("Сообщение отправлено, закрытие соединения...")
+                mail.close()
+                print("Соединение закрыто")
+            
+            print("\nУведомление успешно отправлено")
             return jsonify({'success': True})
 
         except Exception as e:
-            print(f"Ошибка при отправке уведомления: {str(e)}")
+            print(f"\nОшибка при отправке уведомления: {str(e)}")
             return jsonify({'success': False, 'error': f'Ошибка при отправке уведомления: {str(e)}'})
 
     except Exception as e:
-        print(f"Общая ошибка при создании заказа: {str(e)}")
+        print(f"\nОбщая ошибка при создании заказа: {str(e)}")
         return jsonify({'success': False, 'error': f'Произошла ошибка при оформлении заказа: {str(e)}'})
 
 if __name__ == '__main__':
