@@ -1242,7 +1242,7 @@ def quick_order():
         print("\n=== Начало обработки быстрого заказа ===")
         
         # Получаем данные из формы
-        form_data = request.form.to_dict()
+        form_data = dict(request.form)
         print("\nПолученные данные формы:")
         for key, value in form_data.items():
             print(f"{key}: {value}")
@@ -1264,7 +1264,7 @@ def quick_order():
         
         missing_fields = []
         for field, display_name in required_fields.items():
-            if not request.form.get(field):
+            if not form_data.get(field):
                 missing_fields.append(display_name)
         
         if missing_fields:
@@ -1273,19 +1273,19 @@ def quick_order():
             return jsonify({'success': False, 'message': error_msg})
 
         # Получаем и валидируем данные
-        product_id = request.form.get('product_id')
-        product_name = request.form.get('product_name')
-        size = request.form.get('size')
-        color = request.form.get('color')
-        quantity = int(request.form.get('quantity', 1))
-        price = float(request.form.get('price', 0))
-        name = request.form.get('name')
-        phone = request.form.get('phone')
-        email = request.form.get('email')
-        address = request.form.get('address')
-        payment_method = request.form.get('payment_method')
-        telegram = request.form.get('telegram')
-        viber = request.form.get('viber')
+        product_id = form_data.get('product_id')
+        product_name = form_data.get('product_name')
+        size = form_data.get('size')
+        color = form_data.get('color')
+        quantity = int(form_data.get('quantity', 1))
+        price = float(form_data.get('price', 0))
+        name = form_data.get('name')
+        phone = form_data.get('phone')
+        email = form_data.get('email')
+        address = form_data.get('address')
+        payment_method = form_data.get('payment_method')
+        telegram = form_data.get('telegram')
+        viber = form_data.get('viber')
 
         print(f"\nОбработанные данные заказа:")
         print(f"Товар ID: {product_id}")

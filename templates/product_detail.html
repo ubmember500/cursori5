@@ -740,13 +740,13 @@ body .btn:contains("В избранное") {
                                     </div>
                                 </div>
 
-                                <form id="quickOrderForm" onsubmit="handleQuickOrder(event)">
-                                    <input type="hidden" name="product_id" value="{{ product.id }}">
-                                    <input type="hidden" name="product_name" value="{{ product.name }}">
-                                    <input type="hidden" name="size" id="quick_size">
-                                    <input type="hidden" name="color" id="quick_color">
-                                    <input type="hidden" name="quantity" id="quick_quantity">
-                                    <input type="hidden" name="price" id="quick_price" value="{{ product.price }}">
+                                <form id="quickOrderForm" class="needs-validation" novalidate>
+                                    <input type="hidden" name="product_id" id="quick_order_product_id">
+                                    <input type="hidden" name="product_name" id="quick_order_product_name">
+                                    <input type="hidden" name="price" id="quick_order_price">
+                                    <input type="hidden" name="size" id="quick_order_size">
+                                    <input type="hidden" name="color" id="quick_order_color">
+                                    <input type="hidden" name="quantity" id="quick_order_quantity">
                                     <input type="hidden" name="telegram" id="telegram_field">
                                     <input type="hidden" name="viber" id="viber_field">
                                     
@@ -907,36 +907,44 @@ body .btn:contains("В избранное") {
 
 <script>
 function openQuickOrder() {
-    const size = document.getElementById('cart_size').value;
-    const color = document.getElementById('cart_color').value;
-    const quantity = document.getElementById('cart_quantity').value;
-
+    // Получаем выбранные значения
+    const size = document.querySelector('input[name="size"]:checked')?.value;
+    const color = document.querySelector('input[name="color"]:checked')?.value;
+    const quantity = parseInt(document.getElementById('quantity').value) || 1;
+    
+    // Проверяем, что размер и цвет выбраны
     if (!size || !color) {
-        alert('Пожалуйста, выберите размер и цвет');
+        alert('Пожалуйста, выберите размер и цвет товара');
         return;
     }
-
+    
+    // Проверяем количество
     if (quantity < 1) {
-        alert('Пожалуйста, выберите количество');
+        alert('Пожалуйста, выберите количество товара');
         return;
     }
-
+    
     // Заполняем скрытые поля формы
-    document.getElementById('quick_size').value = size;
-    document.getElementById('quick_color').value = color;
-    document.getElementById('quick_quantity').value = quantity;
+    document.getElementById('quick_order_product_id').value = "{{ product.id }}";
+    document.getElementById('quick_order_product_name').value = "{{ product.name }}";
+    document.getElementById('quick_order_price').value = "{{ product.price }}";
+    document.getElementById('quick_order_size').value = size;
+    document.getElementById('quick_order_color').value = color;
+    document.getElementById('quick_order_quantity').value = quantity;
     
     // Заполняем детали заказа для отображения
+    document.getElementById('order_product_name').textContent = "{{ product.name }}";
     document.getElementById('order_size').textContent = size;
     document.getElementById('order_color').textContent = color;
     document.getElementById('order_quantity').textContent = quantity;
-    document.getElementById('order_price').textContent = ({{ product.price }} * quantity).toFixed(2);
-    document.getElementById('order_total').textContent = ({{ product.price }} * quantity + 60).toFixed(2);
+    document.getElementById('order_price').textContent = "{{ product.price }}";
+    
+    // Обновляем общую сумму
+    updateOrderTotal();
     
     // Показываем модальное окно
-    const modal = document.getElementById('quickOrderModal');
-    const bsModal = new bootstrap.Modal(modal);
-    bsModal.show();
+    const modal = new bootstrap.Modal(document.getElementById('quickOrderModal'));
+    modal.show();
 }
 
 function closeQuickOrder() {
@@ -965,7 +973,7 @@ function closeQuickOrder() {
 }
 
 function updateOrderTotal() {
-    const quantity = parseInt(document.getElementById('quick_quantity').value) || 1;
+    const quantity = parseInt(document.getElementById('quick_order_quantity').value) || 1;
     const productPrice = parseFloat('{{ product.price }}');
     const productTotal = productPrice * quantity;
     
@@ -1015,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Обработчик изменения количества в модальном окне
-    const quickQuantityInput = document.getElementById('quick_quantity');
+    const quickQuantityInput = document.getElementById('quick_order_quantity');
     if (quickQuantityInput) {
         quickQuantityInput.addEventListener('change', updateOrderTotal);
     }
@@ -1039,11 +1047,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Заполняем форму данными
         const form = document.getElementById('quickOrderForm');
-        form.querySelector('input[name="product_name"]').value = "{{ product.name }}";
-        form.querySelector('input[name="size"]').value = size;
-        form.querySelector('input[name="color"]').value = color;
-        form.querySelector('input[name="quantity"]').value = quantity;
-        form.querySelector('input[name="price"]').value = {{ product.price }};
+        form.querySelector('input[name="quick_order_product_name"]').value = "{{ product.name }}";
+        form.querySelector('input[name="quick_order_size"]').value = size;
+        form.querySelector('input[name="quick_order_color"]').value = color;
+        form.querySelector('input[name="quick_order_quantity"]').value = quantity;
+        form.querySelector('input[name="quick_order_price"]').value = {{ product.price }};
         
         // Заполняем детали заказа
         document.getElementById('order_product_name').textContent = "{{ product.name }}";
@@ -1216,48 +1224,48 @@ function handleAddToCart(event) {
 function handleQuickOrder(event) {
     event.preventDefault();
     
-    const form = event.target;
-    const formData = new FormData(form);
+    // Получаем форму
+    const form = document.getElementById('quickOrderForm');
     
-    // Проверяем заполнение всех обязательных полей
-    const missingFields = validateForm(formData);
+    // Проверяем обязательные поля
+    const requiredFields = ['name', 'phone', 'email', 'address', 'payment_method'];
+    const missingFields = [];
+    
+    requiredFields.forEach(field => {
+        const input = form.querySelector(`[name="${field}"]`);
+        if (!input || !input.value.trim()) {
+            missingFields.push(input ? input.placeholder : field);
+        }
+    });
+    
     if (missingFields.length > 0) {
-        alert('Пожалуйста, заполните все обязательные поля: ' + missingFields.join(', '));
+        alert(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
         return;
     }
-
+    
     // Проверяем дополнительные поля для оплаты картой
-    if (formData.get('payment_method') === 'card') {
-        const messenger = document.querySelector('input[name="messenger"]:checked');
-        const username = document.getElementById('messenger_username').value;
+    const paymentMethod = form.querySelector('[name="payment_method"]:checked');
+    if (paymentMethod && paymentMethod.value === 'card') {
+        const telegram = form.querySelector('[name="telegram"]').value.trim();
+        const viber = form.querySelector('[name="viber"]').value.trim();
         
-        if (!messenger || !username) {
-            alert('Пожалуйста, укажите мессенджер и ваш username для связи с менеджером');
+        if (!telegram && !viber) {
+            alert('Для оплаты картой необходимо указать контакт в Telegram или Viber');
             return;
         }
-        
-        // Заполняем поля telegram и viber в зависимости от выбранного мессенджера
-        if (messenger.value === 'telegram') {
-            formData.set('telegram', username);
-            formData.set('viber', '');
-        } else if (messenger.value === 'viber') {
-            formData.set('telegram', '');
-            formData.set('viber', username);
-        }
     }
-
-    // Добавляем product_name в formData
-    formData.set('product_name', document.getElementById('order_product_name').textContent);
     
-    // Добавляем цену в formData
-    const price = parseFloat(document.getElementById('order_price').textContent);
-    formData.set('price', price);
-
-    console.log('Отправляемые данные:');
-    for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
-    }
-
+    // Создаем объект FormData
+    const formData = new FormData(form);
+    
+    // Добавляем данные о товаре
+    formData.append('product_id', document.getElementById('quick_order_product_id').value);
+    formData.append('product_name', document.getElementById('quick_order_product_name').value);
+    formData.append('price', document.getElementById('quick_order_price').value);
+    formData.append('size', document.getElementById('quick_order_size').value);
+    formData.append('color', document.getElementById('quick_order_color').value);
+    formData.append('quantity', document.getElementById('quick_order_quantity').value);
+    
     // Отправляем данные на сервер
     fetch('/quick_order', {
         method: 'POST',
@@ -1266,19 +1274,21 @@ function handleQuickOrder(event) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Спасибо за заказ! Мы свяжемся с вами в ближайшее время.');
+            alert('Заказ успешно оформлен!');
             // Закрываем модальное окно
-            const modal = document.getElementById('quickOrderModal');
-            const bsModal = bootstrap.Modal.getInstance(modal);
-            bsModal.hide();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
+            modal.hide();
         } else {
-            alert(data.message || 'Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.');
+            alert(data.message || 'Произошла ошибка при оформлении заказа');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.');
+        console.error('Ошибка:', error);
+        alert('Произошла ошибка при отправке заказа');
     });
 }
+
+// Добавляем обработчик отправки формы
+document.getElementById('quickOrderForm').addEventListener('submit', handleQuickOrder);
 </script>
 {% endblock %}
