@@ -21,6 +21,9 @@ from flask_migrate import Migrate
 import bleach
 import re
 from sqlalchemy.exc import IntegrityError
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -69,11 +72,20 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-app.config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', 'defensivelox@gmail.com')  # Добавляем email администратора
+app.config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', 'defensivelox@gmail.com')
 
-mail = Mail(app)
+# Инициализация расширений
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+mail = Mail(app)
+
+# Явное подключение к почтовому серверу
+with app.app_context():
+    try:
+        mail.connect()
+        print("Успешное подключение к почтовому серверу")
+    except Exception as e:
+        print(f"Ошибка подключения к почтовому серверу: {e}")
 
 # Настройка Flask-Login
 login_manager = LoginManager()
@@ -1121,9 +1133,44 @@ def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
+def send_email_smtp(to_email, subject, body):
+    try:
+        # Создаем объект сообщения
+        msg = MIMEMultipart()
+        msg['From'] = app.config['MAIL_USERNAME']
+        msg['To'] = to_email
+        msg['Subject'] = subject
+
+        # Добавляем тело письма
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Подключаемся к SMTP серверу
+        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+        server.starttls()
+        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+
+        # Отправляем письмо
+        server.send_message(msg)
+        server.quit()
+
+        print("Email успешно отправлен через SMTP")
+        return True
+    except Exception as e:
+        print(f"Ошибка отправки email через SMTP: {e}")
+        return False
+
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
+        # Проверяем настройки почты
+        print("\n=== Проверка настроек почты ===")
+        print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
+        print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
+        print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
+        print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
+        print(f"ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
+        print("=============================")
+
         # Получаем данные из формы
         product_id = request.form.get('product_id')
         product_name = request.form.get('product_name')
@@ -1154,13 +1201,6 @@ def quick_order():
         print(f"- payment_method: {payment_method}")
         print(f"- telegram: {telegram}")
         print(f"- viber: {viber}")
-
-        print("\nНастройки почты:")
-        print(f"- MAIL_SERVER: {app.config['MAIL_SERVER']}")
-        print(f"- MAIL_PORT: {app.config['MAIL_PORT']}")
-        print(f"- MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
-        print(f"- MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
-        print(f"- ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
 
         # Проверяем обязательные поля
         required_fields = {
@@ -1220,19 +1260,11 @@ def quick_order():
             print(f"Тема: Новый заказ от {name}")
             print(f"Текст письма:\n{email_body}")
 
-            # Создаем объект сообщения
-            msg = Message(
-                subject=f'Новый заказ от {name}',
-                recipients=[app.config['ADMIN_EMAIL']],
-                body=email_body
-            )
-            
-            print("\nОтправка сообщения...")
-            # Отправляем сообщение
-            mail.send(msg)
-            print("Сообщение успешно отправлено")
-            
-            return jsonify({'success': True})
+            # Отправляем email через SMTP
+            if send_email_smtp(app.config['ADMIN_EMAIL'], f'Новый заказ от {name}', email_body):
+                return jsonify({'success': True})
+            else:
+                raise Exception("Не удалось отправить email через SMTP")
 
         except Exception as e:
             print(f"\nОшибка при отправке уведомления: {str(e)}")
