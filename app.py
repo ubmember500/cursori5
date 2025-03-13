@@ -28,14 +28,35 @@ from email.mime.multipart import MIMEMultipart
 # Загрузка переменных окружения
 load_dotenv()
 
-# Отладочный вывод настроек почты
-print("=== Настройки почты ===")
-print(f"MAIL_SERVER: {os.getenv('MAIL_SERVER')}")
-print(f"MAIL_PORT: {os.getenv('MAIL_PORT')}")
-print(f"MAIL_USERNAME: {os.getenv('MAIL_USERNAME')}")
-print(f"MAIL_DEFAULT_SENDER: {os.getenv('MAIL_DEFAULT_SENDER')}")
-print(f"ADMIN_EMAIL: {os.getenv('ADMIN_EMAIL')}")
-print("=====================")
+# Проверка загрузки переменных окружения
+print("\n=== Проверка загрузки переменных окружения ===")
+required_env_vars = [
+    'MAIL_SERVER',
+    'MAIL_PORT',
+    'MAIL_USERNAME',
+    'MAIL_PASSWORD',
+    'MAIL_DEFAULT_SENDER',
+    'ADMIN_EMAIL'
+]
+
+missing_vars = []
+for var in required_env_vars:
+    value = os.getenv(var)
+    if not value:
+        missing_vars.append(var)
+    else:
+        # Скрываем пароль в выводе
+        if var == 'MAIL_PASSWORD':
+            print(f"{var}: {'*' * len(value)}")
+        else:
+            print(f"{var}: {value}")
+
+if missing_vars:
+    print("\nВНИМАНИЕ! Отсутствуют следующие переменные окружения:")
+    for var in missing_vars:
+        print(f"- {var}")
+    print("\nПожалуйста, проверьте файл .env")
+print("===========================================\n")
 
 # Настройка путей
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -1135,6 +1156,14 @@ def is_valid_email(email):
 
 def send_email_smtp(to_email, subject, body):
     try:
+        print("\n=== Начало отправки email через SMTP ===")
+        print(f"Настройки SMTP:")
+        print(f"Сервер: {app.config['MAIL_SERVER']}")
+        print(f"Порт: {app.config['MAIL_PORT']}")
+        print(f"Пользователь: {app.config['MAIL_USERNAME']}")
+        print(f"Получатель: {to_email}")
+        print(f"Тема: {subject}")
+        
         # Создаем объект сообщения
         msg = MIMEMultipart()
         msg['From'] = app.config['MAIL_USERNAME']
@@ -1144,19 +1173,26 @@ def send_email_smtp(to_email, subject, body):
         # Добавляем тело письма
         msg.attach(MIMEText(body, 'plain'))
 
+        print("\nПодключение к SMTP серверу...")
         # Подключаемся к SMTP серверу
         server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+        print("Включение TLS...")
         server.starttls()
+        print("Авторизация...")
         server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-
+        print("Отправка сообщения...")
         # Отправляем письмо
         server.send_message(msg)
+        print("Закрытие соединения...")
         server.quit()
 
         print("Email успешно отправлен через SMTP")
         return True
     except Exception as e:
-        print(f"Ошибка отправки email через SMTP: {e}")
+        print(f"\nОшибка отправки email через SMTP: {str(e)}")
+        print(f"Тип ошибки: {type(e).__name__}")
+        import traceback
+        print(f"Полный стек ошибки:\n{traceback.format_exc()}")
         return False
 
 @app.route('/quick_order', methods=['POST'])
@@ -1167,6 +1203,7 @@ def quick_order():
         print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
         print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
         print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
+        print(f"MAIL_PASSWORD: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'Не установлен'}")
         print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
         print(f"ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
         print("=============================")
