@@ -1238,6 +1238,24 @@ function handleQuickOrder(event) {
         return;
     }
     
+    // Валидация email
+    const emailInput = form.querySelector('[name="email"]');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput.value.trim())) {
+        alert('Пожалуйста, введите корректный email адрес');
+        emailInput.focus();
+        return;
+    }
+    
+    // Валидация телефона
+    const phoneInput = form.querySelector('[name="phone"]');
+    const phoneRegex = /^\+?[0-9]{10,15}$/;
+    if (!phoneRegex.test(phoneInput.value.trim().replace(/\D/g, ''))) {
+        alert('Пожалуйста, введите корректный номер телефона');
+        phoneInput.focus();
+        return;
+    }
+    
     // Проверяем дополнительные поля для оплаты картой
     const paymentMethod = form.querySelector('[name="payment_method"]').value;
     if (paymentMethod === 'card') {
@@ -1270,25 +1288,59 @@ function handleQuickOrder(event) {
     formData.append('color', document.getElementById('quick_order_color').value);
     formData.append('quantity', document.getElementById('quick_order_quantity').value);
     
+    // Отключаем кнопку отправки формы
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Отправка...';
+    
     // Отправляем данные на сервер
     fetch('/quick_order', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Ошибка сети');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            alert('Заказ успешно оформлен!');
-            // Закрываем модальное окно
-            const modal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
-            modal.hide();
+            // Показываем сообщение об успехе
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success mt-3';
+            successMessage.textContent = 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.';
+            form.appendChild(successMessage);
+            
+            // Очищаем форму
+            form.reset();
+            
+            // Закрываем модальное окно через 2 секунды
+            setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
+                modal.hide();
+            }, 2000);
         } else {
-            alert(data.message || 'Произошла ошибка при оформлении заказа');
+            throw new Error(data.message || 'Произошла ошибка при оформлении заказа');
         }
     })
     .catch(error => {
         console.error('Ошибка:', error);
-        alert('Произошла ошибка при отправке заказа');
+        // Показываем сообщение об ошибке
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'alert alert-danger mt-3';
+        errorMessage.textContent = error.message || 'Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.';
+        form.appendChild(errorMessage);
+        
+        // Удаляем сообщение об ошибке через 5 секунд
+        setTimeout(() => {
+            errorMessage.remove();
+        }, 5000);
+    })
+    .finally(() => {
+        // Включаем кнопку отправки формы
+        submitButton.disabled = false;
+        submitButton.textContent = 'Оформить заказ';
     });
 }
 

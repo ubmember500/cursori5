@@ -15,7 +15,6 @@ from werkzeug.utils import secure_filename
 from flask_caching import Cache
 from functools import lru_cache, wraps
 from threading import Thread
-from dotenv import load_dotenv
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
 import bleach
@@ -24,47 +23,6 @@ from sqlalchemy.exc import IntegrityError
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from config import SMTP_CONFIG
-
-# Загрузка переменных окружения
-print("\n=== Проверка наличия файла .env ===")
-env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
-print(f"Путь к файлу .env: {env_path}")
-print(f"Файл .env существует: {os.path.exists(env_path)}")
-
-load_dotenv()
-
-# Проверка загрузки переменных окружения
-print("\n=== Проверка загрузки переменных окружения ===")
-required_env_vars = [
-    'MAIL_SERVER',
-    'MAIL_PORT',
-    'MAIL_USERNAME',
-    'MAIL_PASSWORD',
-    'MAIL_DEFAULT_SENDER',
-    'ADMIN_EMAIL'
-]
-
-missing_vars = []
-for var in required_env_vars:
-    value = os.getenv(var)
-    if not value:
-        missing_vars.append(var)
-        print(f"{var}: НЕ УСТАНОВЛЕН")
-    else:
-        # Для пароля показываем только длину
-        if var == 'MAIL_PASSWORD':
-            print(f"{var}: {'*' * len(value)}")
-        else:
-            print(f"{var}: {value}")
-
-if missing_vars:
-    print("\nВНИМАНИЕ: Отсутствуют следующие переменные окружения:")
-    for var in missing_vars:
-        print(f"- {var}")
-    print("\nПожалуйста, проверьте файл .env")
-else:
-    print("\nВсе необходимые переменные окружения установлены")
 
 # Настройка путей
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -79,8 +37,8 @@ SOCIAL_MEDIA = {
 }
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{os.path.join(INSTANCE_DIR, "shop.db")}')
+app.config['SECRET_KEY'] = 'dev'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(INSTANCE_DIR, "shop.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SOCIAL_MEDIA'] = SOCIAL_MEDIA
 
@@ -90,15 +48,20 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # Настройка безопасной сессии
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
-app.config['SESSION_COOKIE_SECURE'] = False  # Разрешаем cookie без HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
-# Настройка почты
-print("\n=== Настройка SMTP ===")
-app.config.update(SMTP_CONFIG)
-GOOGLE_APP_PASSWORD = SMTP_CONFIG['MAIL_PASSWORD']
+# Настройка SMTP
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'defensivelox@gmail.com'
+app.config['MAIL_PASSWORD'] = 'fmxx qexg xlpn lvbz'
+app.config['MAIL_DEFAULT_SENDER'] = 'defensivelox@gmail.com'
+app.config['ADMIN_EMAIL'] = 'defensivelox@gmail.com'
 
+print("\n=== Настройки SMTP ===")
 print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
 print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
 print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
@@ -1206,7 +1169,7 @@ def send_email_smtp(to_email, subject, body):
             print("✓ TLS включен")
             
             print("\nЭтап 4: Авторизация...")
-            server.login(app.config['MAIL_USERNAME'], GOOGLE_APP_PASSWORD)
+            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
             print("✓ Авторизация успешна")
             
             print("\nЭтап 5: Отправка сообщения...")
@@ -1240,14 +1203,25 @@ def send_email_smtp(to_email, subject, body):
 def quick_order():
     try:
         form_data = dict(request.form)
-        logger.info(f"Получены данные формы: {form_data}")
+        print(f"Получены данные формы: {form_data}")
         
         # Валидация обязательных полей
         required_fields = ['name', 'phone', 'email', 'address', 'payment_method']
         missing_fields = [field for field in required_fields if not form_data.get(field)]
         if missing_fields:
-            logger.error(f"Отсутствуют обязательные поля: {missing_fields}")
+            print(f"Отсутствуют обязательные поля: {missing_fields}")
             return jsonify({'success': False, 'message': f'Пожалуйста, заполните все обязательные поля: {", ".join(missing_fields)}'})
+        
+        # Валидация email
+        email = form_data.get('email', '').strip()
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            return jsonify({'success': False, 'message': 'Пожалуйста, введите корректный email адрес'})
+        
+        # Валидация телефона
+        phone = form_data.get('phone', '').strip()
+        phone_clean = re.sub(r'\D', '', phone)
+        if not re.match(r'^\+?[0-9]{10,15}$', phone_clean):
+            return jsonify({'success': False, 'message': 'Пожалуйста, введите корректный номер телефона'})
         
         # Получаем данные о товаре
         product_id = form_data.get('product_id')
@@ -1257,10 +1231,12 @@ def quick_order():
         color = form_data.get('color')
         quantity = form_data.get('quantity')
         
+        # Проверяем наличие всех данных о товаре
+        if not all([product_id, product_name, price, size, color, quantity]):
+            return jsonify({'success': False, 'message': 'Ошибка: не все данные о товаре были переданы'})
+        
         # Получаем данные о покупателе
         name = form_data.get('name')
-        phone = form_data.get('phone')
-        email = form_data.get('email')
         address = form_data.get('address')
         payment_method = form_data.get('payment_method')
         
@@ -1271,7 +1247,7 @@ def quick_order():
         # Проверяем данные для оплаты картой
         if payment_method == 'card':
             if not telegram and not viber:
-                logger.error("Не указан мессенджер для оплаты картой")
+                print("Не указан мессенджер для оплаты картой")
                 return jsonify({'success': False, 'message': 'Для оплаты картой необходимо указать контакт в Telegram или Viber'})
         
         # Формируем сообщение для администратора
@@ -1301,14 +1277,17 @@ def quick_order():
         
         # Отправляем уведомление администратору
         try:
-            send_email(
-                subject='Новый заказ',
-                body=admin_message,
-                recipients=[Config.MAIL_DEFAULT_SENDER]
-            )
-            logger.info("Уведомление администратору отправлено успешно")
+            if not send_email_smtp(
+                app.config['ADMIN_EMAIL'],
+                'Новый заказ',
+                admin_message
+            ):
+                print("Не удалось отправить уведомление администратору")
+                return jsonify({'success': False, 'message': 'Ошибка отправки уведомления администратору'})
+            print("Уведомление администратору отправлено успешно")
         except Exception as e:
-            logger.error(f"Ошибка отправки уведомления администратору: {str(e)}")
+            print(f"Ошибка отправки уведомления администратору: {str(e)}")
+            return jsonify({'success': False, 'message': f'Ошибка отправки уведомления: {str(e)}'})
         
         # Формируем сообщение для покупателя
         customer_message = f"""
@@ -1327,19 +1306,22 @@ def quick_order():
         
         # Отправляем уведомление покупателю
         try:
-            send_email(
-                subject='Подтверждение заказа',
-                body=customer_message,
-                recipients=[email]
-            )
-            logger.info("Уведомление покупателю отправлено успешно")
+            if not send_email_smtp(
+                email,
+                'Подтверждение заказа',
+                customer_message
+            ):
+                print("Не удалось отправить уведомление покупателю")
+                return jsonify({'success': False, 'message': 'Ошибка отправки уведомления покупателю'})
+            print("Уведомление покупателю отправлено успешно")
         except Exception as e:
-            logger.error(f"Ошибка отправки уведомления покупателю: {str(e)}")
+            print(f"Ошибка отправки уведомления покупателю: {str(e)}")
+            return jsonify({'success': False, 'message': f'Ошибка отправки уведомления: {str(e)}'})
         
         return jsonify({'success': True, 'message': 'Заказ успешно оформлен'})
         
     except Exception as e:
-        logger.error(f"Ошибка при обработке быстрого заказа: {str(e)}")
+        print(f"Ошибка при обработке быстрого заказа: {str(e)}")
         return jsonify({'success': False, 'message': 'Произошла ошибка при оформлении заказа'})
 
 @app.route('/test_email')
