@@ -909,7 +909,7 @@ body .btn:contains("В избранное") {
 function openQuickOrder() {
     // Получаем выбранные значения
     const size = document.querySelector('input[name="size"]:checked')?.value;
-    const color = document.querySelector('input[name="color"]:checked')?.value;
+    const color = document.querySelector('.color-option.active')?.dataset.color;
     const quantity = parseInt(document.getElementById('quantity').value) || 1;
     
     // Проверяем, что размер и цвет выбраны
