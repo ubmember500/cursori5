@@ -357,6 +357,53 @@ body .btn:contains("В избранное") {
     position: absolute !important;
     pointer-events: none !important;
 }
+
+/* Уменьшаем отступы в селекторах */
+.size-selector, .color-selector {
+    margin-bottom: 0.5rem;
+}
+
+.size-selector label, .color-selector label {
+    margin-right: 0.2rem;
+    margin-bottom: 0.2rem;
+    padding: 0.2rem 0.6rem;
+}
+
+/* Стили для способов оплаты */
+.payment-methods {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.5rem;
+}
+
+.payment-methods .form-check {
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.payment-methods .form-check:hover {
+    background-color: #f8f9fa;
+}
+
+.payment-methods .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.payment-methods .form-check-label {
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+/* Добавляем класс для мгновенного закрытия */
+.quick-order-modal.hiding {
+    transition: none;
+}
+
+.modal-backdrop.hiding {
+    transition: none;
+}
 </style>
 {% endblock %}
 
@@ -485,6 +532,23 @@ body .btn:contains("В избранное") {
                                     <label class="form-label">Адрес доставки</label>
                                     <textarea class="form-control" name="address" required></textarea>
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Способ оплаты</label>
+                                    <div class="payment-methods">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card" required>
+                                            <label class="form-check-label" for="payment_card">
+                                                Оплата картой
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_cod" value="cod" required>
+                                            <label class="form-check-label" for="payment_cod">
+                                                Наложенный платеж при получении
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                                 <button type="submit" class="btn btn-primary w-100">Заказать</button>
                             </form>
                         </div>
@@ -610,6 +674,33 @@ body .btn:contains("В избранное") {
                     margin-right: 0.2rem;
                     margin-bottom: 0.2rem;
                     padding: 0.2rem 0.6rem;
+                }
+
+                /* Стили для способов оплаты */
+                .payment-methods {
+                    border: 1px solid #dee2e6;
+                    border-radius: 6px;
+                    padding: 0.5rem;
+                }
+
+                .payment-methods .form-check {
+                    padding: 0.5rem;
+                    border-radius: 4px;
+                    transition: background-color 0.2s ease;
+                }
+
+                .payment-methods .form-check:hover {
+                    background-color: #f8f9fa;
+                }
+
+                .payment-methods .form-check-input:checked {
+                    background-color: #0d6efd;
+                    border-color: #0d6efd;
+                }
+
+                .payment-methods .form-check-label {
+                    font-size: 0.9rem;
+                    cursor: pointer;
                 }
 
                 /* Добавляем класс для мгновенного закрытия */
