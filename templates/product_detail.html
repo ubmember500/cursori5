@@ -503,7 +503,7 @@ body .btn:contains("В избранное") {
                     box-shadow: -2px 0 5px rgba(0,0,0,0.2);
                     z-index: 1050;
                     overflow-y: auto;
-                    transition: right 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); /* Плавное появление */
+                    transition: right 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
                 }
 
                 .quick-order-modal.show {
@@ -563,7 +563,7 @@ body .btn:contains("В избранное") {
                     background: rgba(0,0,0,0.5);
                     z-index: 1040;
                     opacity: 0;
-                    transition: opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); /* Та же анимация для фона */
+                    transition: opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
                 }
 
                 .modal-backdrop.show {
@@ -607,6 +607,15 @@ body .btn:contains("В избранное") {
                     margin-bottom: 0.2rem;
                     padding: 0.2rem 0.6rem;
                 }
+
+                /* Добавляем класс для мгновенного закрытия */
+                .quick-order-modal.hiding {
+                    transition: none;
+                }
+
+                .modal-backdrop.hiding {
+                    transition: none;
+                }
                 </style>
 
                 <script>
@@ -616,7 +625,6 @@ body .btn:contains("В избранное") {
                     backdrop.className = 'modal-backdrop';
                     document.body.appendChild(backdrop);
                     
-                    // Запускаем анимацию
                     requestAnimationFrame(() => {
                         modal.style.display = 'block';
                         backdrop.classList.add('show');
@@ -630,16 +638,14 @@ body .btn:contains("В избранное") {
                     const modal = document.getElementById('quickOrderModal');
                     const backdrop = document.querySelector('.modal-backdrop');
                     
-                    // Запускаем анимацию закрытия
-                    modal.classList.remove('show');
-                    backdrop.classList.remove('show');
+                    // Добавляем класс для отключения анимации
+                    modal.classList.add('hiding');
+                    backdrop.classList.add('hiding');
                     
-                    // Ждем окончания анимации и скрываем элементы
-                    setTimeout(() => {
-                        modal.style.display = 'none';
-                        backdrop.remove();
-                        document.body.style.overflow = '';
-                    }, 300);
+                    // Мгновенно скрываем элементы
+                    modal.style.display = 'none';
+                    backdrop.remove();
+                    document.body.style.overflow = '';
                 }
 
                 function handleQuickOrder(event) {
