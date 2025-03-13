@@ -26,16 +26,16 @@
                                         Все категории
                                     </label>
                                 </div>
-                                {% for category in categories %}
-                                <div class="form-check">
+                    {% for category in categories %}
+                    <div class="form-check">
                                     <input class="form-check-input category-filter" type="radio" name="category" id="category_{{ category.id }}" value="{{ category.id }}" {% if selected_category|string == category.id|string %}checked{% endif %}>
                                     <label class="form-check-label" for="category_{{ category.id }}">
-                                        {{ category.name }}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
+                            {{ category.name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+            </div>
+        </div>
 
                         <!-- Цена -->
                         <div class="mb-3">
@@ -44,7 +44,7 @@
                                 <div class="d-flex justify-content-between mb-2">
                                     <span id="minPriceDisplay">0</span>
                                     <span id="maxPriceDisplay">20 000</span>
-                                </div>
+            </div>
                                 <input type="range" class="form-range" id="minPriceRange" min="0" max="20000" value="{{ min_price }}">
                                 <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="{{ max_price }}">
                             </div>
@@ -60,11 +60,11 @@
                                 <option value="name_asc">Название (А-Я)</option>
                                 <option value="name_desc">Название (Я-А)</option>
                             </select>
-                        </div>
+                    </div>
                     </form>
                 </div>
             </div>
-        </div>
+            </div>
 
         <!-- Список товаров -->
         <div class="col-md-9">

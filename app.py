@@ -207,6 +207,32 @@ class Session(db.Model):
     expiry = db.Column(db.DateTime)
 
 
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    status = db.Column(db.String(20), default='new')
+    name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    address = db.Column(db.Text, nullable=False)
+    payment_method = db.Column(db.String(20), nullable=False)
+    messenger = db.Column(db.String(100))
+    total_price = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    items = db.relationship('OrderItem', backref='order', lazy=True)
+
+
+class OrderItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    size = db.Column(db.String(10), nullable=False)
+    color = db.Column(db.String(20), nullable=False)
+    product = db.relationship('Product', backref='order_items')
+
+
 # Create database tables
 def init_db():
     with app.app_context():
@@ -1125,10 +1151,16 @@ def quick_order():
         phone = request.form.get('phone')
         email = request.form.get('email')
         address = request.form.get('address')
+        payment_method = request.form.get('payment_method')
+        messenger = request.form.get('messenger')
 
         # Проверяем обязательные поля
-        if not all([product_id, size, color, quantity, name, phone, email, address]):
+        if not all([product_id, size, color, quantity, name, phone, email, address, payment_method]):
             return jsonify({'success': False, 'error': 'Все поля обязательны для заполнения'})
+
+        # Проверяем поле messenger для оплаты картой
+        if payment_method == 'card' and not messenger:
+            return jsonify({'success': False, 'error': 'Пожалуйста, укажите ваш Telegram или Viber'})
 
         # Создаем заказ в базе данных
         order = Order(
@@ -1138,6 +1170,8 @@ def quick_order():
             phone=phone,
             email=email,
             address=address,
+            payment_method=payment_method,
+            messenger=messenger if payment_method == 'card' else None,
             total_price=float(product_price) * int(quantity)
         )
         db.session.add(order)
@@ -1177,7 +1211,12 @@ def send_order_notification(order):
         Email: {order.email}
         Адрес: {order.address}
         
+        Способ оплаты: {'Оплата картой' if order.payment_method == 'card' else 'Наложенный платеж при получении'}
+        {'Telegram/Viber: ' + order.messenger if order.payment_method == 'card' else ''}
+        
         Сумма заказа: {order.total_price} ₴
+        {'+ 60 ₴ доставка Новой почтой' if order.payment_method == 'cod' else ''}
+        {'+ 40 ₴ доставка Укрпочтой' if order.payment_method == 'cod' else ''}
         
         Товары:
         '''
@@ -1193,12 +1232,11 @@ def send_order_notification(order):
             
         msg = Message(
             subject,
-            sender=app.config['MAIL_DEFAULT_SENDER'],
+            sender=app.config['MAIL_USERNAME'],
             recipients=[app.config['ADMIN_EMAIL']]
         )
         msg.body = body
         mail.send(msg)
-        
     except Exception as e:
         print(f"Ошибка при отправке уведомления: {str(e)}")
 

@@ -536,17 +536,32 @@ body .btn:contains("В избранное") {
                                     <label class="form-label">Способ оплаты</label>
                                     <div class="payment-methods">
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card" required>
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card" required onchange="togglePaymentFields()">
                                             <label class="form-check-label" for="payment_card">
                                                 Оплата картой
                                             </label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_cod" value="cod" required>
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_cod" value="cod" required onchange="togglePaymentFields()">
                                             <label class="form-check-label" for="payment_cod">
                                                 Наложенный платеж при получении
                                             </label>
                                         </div>
+                                    </div>
+                                </div>
+                                <div id="card_payment_fields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label class="form-label">Telegram или Viber</label>
+                                        <input type="text" class="form-control" name="messenger" placeholder="Введите ваш Telegram или Viber">
+                                    </div>
+                                </div>
+                                <div id="cod_payment_fields" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <h6>Сумма к оплате:</h6>
+                                        <p class="mb-1">Стоимость товара: <span id="product_total">0</span> ₴</p>
+                                        <p class="mb-1">Доставка Новой почтой: 60 ₴</p>
+                                        <p class="mb-1">Доставка Укрпочтой: 40 ₴</p>
+                                        <p class="mb-0"><strong>Итого: <span id="cod_total">0</span> ₴</strong></p>
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100">Заказать</button>
@@ -797,6 +812,35 @@ body .btn:contains("В избранное") {
                 function changeImage(src) {
                     document.getElementById('mainImage').src = src;
                 }
+
+                function togglePaymentFields() {
+                    const cardFields = document.getElementById('card_payment_fields');
+                    const codFields = document.getElementById('cod_payment_fields');
+                    const productPrice = parseFloat('{{ product.price }}');
+                    const quantity = parseInt(document.getElementById('quick_quantity').value);
+                    const productTotal = productPrice * quantity;
+                    
+                    if (document.getElementById('payment_card').checked) {
+                        cardFields.style.display = 'block';
+                        codFields.style.display = 'none';
+                    } else if (document.getElementById('payment_cod').checked) {
+                        cardFields.style.display = 'none';
+                        codFields.style.display = 'block';
+                        document.getElementById('product_total').textContent = productTotal.toFixed(2);
+                        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
+                    }
+                }
+
+                // Добавляем обработчик изменения количества для обновления суммы при наложенном платеже
+                document.getElementById('quick_quantity').addEventListener('change', function() {
+                    if (document.getElementById('payment_cod').checked) {
+                        const productPrice = parseFloat('{{ product.price }}');
+                        const quantity = parseInt(this.value);
+                        const productTotal = productPrice * quantity;
+                        document.getElementById('product_total').textContent = productTotal.toFixed(2);
+                        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
+                    }
+                });
                 </script>
             </div>
         </div>
