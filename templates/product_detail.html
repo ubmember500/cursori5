@@ -404,6 +404,38 @@ body .btn:contains("В избранное") {
 .modal-backdrop.hiding {
     transition: none;
 }
+
+/* Стили для модального окна с информацией о заказе */
+.order-details {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+}
+
+.order-details p {
+    margin: 10px 0;
+}
+
+.order-details strong {
+    color: #333;
+}
+
+#orderSuccessModal .modal-content {
+    max-width: 600px;
+    width: 90%;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+#orderSuccessModal h2 {
+    color: #28a745;
+    text-align: center;
+    margin-bottom: 20px;
+}
 </style>
 {% endblock %}
 
@@ -582,164 +614,6 @@ body .btn:contains("В избранное") {
                     </div>
                 </div>
 
-                <style>
-                .quick-order-modal {
-                    display: none;
-                    position: fixed;
-                    top: 0;
-                    right: -400px;
-                    bottom: 0;
-                    width: 400px;
-                    background: white;
-                    box-shadow: -2px 0 5px rgba(0,0,0,0.2);
-                    z-index: 1050;
-                    overflow-y: auto;
-                    transition: right 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-                    will-change: right;
-                    transform: translateZ(0);
-                }
-
-                .quick-order-modal.show {
-                    right: 0;
-                }
-
-                .quick-order-content {
-                    padding: 20px;
-                }
-
-                .quick-order-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 15px;
-                    padding-bottom: 8px;
-                    border-bottom: 1px solid #dee2e6;
-                }
-
-                .quick-order-image {
-                    width: 100px;
-                    height: 100px;
-                    object-fit: cover;
-                    border-radius: 8px;
-                    margin-right: 15px;
-                }
-
-                .product-summary {
-                    display: flex;
-                    align-items: start;
-                    margin-bottom: 15px;
-                    padding-bottom: 15px;
-                    border-bottom: 1px solid #dee2e6;
-                }
-
-                .product-summary-details {
-                    flex-grow: 1;
-                }
-
-                .product-summary-details h5 {
-                    margin-bottom: 5px;
-                }
-
-                .product-summary-details .price {
-                    font-size: 1.25rem;
-                    color: #0d6efd;
-                    font-weight: bold;
-                }
-
-                .modal-backdrop {
-                    display: none;
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0,0,0,0.5);
-                    z-index: 1040;
-                    opacity: 0;
-                    transition: opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-                    will-change: opacity;
-                    transform: translateZ(0);
-                }
-
-                .modal-backdrop.show {
-                    opacity: 1;
-                }
-
-                /* Уменьшаем отступы между разделами формы */
-                .quick-order-modal .mb-3 {
-                    margin-bottom: 0.5rem !important; /* Уменьшаем отступ между разделами */
-                }
-
-                .quick-order-modal .form-label {
-                    font-size: 0.85rem;
-                    margin-bottom: 0.2rem;
-                }
-
-                .quick-order-modal .form-control {
-                    padding: 0.3rem 0.6rem;
-                    font-size: 0.9rem;
-                }
-
-                /* Уменьшаем отступы в заголовке */
-                .quick-order-header {
-                    margin-bottom: 15px;
-                    padding-bottom: 8px;
-                }
-
-                /* Уменьшаем отступы в сводке товара */
-                .product-summary {
-                    margin-bottom: 15px;
-                    padding-bottom: 15px;
-                }
-
-                /* Уменьшаем отступы в селекторах */
-                .size-selector, .color-selector {
-                    margin-bottom: 0.5rem;
-                }
-
-                .size-selector label, .color-selector label {
-                    margin-right: 0.2rem;
-                    margin-bottom: 0.2rem;
-                    padding: 0.2rem 0.6rem;
-                }
-
-                /* Стили для способов оплаты */
-                .payment-methods {
-                    border: 1px solid #dee2e6;
-                    border-radius: 6px;
-                    padding: 0.5rem;
-                }
-
-                .payment-methods .form-check {
-                    padding: 0.5rem;
-                    border-radius: 4px;
-                    transition: background-color 0.2s ease;
-                }
-
-                .payment-methods .form-check:hover {
-                    background-color: #f8f9fa;
-                }
-
-                .payment-methods .form-check-input:checked {
-                    background-color: #0d6efd;
-                    border-color: #0d6efd;
-                }
-
-                .payment-methods .form-check-label {
-                    font-size: 0.9rem;
-                    cursor: pointer;
-                }
-
-                /* Добавляем класс для мгновенного закрытия */
-                .quick-order-modal.hiding {
-                    transition: none;
-                }
-
-                .modal-backdrop.hiding {
-                    transition: none;
-                }
-                </style>
-
                 <script>
                 function openQuickOrder() {
                     const modal = document.getElementById('quickOrderModal');
@@ -780,12 +654,47 @@ body .btn:contains("В избранное") {
                     const form = event.target;
                     const formData = new FormData(form);
                     
+                    // Проверяем обязательные поля
+                    const requiredFields = {
+                        'quick_size': 'Размер',
+                        'quick_color': 'Цвет',
+                        'quick_quantity': 'Количество',
+                        'name': 'Имя',
+                        'phone': 'Телефон',
+                        'email': 'Email',
+                        'address': 'Адрес доставки',
+                        'payment_method': 'Способ оплаты'
+                    };
+                    
+                    let missingFields = [];
+                    for (let field in requiredFields) {
+                        if (!formData.get(field)) {
+                            missingFields.push(requiredFields[field]);
+                        }
+                    }
+                    
+                    if (missingFields.length > 0) {
+                        alert('Пожалуйста, заполните следующие поля:\n' + missingFields.join('\n'));
+                        return;
+                    }
+                    
+                    // Проверяем поля для оплаты картой
+                    if (formData.get('payment_method') === 'card') {
+                        const telegram = formData.get('telegram');
+                        const viber = formData.get('viber');
+                        if (!telegram && !viber) {
+                            alert('Для оплаты картой необходимо указать хотя бы один способ связи (Telegram или Viber)');
+                            return;
+                        }
+                    }
+                    
                     // Показываем индикатор загрузки
                     const submitButton = form.querySelector('button[type="submit"]');
                     const originalText = submitButton.textContent;
                     submitButton.disabled = true;
-                    submitButton.textContent = 'Отправка...';
+                    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Отправка...';
                     
+                    // Отправляем данные на сервер
                     fetch('/quick_order', {
                         method: 'POST',
                         body: formData
@@ -798,15 +707,23 @@ body .btn:contains("В избранное") {
                     })
                     .then(data => {
                         if (data.success) {
-                            alert('Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.');
-                            closeQuickOrder();
+                            showOrderSuccess(data.order);
                         } else {
                             throw new Error(data.error || 'Произошла ошибка при оформлении заказа.');
                         }
                     })
                     .catch(error => {
                         console.error('Ошибка:', error);
-                        alert(error.message || 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.');
+                        // Показываем сообщение об ошибке
+                        const errorMessage = document.createElement('div');
+                        errorMessage.className = 'alert alert-danger mt-3';
+                        errorMessage.textContent = error.message || 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.';
+                        form.appendChild(errorMessage);
+                        
+                        // Удаляем сообщение об ошибке через 5 секунд
+                        setTimeout(() => {
+                            errorMessage.remove();
+                        }, 5000);
                     })
                     .finally(() => {
                         // Восстанавливаем кнопку
@@ -864,6 +781,34 @@ body .btn:contains("В избранное") {
                         document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
                     }
                 });
+
+                function closeOrderSuccessModal() {
+                    document.getElementById('orderSuccessModal').style.display = 'none';
+                    // Очищаем форму после успешной отправки
+                    document.getElementById('quickOrderForm').reset();
+                }
+
+                function showOrderSuccess(orderData) {
+                    const orderDetails = document.getElementById('orderDetails');
+                    orderDetails.innerHTML = `
+                        <p><strong>Товар:</strong> ${orderData.product_name}</p>
+                        <p><strong>Размер:</strong> ${orderData.size}</p>
+                        <p><strong>Цвет:</strong> ${orderData.color}</p>
+                        <p><strong>Количество:</strong> ${orderData.quantity}</p>
+                        <p><strong>Цена за единицу:</strong> ${orderData.price} ₴</p>
+                        <p><strong>Общая сумма:</strong> ${orderData.total} ₴</p>
+                        <p><strong>Имя:</strong> ${orderData.customer_name}</p>
+                        <p><strong>Телефон:</strong> ${orderData.phone}</p>
+                        <p><strong>Email:</strong> ${orderData.email}</p>
+                        <p><strong>Адрес:</strong> ${orderData.address}</p>
+                        <p><strong>Способ оплаты:</strong> ${orderData.payment_method}</p>
+                        ${orderData.contact_info ? `
+                            <p><strong>Telegram:</strong> ${orderData.contact_info.telegram || 'Не указан'}</p>
+                            <p><strong>Viber:</strong> ${orderData.contact_info.viber || 'Не указан'}</p>
+                        ` : ''}
+                    `;
+                    document.getElementById('orderSuccessModal').style.display = 'block';
+                }
                 </script>
             </div>
         </div>
@@ -959,6 +904,18 @@ body .btn:contains("В избранное") {
                 </div>
             </div>
             {% endfor %}
+        </div>
+    </div>
+
+    <!-- Добавляем модальное окно для отображения информации о заказе -->
+    <div id="orderSuccessModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Заказ успешно оформлен!</h2>
+            <div id="orderDetails" class="order-details">
+                <!-- Здесь будет отображаться информация о заказе -->
+            </div>
+            <button onclick="closeOrderSuccessModal()" class="btn btn-primary">Закрыть</button>
         </div>
     </div>
 </div>
