@@ -1125,22 +1125,17 @@ function changeImage(src) {
 function togglePaymentFields() {
     const paymentMethod = document.getElementById('payment_method').value;
     const cardFields = document.getElementById('card_payment_fields');
-    const codFields = document.getElementById('cod_payment_fields');
-    const productPrice = parseFloat('{{ product.price }}');
-    const quantity = parseInt(document.getElementById('cart_quantity').value);
-    const productTotal = productPrice * quantity;
     
     if (paymentMethod === 'card') {
         cardFields.style.display = 'block';
-        codFields.style.display = 'none';
-    } else if (paymentMethod === 'cod') {
-        cardFields.style.display = 'none';
-        codFields.style.display = 'block';
-        document.getElementById('product_total').textContent = productTotal.toFixed(2);
-        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
+        // Делаем поля обязательными
+        document.querySelector('[name="messenger"]').required = true;
+        document.querySelector('[name="messenger_username"]').required = true;
     } else {
         cardFields.style.display = 'none';
-        codFields.style.display = 'none';
+        // Убираем обязательность полей
+        document.querySelector('[name="messenger"]').required = false;
+        document.querySelector('[name="messenger_username"]').required = false;
     }
 }
 
@@ -1244,14 +1239,23 @@ function handleQuickOrder(event) {
     }
     
     // Проверяем дополнительные поля для оплаты картой
-    const paymentMethod = form.querySelector('[name="payment_method"]:checked');
-    if (paymentMethod && paymentMethod.value === 'card') {
-        const telegram = form.querySelector('[name="telegram"]').value.trim();
-        const viber = form.querySelector('[name="viber"]').value.trim();
+    const paymentMethod = form.querySelector('[name="payment_method"]').value;
+    if (paymentMethod === 'card') {
+        const messenger = form.querySelector('[name="messenger"]:checked')?.value;
+        const messengerUsername = form.querySelector('[name="messenger_username"]').value.trim();
         
-        if (!telegram && !viber) {
-            alert('Для оплаты картой необходимо указать контакт в Telegram или Viber');
+        if (!messenger || !messengerUsername) {
+            alert('Для оплаты картой необходимо указать мессенджер и ваш username');
             return;
+        }
+        
+        // Устанавливаем значения в скрытые поля
+        if (messenger === 'telegram') {
+            form.querySelector('[name="telegram"]').value = messengerUsername;
+            form.querySelector('[name="viber"]').value = '';
+        } else if (messenger === 'viber') {
+            form.querySelector('[name="viber"]').value = messengerUsername;
+            form.querySelector('[name="telegram"]').value = '';
         }
     }
     
