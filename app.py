@@ -1187,17 +1187,17 @@ def send_email_smtp(to_email, subject, body):
     try:
         print("\n=== Начало отправки email через SMTP ===")
         print(f"Настройки SMTP:")
-        print(f"Сервер: {SMTP_CONFIG['MAIL_SERVER']}")
-        print(f"Порт: {SMTP_CONFIG['MAIL_PORT']}")
-        print(f"Пользователь: {SMTP_CONFIG['MAIL_USERNAME']}")
-        print(f"Пароль: {'*' * len(SMTP_CONFIG['MAIL_PASSWORD'])}")
-        print(f"Отправитель: {SMTP_CONFIG['MAIL_DEFAULT_SENDER']}")
+        print(f"Сервер: {app.config['MAIL_SERVER']}")
+        print(f"Порт: {app.config['MAIL_PORT']}")
+        print(f"Пользователь: {app.config['MAIL_USERNAME']}")
+        print(f"Пароль: {'*' * len(app.config['MAIL_PASSWORD'])}")
+        print(f"Отправитель: {app.config['MAIL_DEFAULT_SENDER']}")
         print(f"Получатель: {to_email}")
         print(f"Тема: {subject}")
         
         print("\nЭтап 1: Создание объекта сообщения...")
         msg = MIMEMultipart()
-        msg['From'] = SMTP_CONFIG['MAIL_USERNAME']
+        msg['From'] = app.config['MAIL_USERNAME']
         msg['To'] = to_email
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
@@ -1205,7 +1205,7 @@ def send_email_smtp(to_email, subject, body):
 
         print("\nЭтап 2: Подключение к SMTP серверу...")
         try:
-            server = smtplib.SMTP(SMTP_CONFIG['MAIL_SERVER'], SMTP_CONFIG['MAIL_PORT'])
+            server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
             print("✓ Соединение с сервером установлено")
             
             print("\nЭтап 3: Включение TLS...")
@@ -1213,7 +1213,7 @@ def send_email_smtp(to_email, subject, body):
             print("✓ TLS включен")
             
             print("\nЭтап 4: Авторизация...")
-            server.login(SMTP_CONFIG['MAIL_USERNAME'], SMTP_CONFIG['MAIL_PASSWORD'])
+            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
             print("✓ Авторизация успешна")
             
             print("\nЭтап 5: Отправка сообщения...")
@@ -1248,12 +1248,12 @@ def quick_order():
     try:
         # Проверяем настройки почты
         print("\n=== Проверка настроек почты ===")
-        print(f"MAIL_SERVER: {SMTP_CONFIG['MAIL_SERVER']}")
-        print(f"MAIL_PORT: {SMTP_CONFIG['MAIL_PORT']}")
-        print(f"MAIL_USERNAME: {SMTP_CONFIG['MAIL_USERNAME']}")
-        print(f"MAIL_PASSWORD: {'*' * len(SMTP_CONFIG['MAIL_PASSWORD'])}")
-        print(f"MAIL_DEFAULT_SENDER: {SMTP_CONFIG['MAIL_DEFAULT_SENDER']}")
-        print(f"ADMIN_EMAIL: {SMTP_CONFIG['ADMIN_EMAIL']}")
+        print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
+        print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
+        print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
+        print(f"MAIL_PASSWORD: {'*' * len(app.config['MAIL_PASSWORD'])}")
+        print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
+        print(f"ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
         print("=============================")
 
         # Получаем данные из формы
@@ -1358,7 +1358,7 @@ def quick_order():
         try:
             msg = Message(
                 subject='Новый быстрый заказ',
-                recipients=[SMTP_CONFIG['ADMIN_EMAIL']],
+                recipients=[app.config['ADMIN_EMAIL']],
                 body=email_text
             )
             mail.send(msg)

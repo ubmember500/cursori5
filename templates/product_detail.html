@@ -579,12 +579,12 @@ body .btn:contains("В избранное") {
                 <!-- Кнопки действий -->
                 <div class="action-buttons">
                     <button class="btn btn-primary" onclick="openQuickOrder()">Купить</button>
-                    <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;">
+                    <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;" onsubmit="handleAddToCart(event)">
                         <input type="hidden" name="quantity" id="cart_quantity" value="1">
                         <input type="hidden" name="size" id="cart_size">
                         <input type="hidden" name="color" id="cart_color">
                         <input type="hidden" name="image" value="{{ product_image }}">
-                        <button type="button" class="btn btn-outline-primary" onclick="handleAddToCart()">В корзину</button>
+                        <button type="submit" class="btn btn-outline-primary">В корзину</button>
                     </form>
                 </div>
 
@@ -918,31 +918,41 @@ function handleQuickOrder(event) {
     });
 }
 
-function handleAddToCart() {
-    const quantity = document.getElementById('quantity').value;
-    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
-    const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
+function handleAddToCart(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
     
-    if (!selectedSize || !selectedColor) {
-        alert('Пожалуйста, выберите размер и цвет');
+    // Проверяем обязательные поля
+    const requiredFields = {
+        'quantity': 'Количество',
+        'size': 'Размер',
+        'color': 'Цвет',
+        'image': 'Изображение товара'
+    };
+    
+    let missingFields = [];
+    for (let field in requiredFields) {
+        if (!formData.get(field)) {
+            missingFields.push(requiredFields[field]);
+        }
+    }
+    
+    if (missingFields.length > 0) {
+        alert('Пожалуйста, заполните следующие поля:\n' + missingFields.join('\n'));
         return;
     }
     
     // Показываем индикатор загрузки
-    const submitButton = document.querySelector('button[onclick="handleAddToCart()"]');
+    const submitButton = form.querySelector('button[type="submit"]');
     const originalText = submitButton.textContent;
     submitButton.disabled = true;
     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Добавление...';
     
-    const form = document.getElementById('cartForm');
-    document.getElementById('cart_quantity').value = quantity;
-    document.getElementById('cart_size').value = selectedSize;
-    document.getElementById('cart_color').value = selectedColor;
-    
-    // Отправляем форму через fetch
+    // Отправляем данные на сервер
     fetch(form.action, {
         method: 'POST',
-        body: new FormData(form),
+        body: formData,
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
