@@ -438,10 +438,10 @@ body .btn:contains("В избранное") {
 }
 
 /* Стили для модального окна */
-.quick-order-modal {
-    display: none;
-    position: fixed;
-    z-index: 1050;
+                .quick-order-modal {
+                    display: none;
+                    position: fixed;
+                    z-index: 1050;
     left: 0;
     top: 0;
     width: 100%;
@@ -449,17 +449,17 @@ body .btn:contains("В избранное") {
     background-color: rgba(0,0,0,0.5);
     opacity: 0;
     transition: opacity 0.3s ease;
-}
+                }
 
-.quick-order-modal.show {
+                .quick-order-modal.show {
     display: block;
     opacity: 1;
-}
+                }
 
-.quick-order-content {
+                .quick-order-content {
     background-color: #fff;
     margin: 5% auto;
-    padding: 20px;
+                    padding: 20px;
     border: none;
     width: 90%;
     max-width: 500px;
@@ -472,12 +472,12 @@ body .btn:contains("В избранное") {
 
 .quick-order-modal.show .quick-order-content {
     transform: translateY(0);
-}
+                }
 
-.quick-order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+                .quick-order-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
     margin-bottom: 20px;
 }
 
@@ -499,25 +499,25 @@ body .btn:contains("В избранное") {
 
 .close:hover {
     color: #212529;
-}
+                }
 
-.modal-backdrop {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
+                .modal-backdrop {
+                    display: none;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 999;
-    opacity: 0;
+                    opacity: 0;
     transition: opacity 0.3s ease;
-}
+                }
 
-.modal-backdrop.show {
+                .modal-backdrop.show {
     display: block;
-    opacity: 1;
-}
+                    opacity: 1;
+                }
 
 .product-summary {
     display: flex;
@@ -581,7 +581,7 @@ body .btn:contains("В избранное") {
 }
 
 .color-option.active {
-    border-color: #0d6efd;
+                    border-color: #0d6efd;
     transform: scale(1.1);
 }
 
@@ -598,8 +598,8 @@ body .btn:contains("В избранное") {
 
 .input-group input {
     text-align: center;
-}
-</style>
+                }
+                </style>
 {% endblock %}
 
 {% block content %}
@@ -708,80 +708,89 @@ body .btn:contains("В избранное") {
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <form id="quickOrderForm" onsubmit="handleQuickOrder(event)">
-                                    <input type="hidden" name="product_id" value="">
-                                    <input type="hidden" name="product_name" value="">
-                                    <input type="hidden" name="product_price" value="">
-                                    <input type="hidden" name="quantity" value="">
-                                    <input type="hidden" name="size" value="">
-                                    <input type="hidden" name="color" value="">
-                                    
-                                    <!-- Детали заказа -->
-                                    <div class="order-details">
-                                        <h6>Детали заказа:</h6>
-                                        <p><strong>Товар:</strong> <span id="orderProductName"></span></p>
-                                        <p><strong>Размер:</strong> <span id="orderSize"></span></p>
-                                        <p><strong>Цвет:</strong> <span id="orderColor"></span></p>
-                                        <p><strong>Количество:</strong> <span id="orderQuantity"></span></p>
-                                        <p><strong>Итого:</strong> <span id="orderTotal"></span> ₴</p>
+                                <div class="order-details">
+                                    <h4>Детали заказа</h4>
+                                    <div class="order-item">
+                                        <span>Товар:</span>
+                                        <span id="order_product_name"></span>
                                     </div>
+                                    <div class="order-item">
+                                        <span>Размер:</span>
+                                        <span id="order_size"></span>
+                                    </div>
+                                    <div class="order-item">
+                                        <span>Цвет:</span>
+                                        <span id="order_color"></span>
+                                    </div>
+                                    <div class="order-item">
+                                        <span>Количество:</span>
+                                        <span id="order_quantity"></span>
+                                    </div>
+                                    <div class="order-item">
+                                        <span>Стоимость товара:</span>
+                                        <span id="order_price"></span>
+                                    </div>
+                                    <div class="order-item">
+                                        <span>Доставка (Новая Почта):</span>
+                                        <span>60 грн</span>
+                                    </div>
+                                    <div class="order-item total">
+                                        <span>Итого:</span>
+                                        <span id="order_total"></span>
+                                    </div>
+                                </div>
 
-                                    <!-- Контактная информация -->
-                                    <div class="mb-3">
-                                        <label for="name" class="form-label">Имя</label>
-                                        <input type="text" class="form-control" id="name" name="name" required>
-                                    </div>
+                                <form id="quickOrderForm" onsubmit="handleQuickOrder(event)">
+                                    <input type="hidden" name="product_name" id="cart_product_name">
+                                    <input type="hidden" name="size" id="cart_size">
+                                    <input type="hidden" name="color" id="cart_color">
+                                    <input type="hidden" name="quantity" id="cart_quantity">
+                                    <input type="hidden" name="price" id="cart_price">
                                     
-                                    <div class="mb-3">
-                                        <label for="phone" class="form-label">Телефон</label>
+                                    <div class="form-group">
+                                        <label for="name">Ваше имя *</label>
+                                        <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="phone">Телефон *</label>
                                         <input type="tel" class="form-control" id="phone" name="phone" required>
                                     </div>
                                     
-                                    <div class="mb-3">
-                                        <label for="email" class="form-label">Email</label>
-                                        <input type="email" class="form-control" id="email" name="email" value="defensivelox@gmail.com" required>
+                                    <div class="form-group">
+                                        <label for="email">Email *</label>
+                                        <input type="email" class="form-control" id="email" name="email" required>
                                     </div>
                                     
-                                    <div class="mb-3">
-                                        <label for="address" class="form-label">Адрес доставки</label>
-                                        <textarea class="form-control" id="address" name="address" rows="3" required></textarea>
+                                    <div class="form-group">
+                                        <label for="address">Адрес доставки *</label>
+                                        <input type="text" class="form-control" id="address" name="address" required>
                                     </div>
 
-                                    <!-- Способ оплаты -->
-                                    <div class="mb-3">
-                                        <label class="form-label">Способ оплаты</label>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_cod" value="cod" checked>
-                                            <label class="form-check-label" for="payment_cod">
-                                                Оплата при получении
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card">
-                                            <label class="form-check-label" for="payment_card">
-                                                Оплата картой
-                                            </label>
-                                        </div>
+                                    <div class="form-group">
+                                        <label for="payment_method">Способ оплаты *</label>
+                                        <select class="form-control" id="payment_method" name="payment_method" required>
+                                            <option value="">Выберите способ оплаты</option>
+                                            <option value="cash">Оплата при получении</option>
+                                            <option value="card">Оплата картой</option>
+                                        </select>
                                     </div>
 
-                                    <!-- Способ связи -->
-                                    <div class="mb-3">
-                                        <label class="form-label">Способ связи</label>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="telegram" id="telegram">
-                                            <label class="form-check-label" for="telegram">
-                                                Telegram
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="viber" id="viber">
-                                            <label class="form-check-label" for="viber">
-                                                Viber
-                                            </label>
-                                        </div>
+                                    <div class="form-group" id="messenger_group" style="display: none;">
+                                        <label for="messenger">Мессенджер для связи *</label>
+                                        <select class="form-control" id="messenger" name="messenger">
+                                            <option value="">Выберите мессенджер</option>
+                                            <option value="telegram">Telegram</option>
+                                            <option value="viber">Viber</option>
+                                        </select>
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary w-100">Оформить заказ</button>
+                                    <div class="form-group" id="messenger_username_group" style="display: none;">
+                                        <label for="messenger_username">Ваш username в мессенджере *</label>
+                                        <input type="text" class="form-control" id="messenger_username" name="messenger_username">
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">Оформить заказ</button>
                                 </form>
                             </div>
                         </div>
@@ -905,19 +914,19 @@ function openQuickOrder() {
     const form = document.getElementById('quickOrderForm');
     
     // Заполняем форму данными
-    form.querySelector('input[name="product_id"]').value = {{ product.id }};
     form.querySelector('input[name="product_name"]').value = "{{ product.name }}";
-    form.querySelector('input[name="product_price"]').value = {{ product.price }};
-    form.querySelector('input[name="quantity"]').value = quantity;
     form.querySelector('input[name="size"]').value = size;
     form.querySelector('input[name="color"]').value = color;
+    form.querySelector('input[name="quantity"]').value = quantity;
+    form.querySelector('input[name="price"]').value = {{ product.price }};
     
     // Заполняем детали заказа
-    document.getElementById('orderProductName').textContent = "{{ product.name }}";
-    document.getElementById('orderSize').textContent = size;
-    document.getElementById('orderColor').textContent = color;
-    document.getElementById('orderQuantity').textContent = quantity;
-    document.getElementById('orderTotal').textContent = ({{ product.price }} * quantity).toFixed(2);
+    document.getElementById('order_product_name').textContent = "{{ product.name }}";
+    document.getElementById('order_size').textContent = size;
+    document.getElementById('order_color').textContent = color;
+    document.getElementById('order_quantity').textContent = quantity;
+    document.getElementById('order_price').textContent = ({{ product.price }} * quantity).toFixed(2);
+    document.getElementById('order_total').textContent = ({{ product.price }} * quantity + 60).toFixed(2);
     
     // Показываем модальное окно
     modal.style.display = 'block';
@@ -1024,19 +1033,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Заполняем форму данными
         const form = document.getElementById('quickOrderForm');
-        form.querySelector('input[name="product_id"]').value = {{ product.id }};
         form.querySelector('input[name="product_name"]').value = "{{ product.name }}";
-        form.querySelector('input[name="product_price"]').value = {{ product.price }};
-        form.querySelector('input[name="quantity"]').value = quantity;
         form.querySelector('input[name="size"]').value = size;
         form.querySelector('input[name="color"]').value = color;
+        form.querySelector('input[name="quantity"]').value = quantity;
+        form.querySelector('input[name="price"]').value = {{ product.price }};
         
         // Заполняем детали заказа
-        document.getElementById('orderProductName').textContent = "{{ product.name }}";
-        document.getElementById('orderSize').textContent = size;
-        document.getElementById('orderColor').textContent = color;
-        document.getElementById('orderQuantity').textContent = quantity;
-        document.getElementById('orderTotal').textContent = ({{ product.price }} * quantity).toFixed(2);
+        document.getElementById('order_product_name').textContent = "{{ product.name }}";
+        document.getElementById('order_size').textContent = size;
+        document.getElementById('order_color').textContent = color;
+        document.getElementById('order_quantity').textContent = quantity;
+        document.getElementById('order_price').textContent = ({{ product.price }} * quantity).toFixed(2);
+        document.getElementById('order_total').textContent = ({{ product.price }} * quantity + 60).toFixed(2);
         
         // Показываем модальное окно
         quickOrderModal.show();
@@ -1161,58 +1170,63 @@ function handleAddToCart(event) {
 
 function handleQuickOrder(event) {
     event.preventDefault();
+    
     const form = event.target;
     const formData = new FormData(form);
     
-    // Проверяем обязательные поля
-    const requiredFields = {
-        name: 'Имя',
-        phone: 'Телефон',
-        email: 'Email',
-        address: 'Адрес',
-        payment_method: 'Способ оплаты'
-    };
-    
-    const missingFields = validateForm(formData, requiredFields);
+    // Проверяем заполнение всех обязательных полей
+    const missingFields = validateForm(formData);
     if (missingFields.length > 0) {
-        alert('Пожалуйста, заполните следующие поля: ' + missingFields.join(', '));
+        alert('Пожалуйста, заполните все обязательные поля: ' + missingFields.join(', '));
         return;
     }
-    
+
+    // Проверяем дополнительные поля для оплаты картой
+    if (formData.get('payment_method') === 'card') {
+        if (!formData.get('messenger') || !formData.get('messenger_username')) {
+            alert('Пожалуйста, укажите мессенджер и ваш username для связи с менеджером');
+            return;
+        }
+    }
+
     // Отправляем данные на сервер
-    fetch('{{ url_for("quick_order") }}', {
+    fetch('/send-order', {
         method: 'POST',
         body: formData
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            alert('Спасибо за заказ! Мы свяжемся с вами в ближайшее время.');
             // Закрываем модальное окно
-            const modal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
-            modal.hide();
-            
-            // Показываем сообщение об успехе
-            alert('Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.');
-            
-            // Очищаем форму
-            form.reset();
+            const modal = document.getElementById('quickOrderModal');
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            bsModal.hide();
         } else {
-            alert(data.message || 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте еще раз.');
+            alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+        alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.');
     });
 }
 
-function validateForm(formData, requiredFields) {
+function validateForm(formData) {
     const missingFields = [];
-    for (let [field, label] of Object.entries(requiredFields)) {
+    const requiredFields = ['name', 'phone', 'email', 'address', 'payment_method'];
+    
+    requiredFields.forEach(field => {
         if (!formData.get(field)) {
-            missingFields.push(label);
+            missingFields.push(field);
         }
+    });
+
+    if (formData.get('payment_method') === 'card') {
+        if (!formData.get('messenger')) missingFields.push('мессенджер');
+        if (!formData.get('messenger_username')) missingFields.push('username в мессенджере');
     }
+    
     return missingFields;
 }
 
@@ -1223,5 +1237,25 @@ window.onclick = function(event) {
         closeQuickOrder();
     }
 }
+
+// Обработчик изменения способа оплаты
+document.getElementById('payment_method').addEventListener('change', function() {
+    const messengerGroup = document.getElementById('messenger_group');
+    const messengerUsernameGroup = document.getElementById('messenger_username_group');
+    const messengerSelect = document.getElementById('messenger');
+    const messengerUsernameInput = document.getElementById('messenger_username');
+    
+    if (this.value === 'card') {
+        messengerGroup.style.display = 'block';
+        messengerUsernameGroup.style.display = 'block';
+        messengerSelect.required = true;
+        messengerUsernameInput.required = true;
+    } else {
+        messengerGroup.style.display = 'none';
+        messengerUsernameGroup.style.display = 'none';
+        messengerSelect.required = false;
+        messengerUsernameInput.required = false;
+    }
+});
 </script>
 {% endblock %}
