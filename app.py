@@ -454,6 +454,15 @@ def products():
         
         print("=== Завершение обработки запроса /products ===\n")
         
+        # Проверяем, является ли запрос AJAX
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return render_template('products_partial.html', 
+                                products=products, 
+                                categories=all_categories,
+                                min_price=min_price,
+                                max_price=max_price,
+                                selected_category=category if category else None)
+        
         response = make_response(render_template('products.html', 
                                               products=products, 
                                               categories=all_categories,

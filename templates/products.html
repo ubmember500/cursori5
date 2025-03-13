@@ -288,8 +288,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const maxDisplay = document.getElementById('maxPriceDisplay');
     const filterForm = document.getElementById('filterForm');
     const sortSelect = document.getElementById('sortSelect');
+    const productsContainer = document.querySelector('.row.g-4');
     let debounceTimer;
-    let lastParams = new URLSearchParams(window.location.search);
 
     // Предотвращаем отправку формы
     filterForm.addEventListener('submit', function(e) {
@@ -312,49 +312,62 @@ document.addEventListener('DOMContentLoaded', function() {
         return new URLSearchParams(window.location.search);
     }
 
-    // Проверка изменения параметров
-    function hasParamsChanged(newParams) {
-        const currentParams = getCurrentParams();
-        for (const [key, value] of Object.entries(newParams)) {
-            if (currentParams.get(key) !== value?.toString()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     // Обновление URL и данных с задержкой
     function debounceUpdate(callback, delay = 300) {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(callback, delay);
     }
 
-    // Обновление URL с сохранением всех параметров
-    function updateURLWithParams(newParams = {}) {
+    // Обновление URL без перезагрузки страницы
+    function updateURL(newParams = {}) {
         try {
-            // Проверяем, изменились ли параметры
-            if (!hasParamsChanged(newParams)) {
-                console.log('Параметры не изменились, пропускаем обновление');
-                return;
-            }
-
             const params = new URLSearchParams();
-            
-            // Добавляем только измененные параметры
             Object.entries(newParams).forEach(([key, value]) => {
                 if (value !== null && value !== undefined && value !== '') {
                     params.set(key, value);
                 }
             });
             
-            // Формируем новый URL
             const newUrl = `${window.location.pathname}?${params.toString()}`;
-            console.log('Обновление URL:', newUrl);
-            
-            // Перезагружаем страницу с новыми параметрами
-            window.location.href = newUrl;
+            window.history.pushState({}, '', newUrl);
+            return newUrl;
         } catch (error) {
             console.error('Ошибка при обновлении URL:', error);
+            return null;
+        }
+    }
+
+    // Загрузка товаров через AJAX
+    async function loadProducts(params) {
+        try {
+            const response = await fetch(`${window.location.pathname}?${params.toString()}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newProducts = doc.querySelector('.row.g-4');
+            
+            if (newProducts) {
+                productsContainer.innerHTML = newProducts.innerHTML;
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке товаров:', error);
+        }
+    }
+
+    // Обновление URL и данных
+    async function updateURLWithParams(newParams = {}) {
+        try {
+            const newUrl = updateURL(newParams);
+            if (newUrl) {
+                const params = new URLSearchParams(newUrl.split('?')[1]);
+                await loadProducts(params);
+            }
+        } catch (error) {
+            console.error('Ошибка при обновлении параметров:', error);
             alert('Произошла ошибка при обновлении фильтров. Пожалуйста, попробуйте еще раз.');
         }
     }
