@@ -436,6 +436,84 @@ body .btn:contains("В избранное") {
     text-align: center;
     margin-bottom: 20px;
 }
+
+/* Стили для модального окна */
+.quick-order-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.quick-order-modal.show {
+    display: block;
+    opacity: 1;
+}
+
+.quick-order-content {
+    position: relative;
+    background-color: #fff;
+    margin: 50px auto;
+    padding: 20px;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+}
+
+.quick-order-modal.show .quick-order-content {
+    transform: translateY(0);
+}
+
+.quick-order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.quick-order-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.btn-close:hover {
+    color: #333;
+}
+
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-backdrop.show {
+    display: block;
+    opacity: 1;
+}
 </style>
 {% endblock %}
 
@@ -510,12 +588,12 @@ body .btn:contains("В избранное") {
                     </form>
                 </div>
 
-                <!-- Мини-страница быстрого заказа -->
+                <!-- Модальное окно быстрого заказа -->
                 <div class="quick-order-modal" id="quickOrderModal">
                     <div class="quick-order-content">
                         <div class="quick-order-header">
                             <h4>Быстрый заказ</h4>
-                            <button type="button" class="btn-close" onclick="closeQuickOrder()"></button>
+                            <button type="button" class="btn-close" onclick="closeQuickOrder()">&times;</button>
                         </div>
                         <div class="quick-order-body">
                             <div class="product-summary">
@@ -610,187 +688,8 @@ body .btn:contains("В избранное") {
                                 <button type="submit" class="btn btn-primary w-100">Заказать</button>
                             </form>
                         </div>
-                </div>
                     </div>
                 </div>
-
-                <script>
-                function openQuickOrder() {
-                    const modal = document.getElementById('quickOrderModal');
-                    const backdrop = document.createElement('div');
-                    backdrop.className = 'modal-backdrop';
-                    document.body.appendChild(backdrop);
-                    
-                    // Сначала показываем элементы
-                    modal.style.display = 'block';
-                    backdrop.style.display = 'block';
-                    
-                    // Даем браузеру время на отрисовку
-                    setTimeout(() => {
-                        // Добавляем классы для анимации
-                        backdrop.classList.add('show');
-                        modal.classList.add('show');
-                    }, 50);
-                    
-                    document.body.style.overflow = 'hidden';
-                }
-
-                function closeQuickOrder() {
-                    const modal = document.getElementById('quickOrderModal');
-                    const backdrop = document.querySelector('.modal-backdrop');
-                    
-                    // Добавляем класс для отключения анимации
-                    modal.classList.add('hiding');
-                    backdrop.classList.add('hiding');
-                    
-                    // Мгновенно скрываем элементы
-                    modal.style.display = 'none';
-                    backdrop.remove();
-                    document.body.style.overflow = '';
-                }
-
-                function handleQuickOrder(event) {
-                    event.preventDefault();
-                    const form = event.target;
-                    const formData = new FormData(form);
-                    
-                    // Проверяем обязательные поля
-                    const requiredFields = {
-                        'quick_size': 'Размер',
-                        'quick_color': 'Цвет',
-                        'quick_quantity': 'Количество',
-                        'name': 'Имя',
-                        'phone': 'Телефон',
-                        'email': 'Email',
-                        'address': 'Адрес доставки',
-                        'payment_method': 'Способ оплаты'
-                    };
-                    
-                    let missingFields = [];
-                    for (let field in requiredFields) {
-                        if (!formData.get(field)) {
-                            missingFields.push(requiredFields[field]);
-                        }
-                    }
-                    
-                    if (missingFields.length > 0) {
-                        alert('Пожалуйста, заполните следующие поля:\n' + missingFields.join('\n'));
-                        return;
-                    }
-                    
-                    // Проверяем поля для оплаты картой
-                    if (formData.get('payment_method') === 'card') {
-                        const telegram = formData.get('telegram');
-                        const viber = formData.get('viber');
-                        if (!telegram && !viber) {
-                            alert('Для оплаты картой необходимо указать хотя бы один способ связи (Telegram или Viber)');
-                            return;
-                        }
-                    }
-                    
-                    // Показываем индикатор загрузки
-                    const submitButton = form.querySelector('button[type="submit"]');
-                    const originalText = submitButton.textContent;
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Отправка...';
-                    
-                    // Отправляем данные на сервер
-                    fetch('/quick_order', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            // Показываем сообщение об успехе
-                            const successMessage = document.createElement('div');
-                            successMessage.className = 'alert alert-success mt-3';
-                            successMessage.textContent = 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.';
-                            form.appendChild(successMessage);
-                            
-                            // Закрываем модальное окно через 2 секунды
-                            setTimeout(() => {
-                                closeQuickOrder();
-                            }, 2000);
-                        } else {
-                            throw new Error(data.error || 'Произошла ошибка при оформлении заказа.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Ошибка:', error);
-                        // Показываем сообщение об ошибке
-                        const errorMessage = document.createElement('div');
-                        errorMessage.className = 'alert alert-danger mt-3';
-                        errorMessage.textContent = error.message || 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.';
-                        form.appendChild(errorMessage);
-                        
-                        // Удаляем сообщение об ошибке через 5 секунд
-                        setTimeout(() => {
-                            errorMessage.remove();
-                        }, 5000);
-                    })
-                    .finally(() => {
-                        // Восстанавливаем кнопку
-                        submitButton.disabled = false;
-                        submitButton.textContent = originalText;
-                    });
-                }
-
-                function handleAddToCart() {
-                    const quantity = document.getElementById('quantity').value;
-                    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
-                    const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
-                    
-                    if (!selectedSize || !selectedColor) {
-                        alert('Пожалуйста, выберите размер и цвет');
-                        return;
-                    }
-                    
-                    const form = document.getElementById('cartForm');
-                    document.getElementById('cart_quantity').value = quantity;
-                    document.getElementById('cart_size').value = selectedSize;
-                    document.getElementById('cart_color').value = selectedColor;
-                    form.submit();
-                }
-
-                function changeImage(src) {
-                    document.getElementById('mainImage').src = src;
-                }
-
-                function togglePaymentFields() {
-                    const cardFields = document.getElementById('card_payment_fields');
-                    const codFields = document.getElementById('cod_payment_fields');
-                    const productPrice = parseFloat('{{ product.price }}');
-                    const quantity = parseInt(document.getElementById('quick_quantity').value);
-                    const productTotal = productPrice * quantity;
-                    
-                    if (document.getElementById('payment_card').checked) {
-                        cardFields.style.display = 'block';
-                        codFields.style.display = 'none';
-                    } else if (document.getElementById('payment_cod').checked) {
-                        cardFields.style.display = 'none';
-                        codFields.style.display = 'block';
-                        document.getElementById('product_total').textContent = productTotal.toFixed(2);
-                        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
-                    }
-                }
-
-                // Добавляем обработчик изменения количества для обновления суммы при наложенном платеже
-                document.getElementById('quick_quantity').addEventListener('change', function() {
-                    if (document.getElementById('payment_cod').checked) {
-                        const productPrice = parseFloat('{{ product.price }}');
-                        const quantity = parseInt(this.value);
-                        const productTotal = productPrice * quantity;
-                        document.getElementById('product_total').textContent = productTotal.toFixed(2);
-                        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
-                    }
-                });
-                </script>
             </div>
         </div>
     </div>
@@ -888,4 +787,40 @@ body .btn:contains("В избранное") {
         </div>
     </div>
 </div>
+
+<script>
+function openQuickOrder() {
+    const modal = document.getElementById('quickOrderModal');
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    document.body.appendChild(backdrop);
+    
+    // Сначала показываем элементы
+    modal.style.display = 'block';
+    backdrop.style.display = 'block';
+    
+    // Даем браузеру время на отрисовку
+    setTimeout(() => {
+        // Добавляем классы для анимации
+        backdrop.classList.add('show');
+        modal.classList.add('show');
+    }, 50);
+    
+    document.body.style.overflow = 'hidden';
+}
+
+function closeQuickOrder() {
+    const modal = document.getElementById('quickOrderModal');
+    const backdrop = document.querySelector('.modal-backdrop');
+    
+    // Добавляем класс для отключения анимации
+    modal.classList.add('hiding');
+    backdrop.classList.add('hiding');
+    
+    // Мгновенно скрываем элементы
+    modal.style.display = 'none';
+    backdrop.remove();
+    document.body.style.overflow = '';
+}
+
 {% endblock %}

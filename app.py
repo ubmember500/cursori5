@@ -1341,7 +1341,28 @@ def quick_order():
             # Отправляем email через SMTP
             if send_email_smtp(SMTP_CONFIG['ADMIN_EMAIL'], f'Новый заказ от {name}', email_body):
                 print("\nEmail успешно отправлен")
-                return jsonify({'success': True})
+                # Возвращаем подробную информацию о заказе
+                order_info = {
+                    'success': True,
+                    'order': {
+                        'product_name': product_name,
+                        'size': size,
+                        'color': color,
+                        'quantity': quantity,
+                        'price': product_price,
+                        'total': float(product_price) * int(quantity),
+                        'customer_name': name,
+                        'phone': phone,
+                        'email': email,
+                        'address': address,
+                        'payment_method': 'Оплата картой' if payment_method == 'card' else 'Наложенный платеж при получении',
+                        'contact_info': {
+                            'telegram': telegram,
+                            'viber': viber
+                        } if payment_method == 'card' else None
+                    }
+                }
+                return jsonify(order_info)
             else:
                 raise Exception("Не удалось отправить email через SMTP")
 
