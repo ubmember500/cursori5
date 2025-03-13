@@ -106,9 +106,13 @@ def xss_protection_middleware():
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
+        
+        # Добавляем заголовки кэширования только для не-AJAX запросов
+        if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        
         return response
 
 # Активируем middleware
@@ -335,20 +339,13 @@ def after_request(response):
         invalidate_cache()
     return response
 
-def add_no_cache_headers(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
-
 @app.route('/')
 def home():
     featured_products = Product.query.limit(6).all()
     # Обновляем изображения для товаров
     for product in featured_products:
         product.image = get_random_product_image(product.category_id)
-    response = make_response(render_template('home.html', products=featured_products))
-    return add_no_cache_headers(response)
+    return render_template('home.html', products=featured_products)
 
 
 @app.route('/products')
@@ -356,6 +353,7 @@ def products():
     try:
         print("\n=== Начало обработки запроса /products ===")
         print(f"Все параметры запроса: {request.args}")
+        print(f"Заголовки запроса: {dict(request.headers)}")
         
         # Получаем параметры фильтрации
         category = request.args.get('category')
@@ -455,7 +453,10 @@ def products():
         print("=== Завершение обработки запроса /products ===\n")
         
         # Проверяем, является ли запрос AJAX
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        print(f"Это AJAX запрос: {is_ajax}")
+        
+        if is_ajax:
             return render_template('products_partial.html', 
                                 products=products, 
                                 categories=all_categories,
@@ -463,13 +464,12 @@ def products():
                                 max_price=max_price,
                                 selected_category=category if category else None)
         
-        response = make_response(render_template('products.html', 
-                                              products=products, 
-                                              categories=all_categories,
-                                              min_price=min_price,
-                                              max_price=max_price,
-                                              selected_category=category if category else None))
-        return add_no_cache_headers(response)
+        return render_template('products.html', 
+                             products=products, 
+                             categories=all_categories,
+                             min_price=min_price,
+                             max_price=max_price,
+                             selected_category=category if category else None)
         
     except Exception as e:
         print(f"Критическая ошибка в route products: {e}")
@@ -1110,14 +1110,6 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
-
-# Функция для отключения кэширования
-@app.after_request
-def add_header(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
 
 if __name__ == '__main__':
     init_db()

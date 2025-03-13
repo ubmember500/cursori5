@@ -1,279 +1,84 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
-{% block title %}Товары - Cursor Shop🛍️{% endblock %}
+{% block title %}Товары{% endblock %}
 
-{% block extra_css %}
-<style>
-/* Стили для фильтров */
-.filters {
-    background-color: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 12px;
-    margin-bottom: 2rem;
-}
-
-.filters h5 {
-    margin-bottom: 1rem;
-    font-weight: 600;
-}
-
-.form-check {
-    margin-bottom: 0.5rem;
-}
-
-.form-check-label {
-    cursor: pointer;
-}
-
-/* Стили для сортировки */
-.sort-section {
-    margin-bottom: 2rem;
-}
-
-.sort-section select {
-    min-width: 200px;
-}
-
-/* Стили для карточек товаров */
-.product-card {
-    height: 100%;
-    border: none;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-}
-
-.product-card .card-img-wrapper {
-    position: relative;
-    width: 100%;
-    padding-top: 133.375%; /* Соотношение сторон 3:4 (800:1067) */
-    overflow: hidden;
-}
-
-.product-card .card-img-top {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s ease;
-}
-
-.product-card:hover .card-img-top {
-    transform: scale(1.05);
-}
-
-.product-card .card-body {
-    padding: 1.5rem;
-}
-
-.product-card .card-title {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.product-card .price {
-    font-size: 1.25rem;
-    color: #0d6efd;
-    font-weight: bold;
-    margin-bottom: 1rem;
-}
-
-.product-card .btn-group {
-    width: 100%;
-    gap: 0.5rem;
-}
-
-/* Стили для ползунков цены */
-.price-range-wrapper {
-    padding: 20px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.price-display {
-    margin-bottom: 15px;
-}
-
-.slider-group {
-    margin-bottom: 15px;
-}
-
-.slider-label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.price-value {
-    font-weight: 600;
-    color: #0d6efd;
-    min-width: 80px;
-    text-align: right;
-}
-
-.form-range {
-    width: 100%;
-    height: 8px;
-    border-radius: 4px;
-    background: #e9ecef;
-    outline: none;
-    -webkit-appearance: none;
-    margin: 10px 0;
-}
-
-.form-range::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #0d6efd;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    transition: all 0.2s ease;
-}
-
-.form-range::-webkit-slider-thumb:hover {
-    transform: scale(1.1);
-    box-shadow: 0 2px 8px rgba(13,110,253,0.4);
-}
-
-/* Медиа-запросы */
-@media (max-width: 768px) {
-    .filters {
-        margin-bottom: 1rem;
-    }
-
-    .sort-section select {
-        width: 100%;
-    }
-}
-</style>
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/products.css') }}">
 {% endblock %}
 
 {% block content %}
-<!-- Отладочная информация -->
-<div class="container my-5" style="display: none;">
+<div class="container mt-4">
     <div class="row">
-        <div class="col">
-            <h4>Отладочная информация:</h4>
-            <p>Текущая категория: {{ request.args.get('category') }}</p>
-            <p>Все параметры: {{ request.args }}</p>
-            <p>Количество товаров: {{ products|length }}</p>
-            <p>Категории:</p>
-            <ul>
-            {% for category in categories %}
-                <li>{{ category.name }} (ID: {{ category.id }})</li>
-            {% endfor %}
-            </ul>
-            <p>Товары:</p>
-            <ul>
-            {% for product in products %}
-                <li>{{ product.name }} (ID: {{ product.id }}, Категория: {{ product.category_id }}, Цена: {{ product.price }})</li>
-            {% endfor %}
-            </ul>
+        <!-- Фильтры -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Фильтры</h5>
+                    <form id="filterForm">
+                        <!-- Категории -->
+                        <div class="mb-3">
+                            <label class="form-label">Категории</label>
+                            <div class="category-list">
+                                <div class="form-check">
+                                    <input class="form-check-input category-filter" type="radio" name="category" id="category_all" value="" {% if not selected_category %}checked{% endif %}>
+                                    <label class="form-check-label" for="category_all">
+                                        Все категории
+                                    </label>
+                                </div>
+                                {% for category in categories %}
+                                <div class="form-check">
+                                    <input class="form-check-input category-filter" type="radio" name="category" id="category_{{ category.id }}" value="{{ category.id }}" {% if selected_category|string == category.id|string %}checked{% endif %}>
+                                    <label class="form-check-label" for="category_{{ category.id }}">
+                                        {{ category.name }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Цена -->
+                        <div class="mb-3">
+                            <label class="form-label">Цена</label>
+                            <div class="price-range">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span id="minPriceDisplay">{{ min_price }}</span>
+                                    <span id="maxPriceDisplay">{{ max_price }}</span>
+                                </div>
+                                <input type="range" class="form-range" id="minPriceRange" min="0" max="20000" value="{{ min_price }}">
+                                <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="{{ max_price }}">
+                            </div>
+                        </div>
+
+                        <!-- Сортировка -->
+                        <div class="mb-3">
+                            <label class="form-label">Сортировка</label>
+                            <select class="form-select" id="sortSelect">
+                                <option value="default">По умолчанию</option>
+                                <option value="price_asc">Цена (по возрастанию)</option>
+                                <option value="price_desc">Цена (по убыванию)</option>
+                                <option value="name_asc">Название (А-Я)</option>
+                                <option value="name_desc">Название (Я-А)</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Список товаров -->
+        <div class="col-md-9">
+            {% include 'products_partial.html' %}
         </div>
     </div>
 </div>
 
-<div class="container my-5">
-    <div class="row">
-        <!-- Фильтры -->
-        <div class="col-md-3">
-            <div class="filters">
-                <form id="filterForm">
-                    <h5>Категории</h5>
-                    {% for category in categories %}
-                    <div class="form-check">
-                        <input class="form-check-input category-filter" type="radio" name="category" value="{{ category.id }}" 
-                               id="category{{ category.id }}" {% if category.id|string == request.args.get('category') %}checked{% endif %}>
-                        <label class="form-check-label" for="category{{ category.id }}">
-                            {{ category.name }}
-                        </label>
-                    </div>
-                    {% endfor %}
-
-                    <h5 class="mt-4">Цена</h5>
-                    <div class="price-range-wrapper">
-                        <div class="slider-group">
-                            <div class="slider-label">
-                                <span>От:</span>
-                                <span class="price-value"><span id="minPriceDisplay">{{ request.args.get('min_price', 0)|int }}</span> ₴</span>
-                            </div>
-                            <input type="range" class="form-range" id="minPriceRange" 
-                                   min="0" max="20000" step="100" 
-                                   value="{{ request.args.get('min_price', 0)|int }}">
-                        </div>
-                        <div class="slider-group">
-                            <div class="slider-label">
-                                <span>До:</span>
-                                <span class="price-value"><span id="maxPriceDisplay">{{ request.args.get('max_price', 20000)|int }}</span> ₴</span>
-                            </div>
-                            <input type="range" class="form-range" id="maxPriceRange" 
-                                   min="0" max="20000" step="100" 
-                                   value="{{ request.args.get('max_price', 20000)|int }}">
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Товары -->
-        <div class="col-md-9">
-            <div class="sort-section d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">Товары</h4>
-                <select class="form-select" id="sortSelect" style="width: auto;">
-                    <option value="default" {% if not request.args.get('sort') or request.args.get('sort') == 'default' %}selected{% endif %}>По умолчанию</option>
-                    <option value="price_asc" {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>По возрастанию цены</option>
-                    <option value="price_desc" {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>По убыванию цены</option>
-                    <option value="name_asc" {% if request.args.get('sort') == 'name_asc' %}selected{% endif %}>По названию А-Я</option>
-                    <option value="name_desc" {% if request.args.get('sort') == 'name_desc' %}selected{% endif %}>По названию Я-А</option>
-                </select>
-            </div>
-
-            <div class="row g-4 mt-3">
-                {% for product in products %}
-                <div class="col-md-4">
-                    <div class="card product-card" data-category="{{ product.category_id }}" data-price="{{ product.price }}">
-                        <div class="card-img-wrapper">
-                            <img src="{{ url_for('static', filename=product.image) }}" 
-                                 class="card-img-top" 
-                                 alt="{{ product.name }}"
-                                 loading="lazy">
-                        </div>
-                        <div class="card-body">
-                            <h5 class="card-title">{{ product.name }}</h5>
-                            <p class="price">{{ "%.2f"|format(product.price) }} ₴</p>
-                            <div class="btn-group">
-                                <a href="{{ url_for('product_detail', product_id=product.id) }}" 
-                                   class="btn btn-outline-primary">Подробнее</a>
-                                <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <input type="hidden" name="image" value="{{ product.image }}">
-                                    <button type="submit" class="btn btn-primary w-100">В корзину</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            {% if not products %}
-            <div class="text-center mt-5">
-                <h5>Товары не найдены</h5>
-                <p>Попробуйте изменить параметры фильтрации</p>
-            </div>
-            {% endif %}
+<!-- Отладочная информация -->
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Отладочная информация</h5>
+            <pre id="debugInfo"></pre>
         </div>
     </div>
 </div>
@@ -282,18 +87,28 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM загружен, инициализация фильтров...');
+    
     const minSlider = document.getElementById('minPriceRange');
     const maxSlider = document.getElementById('maxPriceRange');
     const minDisplay = document.getElementById('minPriceDisplay');
     const maxDisplay = document.getElementById('maxPriceDisplay');
     const filterForm = document.getElementById('filterForm');
     const sortSelect = document.getElementById('sortSelect');
-    const productsContainer = document.querySelector('.row.g-4');
+    const productsContainer = document.getElementById('productsContainer');
+    const debugInfo = document.getElementById('debugInfo');
     let debounceTimer;
+
+    // Проверка наличия элементов
+    if (!minSlider || !maxSlider || !minDisplay || !maxDisplay || !filterForm || !sortSelect || !productsContainer) {
+        console.error('Не все необходимые элементы найдены на странице');
+        return;
+    }
 
     // Предотвращаем отправку формы
     filterForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        console.log('Предотвращена отправка формы');
     });
 
     // Форматирование числа с разделителями
@@ -305,21 +120,54 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateDisplays(minValue, maxValue) {
         minDisplay.textContent = formatNumber(minValue);
         maxDisplay.textContent = formatNumber(maxValue);
+        console.log('Обновлены отображаемые значения:', { minValue, maxValue });
     }
 
-    // Получение текущих параметров URL
-    function getCurrentParams() {
-        return new URLSearchParams(window.location.search);
+    // Загрузка товаров через AJAX
+    async function loadProducts(params) {
+        try {
+            console.log('Загрузка товаров с параметрами:', params);
+            const response = await fetch(`${window.location.pathname}?${params.toString()}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const html = await response.text();
+            console.log('Получен HTML:', html);
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newProducts = doc.querySelector('#productsContainer');
+            
+            if (newProducts) {
+                // Обновляем содержимое контейнера
+                productsContainer.innerHTML = newProducts.innerHTML;
+                console.log('Товары обновлены');
+                
+                // Обновляем отладочную информацию
+                if (debugInfo) {
+                    debugInfo.textContent = JSON.stringify({
+                        params: Object.fromEntries(params),
+                        productsCount: productsContainer.children.length,
+                        timestamp: new Date().toISOString()
+                    }, null, 2);
+                }
+            } else {
+                console.error('Не найден контейнер с товарами в ответе');
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке товаров:', error);
+        }
     }
 
-    // Обновление URL и данных с задержкой
-    function debounceUpdate(callback, delay = 300) {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(callback, delay);
-    }
-
-    // Обновление URL без перезагрузки страницы
-    function updateURL(newParams = {}) {
+    // Обновление URL и данных
+    function updateURLWithParams(newParams = {}) {
         try {
             const params = new URLSearchParams();
             Object.entries(newParams).forEach(([key, value]) => {
@@ -330,167 +178,100 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const newUrl = `${window.location.pathname}?${params.toString()}`;
             window.history.pushState({}, '', newUrl);
-            return newUrl;
-        } catch (error) {
-            console.error('Ошибка при обновлении URL:', error);
-            return null;
-        }
-    }
-
-    // Загрузка товаров через AJAX
-    async function loadProducts(params) {
-        try {
-            const response = await fetch(`${window.location.pathname}?${params.toString()}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            const html = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const newProducts = doc.querySelector('.row.g-4');
+            console.log('URL обновлен:', newUrl);
             
-            if (newProducts) {
-                productsContainer.innerHTML = newProducts.innerHTML;
-            }
-        } catch (error) {
-            console.error('Ошибка при загрузке товаров:', error);
-        }
-    }
-
-    // Обновление URL и данных
-    async function updateURLWithParams(newParams = {}) {
-        try {
-            const newUrl = updateURL(newParams);
-            if (newUrl) {
-                const params = new URLSearchParams(newUrl.split('?')[1]);
-                await loadProducts(params);
-            }
+            loadProducts(params);
         } catch (error) {
             console.error('Ошибка при обновлении параметров:', error);
-            alert('Произошла ошибка при обновлении фильтров. Пожалуйста, попробуйте еще раз.');
         }
     }
 
     // Обработчики для категорий
     document.querySelectorAll('.category-filter').forEach(radio => {
         radio.addEventListener('change', function() {
-            try {
-                const categoryValue = this.checked ? this.value : null;
-                const minValue = parseFloat(minSlider.value);
-                const maxValue = parseFloat(maxSlider.value);
-                const sortValue = sortSelect.value;
-                
-                console.log('Изменение категории:', {
-                    category: categoryValue,
-                    min_price: minValue,
-                    max_price: maxValue,
-                    sort: sortValue
-                });
-                
-                updateURLWithParams({
-                    category: categoryValue,
-                    min_price: minValue,
-                    max_price: maxValue,
-                    sort: sortValue
-                });
-            } catch (error) {
-                console.error('Ошибка при обработке категорий:', error);
-                alert('Произошла ошибка при фильтрации по категориям. Пожалуйста, попробуйте еще раз.');
-            }
+            console.log('Изменение категории:', this.value);
+            const categoryValue = this.checked ? this.value : null;
+            const minValue = parseFloat(minSlider.value);
+            const maxValue = parseFloat(maxSlider.value);
+            const sortValue = sortSelect.value;
+            
+            updateURLWithParams({
+                category: categoryValue,
+                min_price: minValue,
+                max_price: maxValue,
+                sort: sortValue
+            });
         });
     });
 
     // Обработчик изменения значения ползунка
     function handleSliderInput(currentSlider, otherSlider, isMin) {
-        try {
-            let currentValue = parseFloat(currentSlider.value);
-            let otherValue = parseFloat(otherSlider.value);
-
-            // Проверяем и корректируем значения
-            if (isMin && currentValue > otherValue) {
-                currentValue = otherValue;
-                currentSlider.value = currentValue;
-            } else if (!isMin && currentValue < otherValue) {
-                currentValue = otherValue;
-                currentSlider.value = currentValue;
-            }
-
-            // Обновляем отображение
-            const minValue = parseFloat(minSlider.value);
-            const maxValue = parseFloat(maxSlider.value);
-            updateDisplays(minValue, maxValue);
-
-            // Получаем текущую категорию
-            const selectedCategory = document.querySelector('.category-filter:checked');
-            const categoryValue = selectedCategory ? selectedCategory.value : null;
-
-            // Обновляем URL и данные с задержкой
-            debounceUpdate(() => {
-                console.log('Изменение цены:', {
-                    min_price: minValue,
-                    max_price: maxValue,
-                    category: categoryValue,
-                    sort: sortSelect.value
-                });
-                
-                updateURLWithParams({
-                    min_price: minValue,
-                    max_price: maxValue,
-                    category: categoryValue,
-                    sort: sortSelect.value
-                });
-            });
-        } catch (error) {
-            console.error('Ошибка при обработке изменения ползунка:', error);
+        let currentValue = parseFloat(currentSlider.value);
+        let otherValue = parseFloat(otherSlider.value);
+        
+        console.log('Обработка изменения ползунка:', {
+            currentValue,
+            otherValue,
+            isMin,
+            currentSlider: currentSlider.id,
+            otherSlider: otherSlider.id
+        });
+        
+        if (isMin && currentValue > otherValue) {
+            currentValue = otherValue;
+            currentSlider.value = otherValue;
+        } else if (!isMin && currentValue < otherValue) {
+            currentValue = otherValue;
+            currentSlider.value = otherValue;
         }
-    }
-
-    // Добавляем обработчики событий для ползунков
-    minSlider.addEventListener('input', function() {
-        handleSliderInput(minSlider, maxSlider, true);
-    });
-    
-    maxSlider.addEventListener('input', function() {
-        handleSliderInput(maxSlider, minSlider, false);
-    });
-
-    // Обработчик для сортировки
-    if (sortSelect) {
-        sortSelect.addEventListener('change', function() {
-            try {
-                const minValue = parseFloat(minSlider.value);
-                const maxValue = parseFloat(maxSlider.value);
-                const selectedCategory = document.querySelector('.category-filter:checked');
-                const categoryValue = selectedCategory ? selectedCategory.value : null;
-                
-                console.log('Изменение сортировки:', {
-                    sort: this.value,
-                    min_price: minValue,
-                    max_price: maxValue,
-                    category: categoryValue
-                });
-                
-                updateURLWithParams({
-                    sort: this.value,
-                    min_price: minValue,
-                    max_price: maxValue,
-                    category: categoryValue
-                });
-            } catch (error) {
-                console.error('Ошибка при изменении сортировки:', error);
-                alert('Произошла ошибка при изменении сортировки. Пожалуйста, попробуйте еще раз.');
-            }
+        
+        updateDisplays(
+            isMin ? currentValue : parseFloat(minSlider.value),
+            isMin ? parseFloat(maxSlider.value) : currentValue
+        );
+        
+        const categoryValue = document.querySelector('.category-filter:checked')?.value || '';
+        const sortValue = sortSelect.value;
+        
+        updateURLWithParams({
+            category: categoryValue,
+            min_price: parseFloat(minSlider.value),
+            max_price: parseFloat(maxSlider.value),
+            sort: sortValue
         });
     }
 
-    // Инициализация отображения при загрузке страницы
-    try {
-        const initialMinValue = parseFloat(minSlider.value);
-        const initialMaxValue = parseFloat(maxSlider.value);
-        updateDisplays(initialMinValue, initialMaxValue);
-    } catch (error) {
-        console.error('Ошибка при инициализации значений:', error);
+    // Обработчики для ползунков
+    minSlider.addEventListener('input', function() {
+        handleSliderInput(this, maxSlider, true);
+    });
+
+    maxSlider.addEventListener('input', function() {
+        handleSliderInput(this, minSlider, false);
+    });
+
+    // Обработчик для сортировки
+    sortSelect.addEventListener('change', function() {
+        console.log('Изменение сортировки:', this.value);
+        const categoryValue = document.querySelector('.category-filter:checked')?.value || '';
+        const minValue = parseFloat(minSlider.value);
+        const maxValue = parseFloat(maxSlider.value);
+        
+        updateURLWithParams({
+            category: categoryValue,
+            min_price: minValue,
+            max_price: maxValue,
+            sort: this.value
+        });
+    });
+
+    // Инициализация отладочной информации
+    if (debugInfo) {
+        debugInfo.textContent = JSON.stringify({
+            initialParams: Object.fromEntries(new URLSearchParams(window.location.search)),
+            productsCount: productsContainer.children.length,
+            timestamp: new Date().toISOString()
+        }, null, 2);
     }
 });
 </script>
