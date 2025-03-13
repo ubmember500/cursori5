@@ -175,6 +175,12 @@
                 <li>{{ category.name }} (ID: {{ category.id }})</li>
             {% endfor %}
             </ul>
+            <p>Товары:</p>
+            <ul>
+            {% for product in products %}
+                <li>{{ product.name }} (ID: {{ product.id }}, Категория: {{ product.category_id }}, Цена: {{ product.price }})</li>
+            {% endfor %}
+            </ul>
         </div>
     </div>
 </div>
@@ -283,6 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('filterForm');
     const sortSelect = document.getElementById('sortSelect');
     let debounceTimer;
+    let lastParams = new URLSearchParams(window.location.search);
 
     // Предотвращаем отправку формы
     filterForm.addEventListener('submit', function(e) {
@@ -305,6 +312,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return new URLSearchParams(window.location.search);
     }
 
+    // Проверка изменения параметров
+    function hasParamsChanged(newParams) {
+        const currentParams = getCurrentParams();
+        for (const [key, value] of Object.entries(newParams)) {
+            if (currentParams.get(key) !== value?.toString()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Обновление URL и данных с задержкой
     function debounceUpdate(callback, delay = 300) {
         clearTimeout(debounceTimer);
@@ -314,19 +332,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обновление URL с сохранением всех параметров
     function updateURLWithParams(newParams = {}) {
         try {
-            const params = getCurrentParams();
+            // Проверяем, изменились ли параметры
+            if (!hasParamsChanged(newParams)) {
+                console.log('Параметры не изменились, пропускаем обновление');
+                return;
+            }
+
+            const params = new URLSearchParams();
             
-            // Очищаем старые параметры категорий
-            params.delete('category');
-            
-            // Очищаем старые параметры цены
-            params.delete('min_price');
-            params.delete('max_price');
-            
-            // Очищаем старый параметр сортировки
-            params.delete('sort');
-            
-            // Добавляем новые параметры
+            // Добавляем только измененные параметры
             Object.entries(newParams).forEach(([key, value]) => {
                 if (value !== null && value !== undefined && value !== '') {
                     params.set(key, value);
@@ -335,6 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Формируем новый URL
             const newUrl = `${window.location.pathname}?${params.toString()}`;
+            console.log('Обновление URL:', newUrl);
             
             // Перезагружаем страницу с новыми параметрами
             window.location.href = newUrl;
@@ -349,9 +364,16 @@ document.addEventListener('DOMContentLoaded', function() {
         radio.addEventListener('change', function() {
             try {
                 const categoryValue = this.checked ? this.value : null;
-                const minValue = parseInt(minSlider.value);
-                const maxValue = parseInt(maxSlider.value);
+                const minValue = parseFloat(minSlider.value);
+                const maxValue = parseFloat(maxSlider.value);
                 const sortValue = sortSelect.value;
+                
+                console.log('Изменение категории:', {
+                    category: categoryValue,
+                    min_price: minValue,
+                    max_price: maxValue,
+                    sort: sortValue
+                });
                 
                 updateURLWithParams({
                     category: categoryValue,
@@ -369,8 +391,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработчик изменения значения ползунка
     function handleSliderInput(currentSlider, otherSlider, isMin) {
         try {
-            let currentValue = parseInt(currentSlider.value);
-            let otherValue = parseInt(otherSlider.value);
+            let currentValue = parseFloat(currentSlider.value);
+            let otherValue = parseFloat(otherSlider.value);
 
             // Проверяем и корректируем значения
             if (isMin && currentValue > otherValue) {
@@ -382,8 +404,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Обновляем отображение
-            const minValue = parseInt(minSlider.value);
-            const maxValue = parseInt(maxSlider.value);
+            const minValue = parseFloat(minSlider.value);
+            const maxValue = parseFloat(maxSlider.value);
             updateDisplays(minValue, maxValue);
 
             // Получаем текущую категорию
@@ -392,6 +414,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Обновляем URL и данные с задержкой
             debounceUpdate(() => {
+                console.log('Изменение цены:', {
+                    min_price: minValue,
+                    max_price: maxValue,
+                    category: categoryValue,
+                    sort: sortSelect.value
+                });
+                
                 updateURLWithParams({
                     min_price: minValue,
                     max_price: maxValue,
@@ -417,10 +446,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
             try {
-                const minValue = parseInt(minSlider.value);
-                const maxValue = parseInt(maxSlider.value);
+                const minValue = parseFloat(minSlider.value);
+                const maxValue = parseFloat(maxSlider.value);
                 const selectedCategory = document.querySelector('.category-filter:checked');
                 const categoryValue = selectedCategory ? selectedCategory.value : null;
+                
+                console.log('Изменение сортировки:', {
+                    sort: this.value,
+                    min_price: minValue,
+                    max_price: maxValue,
+                    category: categoryValue
+                });
                 
                 updateURLWithParams({
                     sort: this.value,
@@ -437,8 +473,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Инициализация отображения при загрузке страницы
     try {
-        const initialMinValue = parseInt(minSlider.value);
-        const initialMaxValue = parseInt(maxSlider.value);
+        const initialMinValue = parseFloat(minSlider.value);
+        const initialMaxValue = parseFloat(maxSlider.value);
         updateDisplays(initialMinValue, initialMaxValue);
     } catch (error) {
         console.error('Ошибка при инициализации значений:', error);

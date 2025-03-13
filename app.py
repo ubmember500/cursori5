@@ -378,7 +378,7 @@ def products():
                 min_price = 0
             else:
                 try:
-                    min_price = int(float(min_price))
+                    min_price = float(min_price)
                 except (ValueError, TypeError):
                     min_price = 0
                 min_price = max(0, min(min_price, 20000))
@@ -388,7 +388,7 @@ def products():
                 max_price = 20000
             else:
                 try:
-                    max_price = int(float(max_price))
+                    max_price = float(max_price)
                 except (ValueError, TypeError):
                     max_price = 20000
                 max_price = max(min_price, min(max_price, 20000))
