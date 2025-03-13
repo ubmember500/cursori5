@@ -769,25 +769,41 @@ body .btn:contains("В избранное") {
 
                                     <div class="form-group">
                                         <label for="payment_method">Способ оплаты *</label>
-                                        <select class="form-control" id="payment_method" name="payment_method" required>
+                                        <select class="form-control" id="payment_method" name="payment_method" required onchange="togglePaymentFields()">
                                             <option value="">Выберите способ оплаты</option>
-                                            <option value="cash">Оплата при получении</option>
                                             <option value="card">Оплата картой</option>
+                                            <option value="cod">Оплата при получении</option>
                                         </select>
                                     </div>
 
-                                    <div class="form-group" id="messenger_group" style="display: none;">
-                                        <label for="messenger">Мессенджер для связи *</label>
-                                        <select class="form-control" id="messenger" name="messenger">
-                                            <option value="">Выберите мессенджер</option>
-                                            <option value="telegram">Telegram</option>
-                                            <option value="viber">Viber</option>
-                                        </select>
+                                    <div id="card_payment_fields" style="display: none;">
+                                        <div class="form-group">
+                                            <label>Выберите мессенджер для связи *</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="messenger" id="telegram" value="telegram">
+                                                <label class="form-check-label" for="telegram">
+                                                    Telegram
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="messenger" id="viber" value="viber">
+                                                <label class="form-check-label" for="viber">
+                                                    Viber
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="messenger_username">Ваш username в мессенджере *</label>
+                                            <input type="text" class="form-control" id="messenger_username" name="messenger_username">
+                                        </div>
                                     </div>
 
-                                    <div class="form-group" id="messenger_username_group" style="display: none;">
-                                        <label for="messenger_username">Ваш username в мессенджере *</label>
-                                        <input type="text" class="form-control" id="messenger_username" name="messenger_username">
+                                    <div id="cod_payment_fields" style="display: none;">
+                                        <div class="order-details">
+                                            <p><strong>Стоимость товара:</strong> <span id="product_total">0.00</span> ₴</p>
+                                            <p><strong>Стоимость доставки:</strong> 60.00 ₴</p>
+                                            <p><strong>Итого к оплате:</strong> <span id="cod_total">0.00</span> ₴</p>
+                                        </div>
                                     </div>
                                     
                                     <button type="submit" class="btn btn-primary">Оформить заказ</button>
@@ -980,7 +996,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация Bootstrap модального окна
     const quickOrderModal = new bootstrap.Modal(document.getElementById('quickOrderModal'));
     
-    // Обработчик изменения количества товара
+    // Обработчики изменения количества товара
     const quantityInput = document.getElementById('quantity');
     if (quantityInput) {
         quantityInput.addEventListener('change', function() {
@@ -1055,60 +1071,24 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('quickOrderModal').addEventListener('hidden.bs.modal', function () {
         document.body.style.overflow = '';
     });
-});
 
-function changeImage(src) {
-    document.getElementById('mainImage').src = src;
-}
-
-function togglePaymentFields() {
-    const cardFields = document.getElementById('card_payment_fields');
-    const codFields = document.getElementById('cod_payment_fields');
-    const productPrice = parseFloat('{{ product.price }}');
-    const quantity = parseInt(document.getElementById('quick_quantity').value);
-    const productTotal = productPrice * quantity;
-    
-    if (document.getElementById('payment_card').checked) {
-        cardFields.style.display = 'block';
-        codFields.style.display = 'none';
-    } else if (document.getElementById('payment_cod').checked) {
-        cardFields.style.display = 'none';
-        codFields.style.display = 'block';
-        document.getElementById('product_total').textContent = productTotal.toFixed(2);
-        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
-    }
-}
-
-// Добавляем обработчик изменения количества для обновления суммы при наложенном платеже
-document.getElementById('quick_quantity').addEventListener('change', function() {
-    if (document.getElementById('payment_cod').checked) {
-        const productPrice = parseFloat('{{ product.price }}');
-        const quantity = parseInt(this.value);
-        const productTotal = productPrice * quantity;
-        document.getElementById('product_total').textContent = productTotal.toFixed(2);
-        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
-    }
-});
-
-// Добавляем обработчики для синхронизации значений между формами
-document.querySelectorAll('input[name="size"]').forEach(input => {
-    input.addEventListener('change', function() {
-        document.getElementById('cart_size').value = this.value;
+    // Обработчики для синхронизации значений между формами
+    document.querySelectorAll('input[name="size"]').forEach(input => {
+        input.addEventListener('change', function() {
+            document.getElementById('cart_size').value = this.value;
+        });
     });
-});
 
-document.querySelectorAll('input[name="color"]').forEach(input => {
-    input.addEventListener('change', function() {
-        document.getElementById('cart_color').value = this.value;
+    document.querySelectorAll('input[name="color"]').forEach(input => {
+        input.addEventListener('change', function() {
+            document.getElementById('cart_color').value = this.value;
+        });
     });
-});
 
-document.getElementById('quantity').addEventListener('change', function() {
-    document.getElementById('cart_quantity').value = this.value;
-});
+    document.getElementById('quantity').addEventListener('change', function() {
+        document.getElementById('cart_quantity').value = this.value;
+    });
 
-document.addEventListener('DOMContentLoaded', function() {
-    const quantityInput = document.getElementById('quantity');
     const decreaseBtn = document.getElementById('decrease-qty');
     const increaseBtn = document.getElementById('increase-qty');
 
@@ -1138,14 +1118,89 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('cart_color').value = this.dataset.color;
         });
     });
+});
 
-    // Size options
-    const sizeInputs = document.querySelectorAll('input[name="size"]');
-    sizeInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            document.getElementById('cart_size').value = this.value;
-        });
+function changeImage(src) {
+    document.getElementById('mainImage').src = src;
+}
+
+function togglePaymentFields() {
+    const paymentMethod = document.getElementById('payment_method').value;
+    const cardFields = document.getElementById('card_payment_fields');
+    const codFields = document.getElementById('cod_payment_fields');
+    const productPrice = parseFloat('{{ product.price }}');
+    const quantity = parseInt(document.getElementById('cart_quantity').value);
+    const productTotal = productPrice * quantity;
+    
+    if (paymentMethod === 'card') {
+        cardFields.style.display = 'block';
+        codFields.style.display = 'none';
+    } else if (paymentMethod === 'cod') {
+        cardFields.style.display = 'none';
+        codFields.style.display = 'block';
+        document.getElementById('product_total').textContent = productTotal.toFixed(2);
+        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
+    } else {
+        cardFields.style.display = 'none';
+        codFields.style.display = 'none';
+    }
+}
+
+// Обновляем цены при изменении количества
+document.getElementById('cart_quantity').addEventListener('change', function() {
+    if (document.getElementById('payment_method').value === 'cod') {
+        const productPrice = parseFloat('{{ product.price }}');
+        const quantity = parseInt(this.value);
+        const productTotal = productPrice * quantity;
+        document.getElementById('product_total').textContent = productTotal.toFixed(2);
+        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
+    }
+});
+
+function validateForm(formData) {
+    const missingFields = [];
+    const requiredFields = ['name', 'phone', 'email', 'address', 'payment_method'];
+    
+    requiredFields.forEach(field => {
+        if (!formData.get(field)) {
+            missingFields.push(field);
+        }
     });
+
+    if (formData.get('payment_method') === 'card') {
+        if (!formData.get('messenger')) missingFields.push('выбор мессенджера');
+        if (!formData.get('messenger_username')) missingFields.push('username в мессенджере');
+    }
+    
+    return missingFields;
+}
+
+// Закрытие модального окна при клике вне его
+window.onclick = function(event) {
+    const modal = document.getElementById('quickOrderModal');
+    if (event.target == modal) {
+        closeQuickOrder();
+    }
+}
+
+// Обработчик изменения способа оплаты
+document.getElementById('payment_method').addEventListener('change', function() {
+    const messengerGroup = document.getElementById('messenger_group');
+    const messengerUsernameGroup = document.getElementById('messenger_username_group');
+    const messengerSelect = document.getElementById('messenger');
+    const messengerUsernameInput = document.getElementById('messenger_username');
+    
+    if (this.value === 'card') {
+        messengerGroup.style.display = 'block';
+        messengerUsernameGroup.style.display = 'block';
+        messengerSelect.required = true;
+        messengerUsernameInput.required = true;
+    } else {
+        messengerGroup.style.display = 'none';
+        messengerUsernameGroup.style.display = 'none';
+        messengerSelect.required = false;
+        messengerUsernameInput.required = false;
+    }
 });
 
 function handleAddToCart(event) {
@@ -1211,51 +1266,5 @@ function handleQuickOrder(event) {
         alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте позже.');
     });
 }
-
-function validateForm(formData) {
-    const missingFields = [];
-    const requiredFields = ['name', 'phone', 'email', 'address', 'payment_method'];
-    
-    requiredFields.forEach(field => {
-        if (!formData.get(field)) {
-            missingFields.push(field);
-        }
-    });
-
-    if (formData.get('payment_method') === 'card') {
-        if (!formData.get('messenger')) missingFields.push('мессенджер');
-        if (!formData.get('messenger_username')) missingFields.push('username в мессенджере');
-    }
-    
-    return missingFields;
-}
-
-// Закрытие модального окна при клике вне его
-window.onclick = function(event) {
-    const modal = document.getElementById('quickOrderModal');
-    if (event.target == modal) {
-        closeQuickOrder();
-    }
-}
-
-// Обработчик изменения способа оплаты
-document.getElementById('payment_method').addEventListener('change', function() {
-    const messengerGroup = document.getElementById('messenger_group');
-    const messengerUsernameGroup = document.getElementById('messenger_username_group');
-    const messengerSelect = document.getElementById('messenger');
-    const messengerUsernameInput = document.getElementById('messenger_username');
-    
-    if (this.value === 'card') {
-        messengerGroup.style.display = 'block';
-        messengerUsernameGroup.style.display = 'block';
-        messengerSelect.required = true;
-        messengerUsernameInput.required = true;
-    } else {
-        messengerGroup.style.display = 'none';
-        messengerUsernameGroup.style.display = 'none';
-        messengerSelect.required = false;
-        messengerUsernameInput.required = false;
-    }
-});
 </script>
 {% endblock %}
