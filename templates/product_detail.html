@@ -543,6 +543,87 @@ body .btn:contains("В избранное") {
     font-weight: bold;
     font-size: 1.2rem;
 }
+
+/* Стили для кнопок */
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Стили для модального окна */
+.quick-order-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.quick-order-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+    z-index: 1001;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #000;
+}
+
+/* Стили для выбора цвета */
+.color-option {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.color-option.active {
+    border-color: #0d6efd;
+}
+
+/* Стили для выбора размера */
+.btn-check:checked + .btn-outline-dark {
+    background-color: #212529;
+    color: white;
+}
+
+/* Стили для количества */
+.input-group {
+    max-width: 150px;
+}
+
+.input-group input {
+    text-align: center;
+}
 </style>
 {% endblock %}
 
@@ -582,141 +663,141 @@ body .btn:contains("В избранное") {
                 <p class="product-description">{{ product.description }}</p>
 
                 <!-- Выбор размера -->
-                <div class="size-selector">
-                <h5>Размер:</h5>
-                    {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
-                    <input type="radio" name="size" id="size-{{ size }}" value="{{ size }}" required>
-                    <label for="size-{{ size }}">{{ size }}</label>
-                    {% endfor %}
-            </div>
+                <div class="mb-4">
+                    <h5>Размер:</h5>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="size" id="size-xs" autocomplete="off">
+                        <label class="btn btn-outline-dark" for="size-xs">XS</label>
+
+                        <input type="radio" class="btn-check" name="size" id="size-s" autocomplete="off">
+                        <label class="btn btn-outline-dark" for="size-s">S</label>
+
+                        <input type="radio" class="btn-check" name="size" id="size-m" autocomplete="off" checked>
+                        <label class="btn btn-outline-dark" for="size-m">M</label>
+
+                        <input type="radio" class="btn-check" name="size" id="size-l" autocomplete="off">
+                        <label class="btn btn-outline-dark" for="size-l">L</label>
+
+                        <input type="radio" class="btn-check" name="size" id="size-xl" autocomplete="off">
+                        <label class="btn btn-outline-dark" for="size-xl">XL</label>
+                    </div>
+                </div>
 
                 <!-- Выбор цвета -->
-                <div class="color-selector">
-                <h5>Цвет:</h5>
-                    {% for color in ['Белый', 'Черный', 'Синий', 'Красный'] %}
-                    <input type="radio" name="color" id="color-{{ color }}" value="{{ color }}" required>
-                    <label for="color-{{ color }}">{{ color }}</label>
-                    {% endfor %}
-            </div>
+                <div class="mb-4">
+                    <h5>Цвет:</h5>
+                    <div class="d-flex">
+                        <div class="color-option me-2 active" style="background-color: #000;"></div>
+                        <div class="color-option me-2" style="background-color: #fff; border: 1px solid #ddd;"></div>
+                        <div class="color-option me-2" style="background-color: #0d6efd;"></div>
+                        <div class="color-option me-2" style="background-color: #dc3545;"></div>
+                        <div class="color-option me-2" style="background-color: #198754;"></div>
+                    </div>
+                </div>
 
                 <!-- Выбор количества -->
-                <div class="quantity-selector">
-                <h5>Количество:</h5>
-                    <input type="number" id="quantity" name="quantity" value="1" min="1" max="10">
-            </div>
+                <div class="mb-4">
+                    <h5>Количество:</h5>
+                    <div class="input-group" style="width: 150px;">
+                        <button class="btn btn-outline-secondary" type="button" id="decrease-qty">-</button>
+                        <input type="text" class="form-control text-center" value="1" id="quantity">
+                        <button class="btn btn-outline-secondary" type="button" id="increase-qty">+</button>
+                    </div>
+                    <small class="text-muted mt-2 d-block">В наличии: {{ product.stock }} шт.</small>
+                </div>
 
                 <!-- Кнопки действий -->
-                <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="openQuickOrder()">Купить</button>
+                <div class="d-grid gap-2 d-md-flex">
+                    <button type="button" class="btn btn-primary btn-lg" onclick="openQuickOrder()">
+                        <i class="fas fa-bolt me-2"></i>Купить
+                    </button>
                     <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;" onsubmit="handleAddToCart(event)">
                         <input type="hidden" name="quantity" id="cart_quantity" value="1">
                         <input type="hidden" name="size" id="cart_size">
                         <input type="hidden" name="color" id="cart_color">
                         <input type="hidden" name="image" value="{{ product_image }}">
-                        <button type="submit" class="btn btn-outline-primary">В корзину</button>
+                        <button type="submit" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-shopping-cart me-2"></i>В корзину
+                        </button>
                     </form>
                 </div>
 
-                <!-- Модальное окно быстрого заказа -->
-                <div class="quick-order-modal" id="quickOrderModal">
+                <!-- Модальное окно для быстрого заказа -->
+                <div id="quickOrderModal" class="quick-order-modal">
                     <div class="quick-order-content">
-                        <div class="quick-order-header">
-                            <h4>Быстрый заказ</h4>
-                            <button type="button" class="btn-close" onclick="closeQuickOrder()">&times;</button>
-                        </div>
-                        <div class="quick-order-body">
-                            <div class="product-summary">
-                                <img src="{{ url_for('static', filename=product_image) }}" alt="{{ product.name }}" class="quick-order-image">
-                                <div class="product-summary-details">
-                                    <h5>{{ product.name }}</h5>
-                                    <p class="price">{{ "%.2f"|format(product.price) }} ₴</p>
+                        <span class="close" onclick="closeQuickOrder()">&times;</span>
+                        <h2 class="mb-4">Оформление заказа</h2>
+                        <form id="quickOrderForm" method="POST" action="{{ url_for('quick_order') }}">
+                            <input type="hidden" name="product_id">
+                            <input type="hidden" name="product_name">
+                            <input type="hidden" name="product_price">
+                            <input type="hidden" name="quantity">
+                            <input type="hidden" name="size">
+                            <input type="hidden" name="color">
+                            
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Ваше имя</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Телефон</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Адрес доставки</label>
+                                <textarea class="form-control" id="address" name="address" rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Способ оплаты</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment" id="payment1" value="cash" checked>
+                                    <label class="form-check-label" for="payment1">
+                                        Наличными при получении
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment" id="payment2" value="card">
+                                    <label class="form-check-label" for="payment2">
+                                        Банковской картой
+                                    </label>
                                 </div>
                             </div>
-                            <form id="quickOrderForm" onsubmit="handleQuickOrder(event)">
-                                <input type="hidden" name="product_id" value="{{ product.id }}">
-                                <input type="hidden" name="product_name" value="{{ product.name }}">
-                                <input type="hidden" name="product_price" value="{{ product.price }}">
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Размер</label>
-                                    <div class="size-selector">
-                                        {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
-                                        <input type="radio" name="quick_size" id="quick-size-{{ size }}" value="{{ size }}" required>
-                                        <label for="quick-size-{{ size }}">{{ size }}</label>
-                                        {% endfor %}
-                                    </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Способ связи</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="contact_methods" id="telegram" value="telegram">
+                                    <label class="form-check-label" for="telegram">
+                                        Telegram
+                                    </label>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Цвет</label>
-                                    <div class="color-selector">
-                                        {% for color in ['Белый', 'Черный', 'Синий', 'Красный'] %}
-                                        <input type="radio" name="quick_color" id="quick-color-{{ color }}" value="{{ color }}" required>
-                                        <label for="quick-color-{{ color }}">{{ color }}</label>
-                                        {% endfor %}
-                                    </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="contact_methods" id="viber" value="viber">
+                                    <label class="form-check-label" for="viber">
+                                        Viber
+                                    </label>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Количество</label>
-                                    <input type="number" class="form-control" id="quick_quantity" name="quick_quantity" value="1" min="1" max="10" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Имя</label>
-                                    <input type="text" class="form-control" name="name" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Телефон</label>
-                                    <input type="tel" class="form-control" name="phone" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Email</label>
-                                    <input type="email" class="form-control" name="email" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Адрес доставки</label>
-                                    <textarea class="form-control" name="address" required></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Способ оплаты</label>
-                                    <div class="payment-methods">
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card" required onchange="togglePaymentFields()">
-                                            <label class="form-check-label" for="payment_card">
-                                                Оплата картой
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_cod" value="cod" required onchange="togglePaymentFields()">
-                                            <label class="form-check-label" for="payment_cod">
-                                                Наложенный платеж при получении
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="card_payment_fields" style="display: none;">
-                                    <div class="alert alert-info mb-3">
-                                        <p class="mb-0">Введите вашу соцсеть, с вами свяжется наш менеджер (или по телефону)</p>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Telegram</label>
-                                        <input type="text" class="form-control" name="telegram" placeholder="Введите ваш Telegram">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Viber</label>
-                                        <input type="text" class="form-control" name="viber" placeholder="Введите ваш Viber">
-                                    </div>
-                                </div>
-                                <div id="cod_payment_fields" style="display: none;">
-                                    <div class="alert alert-info">
-                                        <h6>Сумма к оплате:</h6>
-                                        <p class="mb-1">Стоимость товара: <span id="product_total">0</span> ₴</p>
-                                        <p class="mb-1">Доставка Новой почтой: 60 ₴</p>
-                                        <p class="mb-1">Доставка Укрпочтой: 40 ₴</p>
-                                        <p class="mb-0"><strong>Итого: <span id="cod_total">0</span> ₴</strong></p>
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100">Заказать</button>
-                            </form>
-                        </div>
+                            </div>
+                            
+                            <div class="order-details mb-4">
+                                <h5>Детали заказа</h5>
+                                <p>Товар: <span id="orderProductName"></span></p>
+                                <p>Размер: <span id="orderSize"></span></p>
+                                <p>Цвет: <span id="orderColor"></span></p>
+                                <p>Количество: <span id="orderQuantity"></span></p>
+                                <p>Сумма: <span id="orderTotal"></span> ₴</p>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">Оформить заказ</button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -819,72 +900,41 @@ body .btn:contains("В избранное") {
 
 <script>
 function openQuickOrder() {
-    try {
-        // Синхронизируем значения из основной формы
-        const selectedSize = document.querySelector('input[name="size"]:checked');
-        const selectedColor = document.querySelector('input[name="color"]:checked');
-        const quantity = document.getElementById('quantity').value;
+    const size = document.getElementById('cart_size').value;
+    const color = document.getElementById('cart_color').value;
+    const quantity = document.getElementById('cart_quantity').value;
 
-        if (!selectedSize || !selectedColor) {
-            showError(document.querySelector('.action-buttons'), 'Пожалуйста, выберите размер и цвет перед оформлением заказа');
-            return;
-        }
-
-        // Устанавливаем значения в модальном окне
-        try {
-            document.querySelector(`input[name="quick_size"][value="${selectedSize.value}"]`).checked = true;
-            document.querySelector(`input[name="quick_color"][value="${selectedColor.value}"]`).checked = true;
-            document.getElementById('quick_quantity').value = quantity;
-        } catch (e) {
-            console.error('Ошибка при установке значений в модальном окне:', e);
-            showError(document.querySelector('.action-buttons'), 'Произошла ошибка при открытии формы заказа');
-            return;
-        }
-
-        const modal = document.getElementById('quickOrderModal');
-        if (!modal) {
-            console.error('Модальное окно не найдено');
-            return;
-        }
-
-        // Удаляем старый backdrop, если есть
-        const oldBackdrop = document.querySelector('.modal-backdrop');
-        if (oldBackdrop) {
-            oldBackdrop.remove();
-        }
-
-        const backdrop = document.createElement('div');
-        backdrop.className = 'modal-backdrop';
-        document.body.appendChild(backdrop);
-        
-        // Сначала добавляем стили
-        modal.style.display = 'block';
-        backdrop.style.display = 'block';
-        
-        // Затем запускаем анимацию
-        requestAnimationFrame(() => {
-            backdrop.classList.add('show');
-            modal.classList.add('show');
-        });
-        
-        document.body.style.overflow = 'hidden';
-
-        // Добавляем обработчик клика вне модального окна
-        backdrop.addEventListener('click', closeQuickOrder);
-        
-        // Добавляем обработчик клавиши Escape
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeQuickOrder();
-            }
-        });
-
-        // Обновляем сумму заказа
-        updateOrderTotal();
-    } catch (e) {
-        console.error('Ошибка при открытии модального окна:', e);
-        showError(document.querySelector('.action-buttons'), 'Произошла ошибка при открытии формы заказа');
+    if (!size || !color) {
+        alert('Пожалуйста, выберите размер и цвет');
+        return;
     }
+
+    if (quantity < 1) {
+        alert('Пожалуйста, выберите количество');
+        return;
+    }
+
+    const modal = document.getElementById('quickOrderModal');
+    const form = document.getElementById('quickOrderForm');
+    
+    // Заполняем форму данными
+    form.querySelector('input[name="product_id"]').value = {{ product.id }};
+    form.querySelector('input[name="product_name"]').value = "{{ product.name }}";
+    form.querySelector('input[name="product_price"]').value = {{ product.price }};
+    form.querySelector('input[name="quantity"]').value = quantity;
+    form.querySelector('input[name="size"]').value = size;
+    form.querySelector('input[name="color"]').value = color;
+    
+    // Заполняем детали заказа
+    document.getElementById('orderProductName').textContent = "{{ product.name }}";
+    document.getElementById('orderSize').textContent = size;
+    document.getElementById('orderColor').textContent = color;
+    document.getElementById('orderQuantity').textContent = quantity;
+    document.getElementById('orderTotal').textContent = ({{ product.price }} * quantity).toFixed(2);
+    
+    // Показываем модальное окно
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
 }
 
 function closeQuickOrder() {
@@ -1156,4 +1206,117 @@ document.getElementById('quantity').addEventListener('change', function() {
     document.getElementById('cart_quantity').value = this.value;
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('quantity');
+    const decreaseBtn = document.getElementById('decrease-qty');
+    const increaseBtn = document.getElementById('increase-qty');
+
+    decreaseBtn.addEventListener('click', function() {
+        let value = parseInt(quantityInput.value);
+        if (value > 1) {
+            quantityInput.value = value - 1;
+            document.getElementById('cart_quantity').value = value - 1;
+        }
+    });
+
+    increaseBtn.addEventListener('click', function() {
+        let value = parseInt(quantityInput.value);
+        let maxStock = {{ product.stock }};
+        if (value < maxStock) {
+            quantityInput.value = value + 1;
+            document.getElementById('cart_quantity').value = value + 1;
+        }
+    });
+
+    // Color options
+    const colorOptions = document.querySelectorAll('.color-option');
+    colorOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            colorOptions.forEach(opt => opt.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById('cart_color').value = this.style.backgroundColor;
+        });
+    });
+
+    // Size options
+    const sizeInputs = document.querySelectorAll('input[name="size"]');
+    sizeInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            document.getElementById('cart_size').value = this.value;
+        });
+    });
+});
+
+function handleAddToCart(event) {
+    event.preventDefault();
+    
+    const size = document.getElementById('cart_size').value;
+    const color = document.getElementById('cart_color').value;
+    const quantity = document.getElementById('cart_quantity').value;
+
+    if (!size || !color) {
+        alert('Пожалуйста, выберите размер и цвет');
+        return;
+    }
+
+    if (quantity < 1) {
+        alert('Пожалуйста, выберите количество');
+        return;
+    }
+
+    event.target.submit();
+}
+
+function openQuickOrder() {
+    const size = document.getElementById('cart_size').value;
+    const color = document.getElementById('cart_color').value;
+    const quantity = document.getElementById('cart_quantity').value;
+
+    if (!size || !color) {
+        alert('Пожалуйста, выберите размер и цвет');
+        return;
+    }
+
+    if (quantity < 1) {
+        alert('Пожалуйста, выберите количество');
+        return;
+    }
+
+    const modal = document.getElementById('quickOrderModal');
+    const form = document.getElementById('quickOrderForm');
+    
+    // Заполняем форму данными
+    form.querySelector('input[name="product_id"]').value = {{ product.id }};
+    form.querySelector('input[name="product_name"]').value = "{{ product.name }}";
+    form.querySelector('input[name="product_price"]').value = {{ product.price }};
+    form.querySelector('input[name="quantity"]').value = quantity;
+    form.querySelector('input[name="size"]').value = size;
+    form.querySelector('input[name="color"]').value = color;
+    
+    // Заполняем детали заказа
+    document.getElementById('orderProductName').textContent = "{{ product.name }}";
+    document.getElementById('orderSize').textContent = size;
+    document.getElementById('orderColor').textContent = color;
+    document.getElementById('orderQuantity').textContent = quantity;
+    document.getElementById('orderTotal').textContent = ({{ product.price }} * quantity).toFixed(2);
+    
+    // Показываем модальное окно
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeQuickOrder() {
+    const modal = document.getElementById('quickOrderModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Закрытие модального окна при клике вне его
+window.onclick = function(event) {
+    const modal = document.getElementById('quickOrderModal');
+    if (event.target == modal) {
+        closeQuickOrder();
+    }
+}
+</script>
 {% endblock %}
