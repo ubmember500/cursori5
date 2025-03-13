@@ -26,6 +26,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Загрузка переменных окружения
+print("\n=== Проверка наличия файла .env ===")
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+print(f"Путь к файлу .env: {env_path}")
+print(f"Файл .env существует: {os.path.exists(env_path)}")
+
 load_dotenv()
 
 # Проверка загрузки переменных окружения
@@ -44,19 +49,21 @@ for var in required_env_vars:
     value = os.getenv(var)
     if not value:
         missing_vars.append(var)
+        print(f"{var}: НЕ УСТАНОВЛЕН")
     else:
-        # Скрываем пароль в выводе
+        # Для пароля показываем только длину
         if var == 'MAIL_PASSWORD':
             print(f"{var}: {'*' * len(value)}")
         else:
             print(f"{var}: {value}")
 
 if missing_vars:
-    print("\nВНИМАНИЕ! Отсутствуют следующие переменные окружения:")
+    print("\nВНИМАНИЕ: Отсутствуют следующие переменные окружения:")
     for var in missing_vars:
         print(f"- {var}")
     print("\nПожалуйста, проверьте файл .env")
-print("===========================================\n")
+else:
+    print("\nВсе необходимые переменные окружения установлены")
 
 # Настройка путей
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -795,19 +802,14 @@ def contacts():
         """
         
         try:
-            # Создаем объект сообщения
-            msg = Message(
-                subject=f'Новое сообщение от {name}: {subject}',
-                recipients=['defensivelox@gmail.com'],
-                body=email_body
-            )
-            
-            # Отправляем email асинхронно
-            Thread(target=send_async_email, args=(app, msg)).start()
-            
-            flash('Ваше сообщение успешно отправлено!', 'success')
+            # Отправляем email через SMTP
+            if send_email_smtp(app.config['ADMIN_EMAIL'], f'Новое сообщение от {name}: {subject}', email_body):
+                flash('Ваше сообщение успешно отправлено!', 'success')
+            else:
+                raise Exception("Не удалось отправить email через SMTP")
+                
         except Exception as e:
-            print(f"Ошибка создания сообщения: {e}")
+            print(f"Ошибка отправки сообщения: {e}")
             flash('Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте позже.', 'danger')
         
         return redirect(url_for('contacts'))
@@ -944,17 +946,27 @@ def forgot_password():
                     time.sleep(1)  # Ждем секунду перед следующей попыткой
             
             try:
-                # Отправляем email
+                # Формируем текст письма
                 reset_url = url_for('reset_password', token=token, _external=True)
-                msg = Message('Восстановление пароля',
-                            sender='defensivelox@gmail.com',
-                            recipients=[email])
-                msg.body = f'Для восстановления пароля перейдите по ссылке: {reset_url}'
-                mail.send(msg)
+                email_body = f"""
+                Восстановление пароля
                 
-                flash('Инструкции по восстановлению пароля отправлены на ваш email', 'success')
-                return redirect(url_for('login'))
+                Для восстановления пароля перейдите по следующей ссылке:
+                {reset_url}
+                
+                Ссылка действительна в течение 1 часа.
+                Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.
+                """
+                
+                # Отправляем email через SMTP
+                if send_email_smtp(email, 'Восстановление пароля', email_body):
+                    flash('Инструкции по восстановлению пароля отправлены на ваш email', 'success')
+                    return redirect(url_for('login'))
+                else:
+                    raise Exception("Не удалось отправить email через SMTP")
+                    
             except Exception as e:
+                print(f"Ошибка отправки email: {e}")
                 flash('Произошла ошибка при отправке email. Пожалуйста, попробуйте позже.', 'error')
                 return redirect(url_for('forgot_password'))
         
@@ -1161,8 +1173,25 @@ def send_email_smtp(to_email, subject, body):
         print(f"Сервер: {app.config['MAIL_SERVER']}")
         print(f"Порт: {app.config['MAIL_PORT']}")
         print(f"Пользователь: {app.config['MAIL_USERNAME']}")
+        print(f"Пароль: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'Не установлен'}")
+        print(f"Отправитель: {app.config['MAIL_DEFAULT_SENDER']}")
         print(f"Получатель: {to_email}")
         print(f"Тема: {subject}")
+        
+        # Проверяем наличие всех необходимых настроек
+        required_settings = {
+            'MAIL_SERVER': app.config['MAIL_SERVER'],
+            'MAIL_PORT': app.config['MAIL_PORT'],
+            'MAIL_USERNAME': app.config['MAIL_USERNAME'],
+            'MAIL_PASSWORD': app.config['MAIL_PASSWORD']
+        }
+        
+        missing_settings = [key for key, value in required_settings.items() if not value]
+        if missing_settings:
+            print(f"\nОТСУТСТВУЮТ НАСТРОЙКИ SMTP:")
+            for setting in missing_settings:
+                print(f"- {setting}")
+            raise ValueError(f"Отсутствуют необходимые настройки SMTP: {', '.join(missing_settings)}")
         
         # Создаем объект сообщения
         msg = MIMEMultipart()
@@ -1174,22 +1203,40 @@ def send_email_smtp(to_email, subject, body):
         msg.attach(MIMEText(body, 'plain'))
 
         print("\nПодключение к SMTP серверу...")
-        # Подключаемся к SMTP серверу
-        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
-        print("Включение TLS...")
-        server.starttls()
-        print("Авторизация...")
-        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-        print("Отправка сообщения...")
-        # Отправляем письмо
-        server.send_message(msg)
-        print("Закрытие соединения...")
-        server.quit()
+        try:
+            # Подключаемся к SMTP серверу
+            server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+            print("Соединение установлено")
+            
+            print("Включение TLS...")
+            server.starttls()
+            print("TLS включен")
+            
+            print("Авторизация...")
+            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+            print("Авторизация успешна")
+            
+            print("Отправка сообщения...")
+            # Отправляем письмо
+            server.send_message(msg)
+            print("Сообщение отправлено")
+            
+            print("Закрытие соединения...")
+            server.quit()
+            print("Соединение закрыто")
 
-        print("Email успешно отправлен через SMTP")
-        return True
+            print("Email успешно отправлен через SMTP")
+            return True
+            
+        except smtplib.SMTPException as e:
+            print(f"\nОшибка SMTP: {str(e)}")
+            print(f"Тип ошибки: {type(e).__name__}")
+            import traceback
+            print(f"Полный стек ошибки:\n{traceback.format_exc()}")
+            return False
+            
     except Exception as e:
-        print(f"\nОшибка отправки email через SMTP: {str(e)}")
+        print(f"\nОбщая ошибка при отправке email: {str(e)}")
         print(f"Тип ошибки: {type(e).__name__}")
         import traceback
         print(f"Полный стек ошибки:\n{traceback.format_exc()}")
