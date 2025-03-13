@@ -707,7 +707,16 @@ body .btn:contains("В избранное") {
                     })
                     .then(data => {
                         if (data.success) {
-                            showOrderSuccess(data.order);
+                            // Показываем сообщение об успехе
+                            const successMessage = document.createElement('div');
+                            successMessage.className = 'alert alert-success mt-3';
+                            successMessage.textContent = 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.';
+                            form.appendChild(successMessage);
+                            
+                            // Закрываем модальное окно через 2 секунды
+                            setTimeout(() => {
+                                closeQuickOrder();
+                            }, 2000);
                         } else {
                             throw new Error(data.error || 'Произошла ошибка при оформлении заказа.');
                         }
@@ -781,34 +790,6 @@ body .btn:contains("В избранное") {
                         document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
                     }
                 });
-
-                function closeOrderSuccessModal() {
-                    document.getElementById('orderSuccessModal').style.display = 'none';
-                    // Очищаем форму после успешной отправки
-                    document.getElementById('quickOrderForm').reset();
-                }
-
-                function showOrderSuccess(orderData) {
-                    const orderDetails = document.getElementById('orderDetails');
-                    orderDetails.innerHTML = `
-                        <p><strong>Товар:</strong> ${orderData.product_name}</p>
-                        <p><strong>Размер:</strong> ${orderData.size}</p>
-                        <p><strong>Цвет:</strong> ${orderData.color}</p>
-                        <p><strong>Количество:</strong> ${orderData.quantity}</p>
-                        <p><strong>Цена за единицу:</strong> ${orderData.price} ₴</p>
-                        <p><strong>Общая сумма:</strong> ${orderData.total} ₴</p>
-                        <p><strong>Имя:</strong> ${orderData.customer_name}</p>
-                        <p><strong>Телефон:</strong> ${orderData.phone}</p>
-                        <p><strong>Email:</strong> ${orderData.email}</p>
-                        <p><strong>Адрес:</strong> ${orderData.address}</p>
-                        <p><strong>Способ оплаты:</strong> ${orderData.payment_method}</p>
-                        ${orderData.contact_info ? `
-                            <p><strong>Telegram:</strong> ${orderData.contact_info.telegram || 'Не указан'}</p>
-                            <p><strong>Viber:</strong> ${orderData.contact_info.viber || 'Не указан'}</p>
-                        ` : ''}
-                    `;
-                    document.getElementById('orderSuccessModal').style.display = 'block';
-                }
                 </script>
             </div>
         </div>
@@ -904,18 +885,6 @@ body .btn:contains("В избранное") {
                 </div>
             </div>
             {% endfor %}
-        </div>
-    </div>
-
-    <!-- Добавляем модальное окно для отображения информации о заказе -->
-    <div id="orderSuccessModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Заказ успешно оформлен!</h2>
-            <div id="orderDetails" class="order-details">
-                <!-- Здесь будет отображаться информация о заказе -->
-            </div>
-            <button onclick="closeOrderSuccessModal()" class="btn btn-primary">Закрыть</button>
         </div>
     </div>
 </div>
