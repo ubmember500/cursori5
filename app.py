@@ -1154,7 +1154,6 @@ def quick_order():
         email = request.form.get('email')
         address = request.form.get('address')
         payment_method = request.form.get('payment_method')
-        contact_phone = request.form.get('contact_phone')
         telegram = request.form.get('telegram')
         viber = request.form.get('viber')
 
@@ -1163,11 +1162,8 @@ def quick_order():
             return jsonify({'success': False, 'error': 'Все поля обязательны для заполнения'})
 
         # Проверяем поля контактной информации для оплаты картой
-        if payment_method == 'card':
-            if not contact_phone:
-                return jsonify({'success': False, 'error': 'Пожалуйста, укажите номер телефона для связи'})
-            if not telegram and not viber:
-                return jsonify({'success': False, 'error': 'Пожалуйста, укажите хотя бы один способ связи (Telegram или Viber)'})
+        if payment_method == 'card' and not telegram and not viber:
+            return jsonify({'success': False, 'error': 'Пожалуйста, укажите хотя бы один способ связи (Telegram или Viber)'})
 
         # Создаем заказ в базе данных
         order = Order(
@@ -1178,7 +1174,6 @@ def quick_order():
             email=email,
             address=address,
             payment_method=payment_method,
-            contact_phone=contact_phone if payment_method == 'card' else None,
             telegram=telegram if payment_method == 'card' else None,
             viber=viber if payment_method == 'card' else None,
             total_price=float(product_price) * int(quantity)
@@ -1222,7 +1217,6 @@ def send_order_notification(order):
         
         Способ оплаты: {'Оплата картой' if order.payment_method == 'card' else 'Наложенный платеж при получении'}
         {'Контактная информация для связи:' if order.payment_method == 'card' else ''}
-        {'Телефон для связи: ' + order.contact_phone if order.payment_method == 'card' and order.contact_phone else ''}
         {'Telegram: ' + order.telegram if order.payment_method == 'card' and order.telegram else ''}
         {'Viber: ' + order.viber if order.payment_method == 'card' and order.viber else ''}
         
