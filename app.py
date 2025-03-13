@@ -1111,6 +1111,97 @@ def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
+@app.route('/quick_order', methods=['POST'])
+def quick_order():
+    try:
+        # Получаем данные из формы
+        product_id = request.form.get('product_id')
+        product_name = request.form.get('product_name')
+        product_price = request.form.get('product_price')
+        size = request.form.get('quick_size')
+        color = request.form.get('quick_color')
+        quantity = request.form.get('quick_quantity')
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        address = request.form.get('address')
+
+        # Проверяем обязательные поля
+        if not all([product_id, size, color, quantity, name, phone, email, address]):
+            return jsonify({'success': False, 'error': 'Все поля обязательны для заполнения'})
+
+        # Создаем заказ в базе данных
+        order = Order(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            status='new',
+            name=name,
+            phone=phone,
+            email=email,
+            address=address,
+            total_price=float(product_price) * int(quantity)
+        )
+        db.session.add(order)
+        db.session.flush()  # Получаем id заказа
+
+        # Добавляем товар в заказ
+        order_item = OrderItem(
+            order_id=order.id,
+            product_id=product_id,
+            quantity=quantity,
+            price=float(product_price),
+            size=size,
+            color=color
+        )
+        db.session.add(order_item)
+        
+        # Отправляем уведомление администратору
+        send_order_notification(order)
+        
+        db.session.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Ошибка при создании заказа: {str(e)}")
+        return jsonify({'success': False, 'error': 'Произошла ошибка при оформлении заказа'})
+
+def send_order_notification(order):
+    try:
+        subject = f'Новый заказ #{order.id}'
+        body = f'''
+        Новый заказ #{order.id}
+        
+        Информация о покупателе:
+        Имя: {order.name}
+        Телефон: {order.phone}
+        Email: {order.email}
+        Адрес: {order.address}
+        
+        Сумма заказа: {order.total_price} ₴
+        
+        Товары:
+        '''
+        
+        for item in order.items:
+            body += f'''
+            - {item.product.name}
+              Размер: {item.size}
+              Цвет: {item.color}
+              Количество: {item.quantity}
+              Цена: {item.price} ₴
+            '''
+            
+        msg = Message(
+            subject,
+            sender=app.config['MAIL_DEFAULT_SENDER'],
+            recipients=[app.config['ADMIN_EMAIL']]
+        )
+        msg.body = body
+        mail.send(msg)
+        
+    except Exception as e:
+        print(f"Ошибка при отправке уведомления: {str(e)}")
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, port=5001)

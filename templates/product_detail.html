@@ -418,107 +418,191 @@ body .btn:contains("В избранное") {
                     <input type="number" id="quantity" name="quantity" value="1" min="1" max="10">
             </div>
 
-                <!-- Кнопки действий (полностью изолированный компонент) -->
-                <div class="isolated-buttons-component" style="contain: content; isolation: isolate;">
-                    <div class="isolated-button-wrapper" style="contain: content; isolation: isolate;">
-                        <button type="button" 
-                                class="isolated-button isolated-button--secondary" 
-                                onclick="handleAddToCart()"
-                                style="contain: content; isolation: isolate;">
-                            В корзину
-                </button>
-            </div>
+                <!-- Кнопки действий -->
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="openQuickOrder()">Купить</button>
+                    <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;">
+                        <input type="hidden" name="quantity" id="cart_quantity" value="1">
+                        <input type="hidden" name="size" id="cart_size">
+                        <input type="hidden" name="color" id="cart_color">
+                        <input type="hidden" name="image" value="{{ product_image }}">
+                        <button type="button" class="btn btn-outline-primary" onclick="handleAddToCart()">В корзину</button>
+                    </form>
+                </div>
+
+                <!-- Мини-страница быстрого заказа -->
+                <div class="quick-order-modal" id="quickOrderModal">
+                    <div class="quick-order-content">
+                        <div class="quick-order-header">
+                            <h4>Быстрый заказ</h4>
+                            <button type="button" class="btn-close" onclick="closeQuickOrder()"></button>
+                        </div>
+                        <div class="quick-order-body">
+                            <div class="product-summary">
+                                <img src="{{ url_for('static', filename=product_image) }}" alt="{{ product.name }}" class="quick-order-image">
+                                <div class="product-summary-details">
+                                    <h5>{{ product.name }}</h5>
+                                    <p class="price">{{ "%.2f"|format(product.price) }} ₴</p>
+                                </div>
+                            </div>
+                            <form id="quickOrderForm" onsubmit="handleQuickOrder(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Размер</label>
+                                    <div class="size-selector">
+                                        {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
+                                        <input type="radio" name="quick_size" id="quick-size-{{ size }}" value="{{ size }}" required>
+                                        <label for="quick-size-{{ size }}">{{ size }}</label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Цвет</label>
+                                    <div class="color-selector">
+                                        {% for color in ['Белый', 'Черный', 'Синий', 'Красный'] %}
+                                        <input type="radio" name="quick_color" id="quick-color-{{ color }}" value="{{ color }}" required>
+                                        <label for="quick-color-{{ color }}">{{ color }}</label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Количество</label>
+                                    <input type="number" class="form-control" id="quick_quantity" name="quick_quantity" value="1" min="1" max="10" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Имя</label>
+                                    <input type="text" class="form-control" name="name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Телефон</label>
+                                    <input type="tel" class="form-control" name="phone" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" name="email" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Адрес доставки</label>
+                                    <textarea class="form-control" name="address" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">Заказать</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
 
                 <style>
-                    /* Изолируем компонент с кнопками */
-                    .isolated-buttons-component {
-                        --button-primary-color: #0d6efd;
-                        --button-secondary-color: #6c757d;
-                        --button-hover-brightness: 0.9;
-                        
-                        display: grid;
-                        grid-template-columns: 1fr;
-                        gap: 1rem;
-                        margin: 2rem 0;
-                        isolation: isolate;
-                        contain: content;
-                        position: relative;
-                    }
+                .quick-order-modal {
+                    display: none;
+                    position: fixed;
+                    top: 0;
+                    right: 0;
+                    bottom: 0;
+                    width: 400px;
+                    background: white;
+                    box-shadow: -2px 0 5px rgba(0,0,0,0.2);
+                    z-index: 1050;
+                    overflow-y: auto;
+                }
 
-                    /* Запрещаем добавление любых элементов кроме нашей кнопки */
-                    .isolated-buttons-component > *:not(.isolated-button-wrapper),
-                    .isolated-button-wrapper > *:not(.isolated-button),
-                    .isolated-button > *:not(.isolated-button-text) {
-                        display: none !important;
-                        visibility: hidden !important;
-                        opacity: 0 !important;
-                        width: 0 !important;
-                        height: 0 !important;
-                        position: absolute !important;
-                        pointer-events: none !important;
-                    }
+                .quick-order-content {
+                    padding: 20px;
+                }
 
-                    .isolated-button-wrapper {
-                        position: relative;
-                        isolation: isolate;
-                        contain: content;
-                    }
+                .quick-order-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #dee2e6;
+                }
 
-                    .isolated-button {
-                        width: 100%;
-                        padding: 1rem 2rem;
-                        border: none;
-                        border-radius: 8px;
-                        font-size: 1.1rem;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: filter 0.2s;
-                        position: relative;
-                        isolation: isolate;
-                        contain: content;
-                    }
+                .quick-order-image {
+                    width: 100px;
+                    height: 100px;
+                    object-fit: cover;
+                    border-radius: 8px;
+                    margin-right: 15px;
+                }
 
-                    .isolated-button:hover {
-                        filter: brightness(var(--button-hover-brightness));
-                    }
+                .product-summary {
+                    display: flex;
+                    align-items: start;
+                    margin-bottom: 20px;
+                    padding-bottom: 20px;
+                    border-bottom: 1px solid #dee2e6;
+                }
 
-                    .isolated-button:active {
-                        transform: translateY(1px);
-                    }
+                .product-summary-details {
+                    flex-grow: 1;
+                }
 
-                    .isolated-button--secondary {
-                        background-color: white;
-                        color: var(--button-secondary-color);
-                        border: 2px solid var(--button-secondary-color);
-                    }
+                .product-summary-details h5 {
+                    margin-bottom: 5px;
+                }
+
+                .product-summary-details .price {
+                    font-size: 1.25rem;
+                    color: #0d6efd;
+                    font-weight: bold;
+                }
+
+                .modal-backdrop {
+                    display: none;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0,0,0,0.5);
+                    z-index: 1040;
+                }
                 </style>
 
-                <!-- Скрытые формы для отправки -->
-                <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="display: none;">
-                    <input type="hidden" name="quantity" value="1">
-                    <input type="hidden" name="size" id="cart_size" value="">
-                    <input type="hidden" name="color" id="cart_color" value="">
-                    <input type="hidden" name="image" value="{{ product_image }}">
-                </form>
-
                 <script>
-                // Блокируем добавление новых элементов в компонент с кнопками
-                const buttonsComponent = document.querySelector('.isolated-buttons-component');
-                const buttonWrapper = document.querySelector('.isolated-button-wrapper');
-                const cartButton = document.querySelector('.isolated-button');
+                function openQuickOrder() {
+                    document.getElementById('quickOrderModal').style.display = 'block';
+                    document.body.insertAdjacentHTML('beforeend', '<div class="modal-backdrop"></div>');
+                    document.body.style.overflow = 'hidden';
+                }
 
-                // Защищаем от изменений
-                Object.freeze(buttonsComponent);
-                Object.freeze(buttonWrapper);
-                Object.freeze(cartButton);
+                function closeQuickOrder() {
+                    document.getElementById('quickOrderModal').style.display = 'none';
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                    document.body.style.overflow = '';
+                }
 
-                // Блокируем добавление через innerHTML
-                const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-                Object.defineProperty(buttonsComponent, 'innerHTML', {
-                    set: function() { return; },
-                    get: function() { return originalInnerHTML.get.call(this); }
-                });
+                function handleQuickOrder(event) {
+                    event.preventDefault();
+                    const form = event.target;
+                    const formData = new FormData(form);
+                    
+                    // Добавляем информацию о товаре
+                    formData.append('product_id', '{{ product.id }}');
+                    formData.append('product_name', '{{ product.name }}');
+                    formData.append('product_price', '{{ product.price }}');
+                    
+                    fetch('/quick_order', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.');
+                            closeQuickOrder();
+                        } else {
+                            alert(data.error || 'Произошла ошибка при оформлении заказа.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        alert('Произошла ошибка при оформлении заказа.');
+                    });
+                }
 
                 function handleAddToCart() {
                     const quantity = document.getElementById('quantity').value;
@@ -531,7 +615,7 @@ body .btn:contains("В избранное") {
                     }
                     
                     const form = document.getElementById('cartForm');
-                    form.querySelector('input[name="quantity"]').value = quantity;
+                    document.getElementById('cart_quantity').value = quantity;
                     document.getElementById('cart_size').value = selectedSize;
                     document.getElementById('cart_color').value = selectedColor;
                     form.submit();
