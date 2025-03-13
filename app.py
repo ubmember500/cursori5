@@ -60,6 +60,7 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+app.config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', 'defensivelox@gmail.com')  # Добавляем email администратора
 
 mail = Mail(app)
 db = SQLAlchemy(app)
@@ -1157,6 +1158,10 @@ def quick_order():
         telegram = request.form.get('telegram')
         viber = request.form.get('viber')
 
+        print(f"Получены данные формы: product_id={product_id}, name={name}, email={email}")
+        print(f"Настройки почты: MAIL_SERVER={app.config['MAIL_SERVER']}, MAIL_PORT={app.config['MAIL_PORT']}")
+        print(f"Отправитель: {app.config['MAIL_USERNAME']}, Получатель: {app.config['ADMIN_EMAIL']}")
+
         # Проверяем обязательные поля
         if not all([product_id, size, color, quantity, name, phone, email, address, payment_method]):
             return jsonify({'success': False, 'error': 'Все поля обязательны для заполнения'})
@@ -1228,13 +1233,15 @@ def send_order_notification(order):
         '''
         
         for item in order.items:
-            body += f'''
-            - {item.product.name}
-              Размер: {item.size}
-              Цвет: {item.color}
-              Количество: {item.quantity}
-              Цена: {item.price} ₴
-            '''
+            product = Product.query.get(item.product_id)
+            if product:
+                body += f'''
+                - {product.name}
+                  Размер: {item.size}
+                  Цвет: {item.color}
+                  Количество: {item.quantity}
+                  Цена: {item.price} ₴
+                '''
             
         msg = Message(
             subject,
