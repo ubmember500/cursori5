@@ -727,74 +727,51 @@ body .btn:contains("В избранное") {
                                         <span id="order_quantity"></span>
                                     </div>
                                     <div class="order-item">
-                                        <span>Стоимость товара:</span>
+                                        <span>Цена:</span>
                                         <span id="order_price"></span>
                                     </div>
                                     <div class="order-item">
-                                        <span>Доставка (Новая Почта):</span>
+                                        <span>Доставка:</span>
                                         <span>60 грн</span>
                                     </div>
-                                    <div class="order-item total">
+                                    <div class="order-item">
                                         <span>Итого:</span>
                                         <span id="order_total"></span>
                                     </div>
                                 </div>
 
-                                <form id="quickOrderForm" class="needs-validation" novalidate>
+                                <form id="quickOrderForm" class="needs-validation" novalidate onsubmit="handleQuickOrder(event)">
                                     <input type="hidden" name="product_id" id="quick_order_product_id">
-                                    <input type="hidden" name="product_name" id="quick_order_product_name">
-                                    <input type="hidden" name="price" id="quick_order_price">
                                     <input type="hidden" name="size" id="quick_order_size">
                                     <input type="hidden" name="color" id="quick_order_color">
                                     <input type="hidden" name="quantity" id="quick_order_quantity">
                                     
                                     <div class="mb-3">
-                                        <label for="customer_name" class="form-label">Имя *</label>
-                                        <input type="text" class="form-control" id="customer_name" name="customer_name" required>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="customer_email" class="form-label">Email *</label>
-                                        <input type="email" class="form-control" id="customer_email" name="customer_email" required>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="customer_phone" class="form-label">Телефон *</label>
-                                        <input type="tel" class="form-control" id="customer_phone" name="customer_phone" required>
-                                    </div>
-
-                                    <div class="mb-3">
                                         <label for="address" class="form-label">Адрес доставки *</label>
-                                        <textarea class="form-control" id="address" name="address" required></textarea>
+                                        <input type="text" class="form-control" id="address" name="address" required>
                                     </div>
 
                                     <div class="mb-3">
-                                        <label for="payment_method" class="form-label">Способ оплаты *</label>
-                                        <select class="form-select" id="payment_method" name="payment_method" required onchange="togglePaymentFields()">
-                                            <option value="">Выберите способ оплаты</option>
-                                            <option value="card">Оплата картой</option>
-                                            <option value="cash">Наложенный платеж</option>
-                                        </select>
-                                    </div>
-
-                                    <div id="messenger_fields" style="display: none;">
-                                        <div class="mb-3">
-                                            <label for="messenger" class="form-label">Мессенджер *</label>
-                                            <select class="form-select" id="messenger" name="messenger">
-                                                <option value="">Выберите мессенджер</option>
-                                                <option value="telegram">Telegram</option>
-                                                <option value="viber">Viber</option>
-                                                <option value="whatsapp">WhatsApp</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="messenger_username" class="form-label">Ваш username в мессенджере *</label>
-                                            <input type="text" class="form-control" id="messenger_username" name="messenger_username">
+                                        <label class="form-label">Способ оплаты *</label>
+                                        <div class="payment-methods">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="payment_method" id="payment_cod" value="cod" required>
+                                                <label class="form-check-label" for="payment_cod">
+                                                    Наложенный платеж
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card" required>
+                                                <label class="form-check-label" for="payment_card">
+                                                    Оплата картой
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary">Оформить заказ</button>
+                                    <div class="text-center">
+                                        <button type="submit" class="btn btn-primary">Оформить заказ</button>
+                                    </div>
                                 </form>
                             </div>
                         </div>
@@ -1164,25 +1141,11 @@ function validatePhone(phone) {
 }
 
 function validateForm(formData) {
-    const requiredFields = ['customer_name', 'customer_email', 'customer_phone', 'address', 'payment_method'];
+    const requiredFields = ['size', 'color', 'quantity', 'payment_method', 'address'];
     const missingFields = requiredFields.filter(field => !formData.get(field));
     
     if (missingFields.length > 0) {
         alert(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
-        return false;
-    }
-
-    // Валидация email
-    const email = formData.get('customer_email');
-    if (!validateEmail(email)) {
-        alert('Пожалуйста, введите корректный email адрес');
-        return false;
-    }
-
-    // Валидация телефона
-    const phone = formData.get('customer_phone');
-    if (!validatePhone(phone)) {
-        alert('Пожалуйста, введите корректный номер телефона');
         return false;
     }
 
@@ -1192,18 +1155,6 @@ function validateForm(formData) {
     if (quantity > maxStock) {
         alert(`Максимальное количество товара: ${maxStock}`);
         return false;
-    }
-
-    // Дополнительная валидация для оплаты картой
-    const paymentMethod = formData.get('payment_method');
-    if (paymentMethod === 'card') {
-        const messenger = formData.get('messenger');
-        const messengerUsername = formData.get('messenger_username');
-        
-        if (!messenger || !messengerUsername) {
-            alert('Пожалуйста, выберите мессенджер и укажите ваш username');
-            return false;
-        }
     }
 
     return true;
@@ -1226,20 +1177,15 @@ function handleQuickOrder(event) {
     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Обработка...';
 
     const orderData = {
-        product_id: formData.get('product_id'),
-        name: formData.get('product_name'),
-        price: parseFloat(formData.get('price')),
+        product_id: parseInt(formData.get('product_id')),
         size: formData.get('size'),
         color: formData.get('color'),
         quantity: parseInt(formData.get('quantity')),
-        customer_name: formData.get('customer_name'),
-        customer_email: formData.get('customer_email'),
-        customer_phone: formData.get('customer_phone'),
         payment_method: formData.get('payment_method'),
-        address: formData.get('address'),
-        messenger: formData.get('messenger'),
-        messenger_username: formData.get('messenger_username')
+        address: formData.get('address')
     };
+
+    console.log('Отправляемые данные:', orderData);
 
     fetch('/quick_order', {
         method: 'POST',

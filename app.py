@@ -1291,8 +1291,7 @@ def quick_order():
         print(f"Пользователь: {current_user.username} (ID: {current_user.id})")
         
         # Проверяем обязательные поля
-        required_fields = ['product_id', 'name', 'price', 'size', 'color', 'quantity', 
-                         'customer_name', 'customer_email', 'customer_phone', 'payment_method', 'address']
+        required_fields = ['product_id', 'size', 'color', 'quantity', 'payment_method', 'address']
         
         missing_fields = [field for field in required_fields if not data.get(field)]
         if missing_fields:
@@ -1316,9 +1315,9 @@ def quick_order():
                 'message': 'Недостаточно товара на складе'
             }), 400
 
-        # Создаем заказ
+        # Создаем заказ с данными пользователя
         order = Order(
-            user_id=current_user.id,
+            user_id=current_user.id,  # Привязываем заказ к текущему пользователю
             total_amount=product.price * data['quantity'] + 60,
             status='pending',
             items=[{
@@ -1332,15 +1331,15 @@ def quick_order():
                 'total': product.price * data['quantity']
             }],
             customer_info={
-                'name': data.get('customer_name'),
-                'phone': data.get('customer_phone'),
-                'email': data.get('customer_email'),
+                'name': current_user.first_name + ' ' + current_user.last_name,
+                'phone': current_user.phone,
+                'email': current_user.email,
                 'address': data.get('address'),
                 'payment_method': data.get('payment_method')
             },
-            customer_name=data.get('customer_name'),
-            customer_email=data.get('customer_email'),
-            customer_phone=data.get('customer_phone'),
+            customer_name=current_user.first_name + ' ' + current_user.last_name,
+            customer_email=current_user.email,
+            customer_phone=current_user.phone,
             payment_method=data.get('payment_method')
         )
 
@@ -1368,8 +1367,8 @@ def quick_order():
             print("Заказ успешно сохранен")
 
             # Отправляем email клиенту
-            print(f"\nОтправка email клиенту: {data.get('customer_email')}")
-            if not send_order_confirmation_email(data.get('customer_email'), order):
+            print(f"\nОтправка email клиенту: {current_user.email}")
+            if not send_order_confirmation_email(current_user.email, order):
                 print("Ошибка: Не удалось отправить email клиенту")
 
             # Отправляем email администратору
@@ -1381,8 +1380,7 @@ def quick_order():
             print("\n=== Заказ успешно создан ===")
             return jsonify({
                 'success': True,
-                'message': 'Заказ успешно создан',
-                'redirect_url': url_for('my_orders')
+                'message': 'Заказ успешно создан'
             })
 
         except Exception as e:
