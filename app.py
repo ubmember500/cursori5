@@ -259,8 +259,8 @@ class Product(db.Model):
     stock = db.Column(db.Integer, nullable=False, default=10)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    sizes = db.Column(db.JSON, default=lambda: ['S', 'M', 'L', 'XL'])
-    colors = db.Column(db.JSON, default=lambda: ['Белый', 'Черный', 'Синий'])
+    sizes = db.Column(db.Text, default='["S", "M", "L", "XL"]')
+    colors = db.Column(db.Text, default='["Белый", "Черный", "Синий"]')
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -319,9 +319,9 @@ def init_db():
             products = Product.query.all()
             for product in products:
                 if not product.sizes:
-                    product.sizes = ['S', 'M', 'L', 'XL']
+                    product.sizes = '["S", "M", "L", "XL"]'
                 if not product.colors:
-                    product.colors = ['Белый', 'Черный', 'Синий']
+                    product.colors = '["Белый", "Черный", "Синий"]'
             db.session.commit()
             print("Успешно обновлены значения sizes и colors для существующих товаров")
         except Exception as e:
@@ -341,10 +341,20 @@ def init_db():
             db.session.commit()
             
             products = [
-                Product(name='Классическая белая футболка', description='Удобная белая футболка для повседневной носки',
-                        price=19.99, image='img/products/default-product.jpg', category_id=1),
-                Product(name='Футболка с принтом', description='Смелый дизайн на премиальной хлопковой футболке',
-                        price=24.99, image='img/products/default-product.jpg', category_id=1),
+                Product(name='Классическая белая футболка', 
+                       description='Удобная белая футболка для повседневной носки',
+                       price=19.99, 
+                       image='img/products/default-product.jpg', 
+                       category_id=1,
+                       sizes='["S", "M", "L", "XL"]',
+                       colors='["Белый", "Черный", "Синий"]'),
+                Product(name='Футболка с принтом', 
+                       description='Смелый дизайн на премиальной хлопковой футболке',
+                       price=24.99, 
+                       image='img/products/default-product.jpg', 
+                       category_id=1,
+                       sizes='["S", "M", "L", "XL"]',
+                       colors='["Белый", "Черный", "Синий"]'),
                 Product(name='Облегающие джинсы', description='Современные облегающие джинсы с эластичной тканью',
                         price=49.99, image='img/products/default-product.jpg', category_id=2),
                 Product(name='Джинсы с потертостями', description='Стильные джинсы с эффектом потертости для повседневного образа',
