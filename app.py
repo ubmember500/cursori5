@@ -1152,6 +1152,7 @@ def my_orders():
     try:
         print("\n=== Начало получения заказов пользователя ===")
         print(f"Текущий пользователь: {current_user.username} (ID: {current_user.id})")
+        print(f"Пользователь авторизован: {current_user.is_authenticated}")
         
         # Проверяем, не заблокирован ли пользователь
         if not current_user.is_active:
@@ -1169,6 +1170,7 @@ def my_orders():
             print(f"- Дата создания: {order.created_at}")
             print(f"- Статус: {order.status}")
             print(f"- Сумма: {order.total_amount}")
+            print(f"- User ID: {order.user_id}")
             
             # Получаем товары из OrderItem
             order_items = OrderItem.query.filter_by(order_id=order.id).all()
@@ -1303,9 +1305,13 @@ def send_email_smtp(recipient, subject, body):
 def quick_order():
     try:
         data = request.get_json()
+        print("\n=== Начало обработки быстрого заказа ===")
+        print(f"Текущий пользователь: {current_user.username if current_user.is_authenticated else 'Не авторизован'}")
+        print(f"ID пользователя: {current_user.id if current_user.is_authenticated else 'Нет'}")
         
         # Проверяем, авторизован ли пользователь
         if not current_user.is_authenticated:
+            print("Ошибка: Пользователь не авторизован")
             return jsonify({
                 'success': False,
                 'message': 'Для оформления заказа необходимо авторизоваться'
@@ -1317,6 +1323,7 @@ def quick_order():
         
         missing_fields = [field for field in required_fields if not data.get(field)]
         if missing_fields:
+            print(f"Ошибка: Отсутствуют обязательные поля: {missing_fields}")
             return jsonify({
                 'success': False,
                 'message': f'Отсутствуют обязательные поля: {", ".join(missing_fields)}'
@@ -1324,6 +1331,7 @@ def quick_order():
 
         # Проверяем формат email
         if not re.match(r"[^@]+@[^@]+\.[^@]+", data.get('customer_email')):
+            print(f"Ошибка: Неверный формат email: {data.get('customer_email')}")
             return jsonify({
                 'success': False,
                 'message': 'Неверный формат email'
@@ -1331,6 +1339,7 @@ def quick_order():
 
         # Проверяем формат телефона
         if not re.match(r'^\+?[0-9]{10,15}$', data.get('customer_phone')):
+            print(f"Ошибка: Неверный формат телефона: {data.get('customer_phone')}")
             return jsonify({
                 'success': False,
                 'message': 'Неверный формат телефона'
@@ -1339,6 +1348,7 @@ def quick_order():
         # Проверяем поля мессенджера для оплаты картой
         if data.get('payment_method') == 'card':
             if not data.get('messenger') or not data.get('messenger_username'):
+                print("Ошибка: Отсутствуют данные мессенджера для оплаты картой")
                 return jsonify({
                     'success': False,
                     'message': 'Для оплаты картой необходимо указать мессенджер и username'
@@ -1346,9 +1356,13 @@ def quick_order():
 
         # Получаем товар
         product = Product.query.get_or_404(data['product_id'])
+        print(f"\nТовар: {product.name} (ID: {product.id})")
+        print(f"Цена: {product.price}")
+        print(f"В наличии: {product.stock}")
         
         # Проверяем наличие товара
         if product.stock < data['quantity']:
+            print(f"Ошибка: Недостаточно товара на складе. Запрошено: {data['quantity']}, В наличии: {product.stock}")
             return jsonify({
                 'success': False,
                 'message': 'Недостаточно товара на складе'
@@ -1356,6 +1370,7 @@ def quick_order():
 
         # Проверяем максимальное количество
         if data['quantity'] > product.stock:
+            print(f"Ошибка: Превышено максимальное количество товара. Запрошено: {data['quantity']}, Максимум: {product.stock}")
             return jsonify({
                 'success': False,
                 'message': f'Максимальное количество товара: {product.stock}'
@@ -1392,8 +1407,10 @@ def quick_order():
         )
 
         try:
+            print("\nСохранение заказа в базу данных...")
             db.session.add(order)
             db.session.flush()  # Получаем ID заказа
+            print(f"Создан заказ с ID: {order.id}")
 
             # Создаем OrderItem
             order_item = OrderItem(
@@ -1405,21 +1422,29 @@ def quick_order():
                 color=data['color']
             )
             db.session.add(order_item)
+            print("Создан OrderItem")
 
             # Уменьшаем количество товара на складе
             product.stock -= data['quantity']
+            print(f"Обновлено количество товара на складе: {product.stock}")
 
             db.session.commit()
+            print("Изменения сохранены в базу данных")
 
             # Отправляем email клиенту
+            print(f"\nОтправка email клиенту: {data.get('customer_email')}")
             if not send_order_confirmation_email(data.get('customer_email'), order):
+                print("Ошибка: Не удалось отправить email клиенту")
                 app.logger.error(f"Failed to send confirmation email to customer: {data.get('customer_email')}")
 
             # Отправляем email администратору
             admin_email = "ubmember500@gmail.com"
+            print(f"\nОтправка email администратору: {admin_email}")
             if not send_order_confirmation_email(admin_email, order, is_admin=True):
+                print("Ошибка: Не удалось отправить email администратору")
                 app.logger.error(f"Failed to send confirmation email to admin: {admin_email}")
 
+            print("\n=== Заказ успешно создан ===")
             return jsonify({
                 'success': True,
                 'message': 'Заказ успешно создан'
@@ -1427,6 +1452,7 @@ def quick_order():
 
         except Exception as e:
             db.session.rollback()
+            print(f"\nОшибка при сохранении заказа: {str(e)}")
             app.logger.error(f"Database error in quick_order: {str(e)}")
             return jsonify({
                 'success': False,
@@ -1434,6 +1460,7 @@ def quick_order():
             }), 500
 
     except Exception as e:
+        print(f"\nОшибка при создании заказа: {str(e)}")
         app.logger.error(f"Error in quick_order: {str(e)}")
         return jsonify({
             'success': False,
@@ -1494,16 +1521,8 @@ def send_order_confirmation_email(email, order, is_admin=False):
         Команда Cursor Shop
         """
         
-        # Создаем объект сообщения
-        msg = Message(
-            subject=subject,
-            recipients=[email],
-            body=body
-        )
-        
-        # Отправляем письмо
-        mail.send(msg)
-        return True
+        # Отправляем письмо через SMTP
+        return send_email_smtp(email, subject, body)
         
     except Exception as e:
         print(f"Ошибка при отправке email: {str(e)}")
