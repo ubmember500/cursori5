@@ -1303,180 +1303,94 @@ def send_email_smtp(recipient, subject, body):
 @login_required
 def quick_order():
     try:
-        print("=== Начало создания быстрого заказа ===")
         data = request.get_json()
-        print(f"Получены данные заказа: {data}")
         
-        # Проверяем наличие всех необходимых полей
+        # Проверяем обязательные поля
         required_fields = ['product_id', 'name', 'price', 'size', 'color', 'quantity', 
                          'customer_name', 'customer_email', 'customer_phone', 'payment_method', 'address']
-        missing_fields = [field for field in required_fields if field not in data]
         
+        missing_fields = [field for field in required_fields if not data.get(field)]
         if missing_fields:
-            print(f"Отсутствуют обязательные поля: {missing_fields}")
             return jsonify({
                 'success': False,
                 'message': f'Отсутствуют обязательные поля: {", ".join(missing_fields)}'
             }), 400
 
         # Проверяем формат email
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, data['customer_email']):
-            print(f"Неверный формат email: {data['customer_email']}")
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", data.get('customer_email')):
             return jsonify({
                 'success': False,
                 'message': 'Неверный формат email'
             }), 400
 
         # Проверяем формат телефона
-        phone_pattern = r'^\+?[0-9]{10,15}$'
-        if not re.match(phone_pattern, data['customer_phone']):
-            print(f"Неверный формат телефона: {data['customer_phone']}")
+        if not re.match(r'^\+?[0-9]{10,15}$', data.get('customer_phone')):
             return jsonify({
                 'success': False,
                 'message': 'Неверный формат телефона'
             }), 400
 
+        # Получаем товар
+        product = Product.query.get_or_404(data['product_id'])
+        
         # Проверяем наличие товара
-        product = Product.query.get(data['product_id'])
-        if not product:
-            print(f"Товар не найден: {data['product_id']}")
-            return jsonify({
-                'success': False,
-                'message': 'Товар не найден'
-            }), 404
-
-        # Проверяем доступное количество
         if product.stock < data['quantity']:
-            print(f"Недостаточно товара: запрошено {data['quantity']}, доступно {product.stock}")
             return jsonify({
                 'success': False,
-                'message': 'Недостаточно товара'
+                'message': 'Недостаточно товара на складе'
             }), 400
 
-        print("Создание нового заказа...")
-        # Создаем новый заказ
+        # Создаем заказ
         order = Order(
-            user_id=current_user.id,  # Теперь всегда будет user_id
-            customer_name=data['customer_name'],
-            customer_email=data['customer_email'],
-            customer_phone=data['customer_phone'],
-            payment_method=data['payment_method'],
+            user_id=current_user.id,
+            total_amount=product.price * data['quantity'] + 60,  # Добавляем стоимость доставки
             status='pending',
-            total_amount=data['price'] * data['quantity'],
             items=[{
-                'name': data['name'],
-                'price': data['price'],
+                'product_id': product.id,
+                'name': product.name,
+                'price': product.price,
                 'quantity': data['quantity'],
                 'size': data['size'],
                 'color': data['color'],
-                'total': data['price'] * data['quantity']
+                'image': product.image
             }],
             customer_info={
-                'name': data['customer_name'],
-                'email': data['customer_email'],
-                'phone': data['customer_phone'],
-                'payment_method': data['payment_method'],
-                'address': data['address']
-            }
+                'name': data.get('customer_name'),
+                'phone': data.get('customer_phone'),
+                'email': data.get('customer_email'),
+                'address': data.get('address'),
+                'payment_method': data.get('payment_method')
+            },
+            customer_name=data.get('customer_name'),
+            customer_email=data.get('customer_email'),
+            customer_phone=data.get('customer_phone'),
+            payment_method=data.get('payment_method')
         )
-        print(f"Заказ создан: {order.id}")
 
-        # Создаем элемент заказа
-        order_item = OrderItem(
-            order=order,
-            product=product,
-            quantity=data['quantity'],
-            price=data['price'],
-            size=data['size'],
-            color=data['color']
-        )
-        print(f"Элемент заказа создан: {order_item.id}")
-
-        # Обновляем количество товара
-        product.stock -= data['quantity']
-        print(f"Количество товара обновлено: {product.stock}")
-
-        # Сохраняем изменения
         db.session.add(order)
-        db.session.add(order_item)
         db.session.commit()
-        print("Изменения сохранены в базе данных")
 
         # Отправляем email клиенту
-        try:
-            print("Отправка email клиенту...")
-            customer_email_body = f'''
-            Спасибо за ваш заказ!
-            
-            Детали заказа №{order.id}:
-            Товар: {data['name']}
-            Размер: {data['size']}
-            Цвет: {data['color']}
-            Количество: {data['quantity']}
-            Сумма: {data['price'] * data['quantity']} руб.
-            
-            Адрес доставки: {data['address']}
-            
-            Статус заказа: {order.status}
-            
-            Мы свяжемся с вами в ближайшее время для подтверждения заказа.
-            '''
-            
-            if send_email_smtp(data['customer_email'], f'Подтверждение заказа №{order.id}', customer_email_body):
-                print("Email клиенту успешно отправлен")
-            else:
-                print("Не удалось отправить email клиенту")
+        send_order_confirmation_email(data.get('customer_email'), order)
 
-            # Отправляем уведомление администратору
-            print("Отправка уведомления администратору...")
-            admin_email_body = f'''
-            Новый заказ №{order.id}!
-            
-            Детали заказа:
-            Товар: {data['name']}
-            Размер: {data['size']}
-            Цвет: {data['color']}
-            Количество: {data['quantity']}
-            Сумма: {data['price'] * data['quantity']} руб.
-            
-            Информация о покупателе:
-            Имя: {data['customer_name']}
-            Email: {data['customer_email']}
-            Телефон: {data['customer_phone']}
-            Адрес: {data['address']}
-            Способ оплаты: {data['payment_method']}
-            '''
-            
-            if send_email_smtp(app.config['ADMIN_EMAIL'], f'Новый заказ №{order.id}', admin_email_body):
-                print("Уведомление администратору успешно отправлено")
-            else:
-                print("Не удалось отправить уведомление администратору")
-                
-        except Exception as e:
-            print(f"Ошибка при отправке email: {str(e)}")
-            # Не прерываем процесс, если email не удалось отправить
-            pass
+        # Отправляем email администратору
+        admin_email = "ubmember500@gmail.com"
+        send_order_confirmation_email(admin_email, order, is_admin=True)
 
-        print("=== Заказ успешно создан ===")
         return jsonify({
             'success': True,
-            'message': 'Заказ успешно создан',
-            'order_id': order.id
+            'message': 'Заказ успешно создан'
         })
 
     except Exception as e:
-        print(f"=== Ошибка при создании заказа: {str(e)} ===")
-        print("Трейсбек ошибки:")
-        import traceback
-        print(traceback.format_exc())
         db.session.rollback()
+        app.logger.error(f"Error creating quick order: {str(e)}")
         return jsonify({
             'success': False,
-            'message': 'Произошла ошибка при оформлении заказа. Попробуйте позже.'
+            'message': 'Произошла ошибка при создании заказа'
         }), 500
 
-def send_order_confirmation_email(email, order):
+def send_order_confirmation_email(email, order, is_admin=False):
     try:
         # Формируем тему письма
         subject = f'Подтверждение заказа #{order.id}'

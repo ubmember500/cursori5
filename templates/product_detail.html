@@ -754,7 +754,12 @@ body .btn:contains("В избранное") {
                                     </div>
                                     
                                     <div class="form-group mb-3">
-                                        <label for="customer_phone" class="form-label">Телефон</label>
+                                        <label for="customer_email">Email *</label>
+                                        <input type="email" class="form-control" id="customer_email" name="customer_email" required>
+                                    </div>
+                                    
+                                    <div class="form-group mb-3">
+                                        <label for="customer_phone" class="form-label">Телефон *</label>
                                         <input type="tel" class="form-control" id="customer_phone" name="customer_phone" required>
                                     </div>
                                     
@@ -1210,19 +1215,21 @@ function handleAddToCart(event) {
     event.target.submit();
 }
 
-function handleQuickOrder() {
+function handleQuickOrder(event) {
+    event.preventDefault();
+    
     const form = document.getElementById('quickOrderForm');
     const formData = new FormData(form);
     
     const orderData = {
-        product_id: {{ product.id }},
-        name: "{{ product.name }}",
-        price: {{ product.price }},
-        size: formData.get('size'),
-        color: formData.get('color'),
-        quantity: parseInt(formData.get('quantity')),
+        product_id: document.getElementById('quick_order_product_id').value,
+        name: document.getElementById('quick_order_product_name').value,
+        price: parseFloat(document.getElementById('quick_order_price').value),
+        size: document.getElementById('quick_order_size').value,
+        color: document.getElementById('quick_order_color').value,
+        quantity: parseInt(document.getElementById('quick_order_quantity').value),
         customer_name: formData.get('name'),
-        customer_email: formData.get('email'),
+        customer_email: formData.get('customer_email'),
         customer_phone: formData.get('customer_phone'),
         address: formData.get('address'),
         payment_method: formData.get('payment_method')
@@ -1240,19 +1247,20 @@ function handleQuickOrder() {
     .then(data => {
         if (data.success) {
             // Показываем сообщение об успехе
-            showMessage('success', 'Заказ успешно создан! Мы свяжемся с вами в ближайшее время.');
+            alert('Заказ успешно создан! Мы свяжемся с вами в ближайшее время.');
             // Закрываем модальное окно
-            $('#quickOrderModal').modal('hide');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
+            modal.hide();
             // Очищаем форму
             form.reset();
         } else {
             // Показываем сообщение об ошибке
-            showMessage('error', data.message || 'Произошла ошибка при создании заказа.');
+            alert(data.message || 'Произошла ошибка при создании заказа.');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showMessage('error', 'Произошла ошибка при создании заказа. Попробуйте позже.');
+        alert('Произошла ошибка при создании заказа. Попробуйте позже.');
     });
 }
 
