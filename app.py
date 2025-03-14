@@ -1146,6 +1146,11 @@ def subscribe_newsletter():
     
     return redirect(request.referrer or url_for('home'))
 
+@app.route('/order_form')
+@login_required
+def order_form():
+    return render_template('order_form.html')
+
 @app.route('/my_orders')
 @login_required
 def my_orders():

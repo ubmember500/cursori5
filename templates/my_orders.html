@@ -2,7 +2,12 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h1 class="mb-4">Мои заказы</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Мои заказы</h1>
+        <a href="{{ url_for('order_form') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Создать новый заказ
+        </a>
+    </div>
     
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -13,111 +18,72 @@
     {% endwith %}
     
     {% if orders %}
-        {% for order_data in orders %}
+        {% for order in orders %}
             <div class="card mb-4">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Заказ #{{ order_data.order.id }}</h5>
-                        <span class="badge {% if order_data.order.status == 'pending' %}bg-warning
-                                         {% elif order_data.order.status == 'processing' %}bg-info
-                                         {% elif order_data.order.status == 'shipped' %}bg-primary
-                                         {% elif order_data.order.status == 'delivered' %}bg-success
-                                         {% else %}bg-danger{% endif %}">
-                            {% if order_data.order.status == 'pending' %}Ожидает обработки
-                            {% elif order_data.order.status == 'processing' %}В обработке
-                            {% elif order_data.order.status == 'shipped' %}Отправлен
-                            {% elif order_data.order.status == 'delivered' %}Доставлен
-                            {% else %}Отменен{% endif %}
+                        <h5 class="mb-0">Заказ #{{ order.id }}</h5>
+                        <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status == 'processing' else 'secondary' }}">
+                            {{ order.status }}
                         </span>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="order-details">
-                                <p><strong>Дата заказа:</strong> {{ order_data.order.created_at }}</p>
-                                <p><strong>Статус:</strong> {{ order_data.order.status }}</p>
-                                <p><strong>Сумма заказа:</strong> {{ order_data.order.total_amount }} ₴</p>
-                                <p><strong>Адрес доставки:</strong> {{ order_data.order.customer_info.get('address', 'Не указан') }}</p>
-                            </div>
+                            <p><strong>Дата заказа:</strong> {{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                            <p><strong>Сумма заказа:</strong> {{ "%.2f"|format(order.total_amount) }} грн</p>
                         </div>
                         <div class="col-md-6">
-                            {% if order_data.order.customer_info %}
-                                <p><strong>Способ оплаты:</strong> {{ order_data.order.customer_info.get('payment_method', 'Не указан') }}</p>
-                                {% if order_data.order.customer_info.get('telegram') %}
-                                    <p><strong>Telegram:</strong> {{ order_data.order.customer_info.telegram }}</p>
-                                {% endif %}
-                                {% if order_data.order.customer_info.get('viber') %}
-                                    <p><strong>Viber:</strong> {{ order_data.order.customer_info.viber }}</p>
-                                {% endif %}
-                            {% endif %}
+                            <p><strong>Способ оплаты:</strong> {{ order.payment_method }}</p>
+                            <p><strong>Статус оплаты:</strong> {{ 'Оплачен' if order.is_paid else 'Не оплачен' }}</p>
                         </div>
                     </div>
                     
-                    {% if order_data.items %}
-                        <h6 class="mt-3">Товары в заказе:</h6>
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
+                    <h6 class="mt-3">Товары в заказе:</h6>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Товар</th>
+                                    <th>Размер</th>
+                                    <th>Цвет</th>
+                                    <th>Количество</th>
+                                    <th>Цена</th>
+                                    <th>Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items %}
                                     <tr>
-                                        <th>Товар</th>
-                                        <th>Количество</th>
-                                        <th>Цена</th>
-                                        <th>Сумма</th>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="me-2" style="width: 50px; height: 50px; object-fit: cover;">
+                                                {{ item.product.name }}
+                                            </div>
+                                        </td>
+                                        <td>{{ item.size }}</td>
+                                        <td>{{ item.color }}</td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>{{ "%.2f"|format(item.price) }} грн</td>
+                                        <td>{{ "%.2f"|format(item.price * item.quantity) }} грн</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in order_data.items %}
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <img src="{{ item.image or url_for('static', filename='img/products/default-product.jpg') }}" alt="{{ item.name }}" class="img-fluid" style="max-width: 100px;">
-                                                    <div>
-                                                        <div>{{ item.name }}</div>
-                                                        {% if item.size or item.color %}
-                                                            <small class="text-muted">
-                                                                {% if item.size %}Размер: {{ item.size }}{% endif %}
-                                                                {% if item.color %}, Цвет: {{ item.color }}{% endif %}
-                                                            </small>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>{{ item.quantity }}</td>
-                                            <td>{{ "%.2f"|format(item.price) }} грн</td>
-                                            <td>{{ "%.2f"|format(item.total) }} грн</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="3" class="text-end"><strong>Итого:</strong></td>
-                                        <td><strong>{{ "%.2f"|format(order_data.order.total_amount) }} грн</strong></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="alert alert-warning">
-                            В заказе отсутствуют товары
-                        </div>
-                    {% endif %}
-                    
-                    {% if order_data.order.customer_info %}
-                        <div class="mt-3">
-                            <h6>Информация о доставке:</h6>
-                            <p><strong>Получатель:</strong> {{ order_data.order.customer_info.get('name', 'Не указан') }}</p>
-                            <p><strong>Телефон:</strong> {{ order_data.order.customer_info.get('phone', 'Не указан') }}</p>
-                            <p><strong>Email:</strong> {{ order_data.order.customer_info.get('email', 'Не указан') }}</p>
-                            <p><strong>Адрес:</strong> {{ order_data.order.customer_info.get('address', 'Не указан') }}</p>
-                        </div>
-                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" class="text-end"><strong>Итого:</strong></td>
+                                    <td><strong>{{ "%.2f"|format(order.total_amount) }} грн</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
         {% endfor %}
     {% else %}
         <div class="alert alert-info">
-            У вас пока нет заказов. <a href="{{ url_for('products') }}" class="alert-link">Перейти к покупкам</a>
+            У вас пока нет заказов. <a href="{{ url_for('products') }}" class="alert-link">Перейти к каталогу</a>
         </div>
     {% endif %}
 </div>
