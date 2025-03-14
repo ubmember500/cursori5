@@ -17,8 +17,8 @@ def decrypt_password(encrypted_password, key):
     f = Fernet(key)
     return f.decrypt(encrypted_password.encode()).decode()
 
-# Генерируем ключ (в реальном приложении его нужно хранить безопасно)
-ENCRYPTION_KEY = b'YOUR_ENCRYPTION_KEY_HERE'
+# Генерируем ключ шифрования
+ENCRYPTION_KEY = generate_key()
 
 # Настройка путей
 project_path = '/home/ubmember500/cursori5'
@@ -28,9 +28,9 @@ encrypted_password = encrypt_password('snxltrpnzytrfrbl', ENCRYPTION_KEY)
 
 # Настройки SMTP
 os.environ['MAIL_SERVER'] = 'smtp.gmail.com'
-os.environ['MAIL_PORT'] = '465'  # Используем SSL порт
-os.environ['MAIL_USE_SSL'] = 'True'
-os.environ['MAIL_USE_TLS'] = 'False'
+os.environ['MAIL_PORT'] = '587'  # Используем TLS порт
+os.environ['MAIL_USE_SSL'] = 'False'
+os.environ['MAIL_USE_TLS'] = 'True'
 os.environ['MAIL_USERNAME'] = 'defensivelox@gmail.com'
 os.environ['MAIL_PASSWORD'] = encrypted_password
 os.environ['MAIL_DEFAULT_SENDER'] = 'defensivelox@gmail.com'
