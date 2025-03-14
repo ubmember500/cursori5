@@ -993,6 +993,26 @@ function validatePhone(phone) {
     return /^\+?[0-9]{10,15}$/.test(phone);
 }
 
+function validateCardNumber(number) {
+    const regex = /^[0-9]{16}$/;
+    return regex.test(number.replace(/\s/g, ''));
+}
+
+function validateCardExpiry(expiry) {
+    const regex = /^(0[1-9]|1[0-2])\/([0-9]{2})$/;
+    if (!regex.test(expiry)) return false;
+    
+    const [month, year] = expiry.split('/');
+    const now = new Date();
+    const cardDate = new Date(2000 + parseInt(year), parseInt(month) - 1);
+    return cardDate > now;
+}
+
+function validateCardCvv(cvv) {
+    const regex = /^[0-9]{3,4}$/;
+    return regex.test(cvv);
+}
+
 async function handleQuickOrder(event) {
     event.preventDefault();
     
@@ -1001,11 +1021,25 @@ async function handleQuickOrder(event) {
     const loadingSpinner = document.getElementById('loadingSpinner');
     
     try {
+        // Проверяем выбран ли размер и цвет
+        const selectedSize = document.getElementById('quick_order_size').value;
+        const selectedColor = document.getElementById('quick_order_color').value;
+        
+        if (!selectedSize || selectedSize === '') {
+            alert('Пожалуйста, выберите размер');
+            return;
+        }
+        
+        if (!selectedColor || selectedColor === '') {
+            alert('Пожалуйста, выберите цвет');
+            return;
+        }
+        
         // Собираем данные формы
         const orderData = {
             product_id: document.getElementById('quick_order_product_id').value,
-            size: document.getElementById('quick_order_size').value,
-            color: document.getElementById('quick_order_color').value,
+            size: selectedSize,
+            color: selectedColor,
             quantity: parseInt(document.getElementById('quick_order_quantity').value),
             customer_name: form.customer_name.value.trim(),
             customer_email: form.customer_email.value.trim(),
@@ -1051,15 +1085,28 @@ async function handleQuickOrder(event) {
         // Добавляем данные карты если выбрана оплата картой
         if (orderData.payment_method === 'card') {
             const cardNumber = form.card_number.value.replace(/\s/g, '');
-            const cardExpiry = form.card_expiry.value.replace(/\s/g, '');
+            const cardExpiry = form.card_expiry.value;
             const cardCvv = form.card_cvv.value.trim();
             
-            if (!cardNumber || !cardExpiry || !cardCvv) {
-                alert('Пожалуйста, заполните все данные карты');
+            // Валидация данных карты
+            if (!validateCardNumber(cardNumber)) {
+                alert('Пожалуйста, введите корректный номер карты (16 цифр)');
                 submitButton.disabled = false;
-                if (loadingSpinner) {
-                    loadingSpinner.style.display = 'none';
-                }
+                if (loadingSpinner) loadingSpinner.style.display = 'none';
+                return;
+            }
+            
+            if (!validateCardExpiry(cardExpiry)) {
+                alert('Пожалуйста, введите корректный срок действия карты (ММ/ГГ)');
+                submitButton.disabled = false;
+                if (loadingSpinner) loadingSpinner.style.display = 'none';
+                return;
+            }
+            
+            if (!validateCardCvv(cardCvv)) {
+                alert('Пожалуйста, введите корректный CVV код (3 или 4 цифры)');
+                submitButton.disabled = false;
+                if (loadingSpinner) loadingSpinner.style.display = 'none';
                 return;
             }
             
@@ -1100,6 +1147,13 @@ async function handleQuickOrder(event) {
             
             // Очищаем форму
             form.reset();
+            
+            // Обновляем количество товара на странице
+            const stockElement = document.getElementById('productStock');
+            if (stockElement) {
+                const newStock = maxStock - orderData.quantity;
+                stockElement.textContent = newStock;
+            }
         } else {
             throw new Error(result.message || 'Произошла ошибка при оформлении заказа');
         }
