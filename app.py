@@ -1190,11 +1190,10 @@ def my_orders():
                             'image': get_random_product_image(product.category_id)
                         })
             
-            if items:
-                orders_with_items.append({
-                    'order': order,
-                    'items': items
-                })
+            orders_with_items.append({
+                'order': order,
+                'items': items
+            })
         
         print("=== Завершение получения заказов пользователя ===\n")
         return render_template('my_orders.html', orders=orders_with_items)
@@ -1202,7 +1201,7 @@ def my_orders():
     except Exception as e:
         print(f"\nОшибка при получении заказов: {str(e)}")
         flash('Произошла ошибка при загрузке заказов', 'error')
-        return redirect(url_for('home'))
+        return render_template('my_orders.html', orders=[])
 
 @app.route('/test_email')
 def test_email():
