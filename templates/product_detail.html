@@ -1221,13 +1221,35 @@ function handleQuickOrder(event) {
     const form = document.getElementById('quickOrderForm');
     const formData = new FormData(form);
     
+    // Проверяем обязательные поля
+    const missingFields = validateForm(formData);
+    if (missingFields.length > 0) {
+        alert(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
+        return;
+    }
+    
+    // Проверяем выбор размера и цвета
+    const size = document.getElementById('quick_order_size').value;
+    const color = document.getElementById('quick_order_color').value;
+    if (!size || !color) {
+        alert('Пожалуйста, выберите размер и цвет товара');
+        return;
+    }
+    
+    // Проверяем количество
+    const quantity = parseInt(document.getElementById('quick_order_quantity').value);
+    if (quantity < 1) {
+        alert('Пожалуйста, выберите количество товара');
+        return;
+    }
+    
     const orderData = {
         product_id: document.getElementById('quick_order_product_id').value,
         name: document.getElementById('quick_order_product_name').value,
         price: parseFloat(document.getElementById('quick_order_price').value),
-        size: document.getElementById('quick_order_size').value,
-        color: document.getElementById('quick_order_color').value,
-        quantity: parseInt(document.getElementById('quick_order_quantity').value),
+        size: size,
+        color: color,
+        quantity: quantity,
         customer_name: formData.get('name'),
         customer_email: formData.get('customer_email'),
         customer_phone: formData.get('customer_phone'),
@@ -1243,7 +1265,14 @@ function handleQuickOrder(event) {
         },
         body: JSON.stringify(orderData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Произошла ошибка при создании заказа');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Показываем сообщение об успехе
@@ -1260,7 +1289,7 @@ function handleQuickOrder(event) {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Произошла ошибка при создании заказа. Попробуйте позже.');
+        alert(error.message || 'Произошла ошибка при создании заказа. Попробуйте позже.');
     });
 }
 

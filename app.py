@@ -1300,7 +1300,6 @@ def send_email_smtp(recipient, subject, body):
         return False
 
 @app.route('/quick_order', methods=['POST'])
-@login_required
 def quick_order():
     try:
         data = request.get_json()
@@ -1342,7 +1341,7 @@ def quick_order():
 
         # Создаем заказ
         order = Order(
-            user_id=current_user.id,
+            user_id=None,  # Убираем привязку к пользователю для быстрого заказа
             total_amount=product.price * data['quantity'] + 60,  # Добавляем стоимость доставки
             status='pending',
             items=[{
@@ -1352,7 +1351,8 @@ def quick_order():
                 'quantity': data['quantity'],
                 'size': data['size'],
                 'color': data['color'],
-                'image': product.image
+                'image': product.image,
+                'total': product.price * data['quantity']  # Добавляем общую сумму для товара
             }],
             customer_info={
                 'name': data.get('customer_name'),
@@ -1422,7 +1422,11 @@ def send_order_confirmation_email(email, order, is_admin=False):
         
         body += f"""
         
+        Стоимость доставки: 60 грн
         Общая сумма заказа: {order.total_amount} грн
+        
+        Адрес доставки: {order.customer_info.get('address', 'Не указан')}
+        Способ оплаты: {order.customer_info.get('payment_method', 'Не указан')}
         
         Мы свяжемся с вами в ближайшее время для подтверждения заказа.
         
