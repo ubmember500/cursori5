@@ -920,13 +920,31 @@ function openQuickOrder() {
         return;
     }
     
+    // Заполняем скрытые поля формы
     document.getElementById('quick_order_product_id').value = "{{ product.id }}";
-    document.getElementById('quick_order_product_name').value = "{{ product.name }}";
-    document.getElementById('quick_order_price').value = "{{ product.price }}";
     document.getElementById('quick_order_size').value = size;
     document.getElementById('quick_order_color').value = color;
     document.getElementById('quick_order_quantity').value = quantity;
     
+    // Заполняем детали заказа в модальном окне
+    document.getElementById('order_product_name').textContent = "{{ product.name }}";
+    document.getElementById('order_size').textContent = size;
+    document.getElementById('order_color').textContent = color;
+    document.getElementById('order_quantity').textContent = quantity;
+    
+    // Обновляем цены
+    const productPrice = {{ product.price }};
+    const productTotal = productPrice * quantity;
+    const deliveryCost = 60;
+    const totalAmount = productTotal + deliveryCost;
+    
+    document.getElementById('order_price').textContent = productTotal.toFixed(2);
+    document.getElementById('order_total').textContent = totalAmount.toFixed(2);
+    
+    // Сбрасываем форму
+    document.getElementById('quickOrderForm').reset();
+    
+    // Показываем модальное окно
     const modal = new bootstrap.Modal(document.getElementById('quickOrderModal'));
     modal.show();
 }
@@ -1177,10 +1195,10 @@ function handleQuickOrder(event) {
     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Обработка...';
 
     const orderData = {
-        product_id: parseInt(formData.get('product_id')),
-        size: formData.get('size'),
-        color: formData.get('color'),
-        quantity: parseInt(formData.get('quantity')),
+        product_id: parseInt(document.getElementById('quick_order_product_id').value),
+        size: document.getElementById('quick_order_size').value,
+        color: document.getElementById('quick_order_color').value,
+        quantity: parseInt(document.getElementById('quick_order_quantity').value),
         payment_method: formData.get('payment_method'),
         address: formData.get('address')
     };
