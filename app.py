@@ -1169,6 +1169,7 @@ def my_orders():
         orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
         print(f"Найдено заказов: {len(orders)}")
         
+        # Преобразуем заказы в нужный формат
         orders_with_items = []
         for order in orders:
             print(f"\nОбработка заказа #{order.id}:")
@@ -1177,43 +1178,29 @@ def my_orders():
             print(f"- Сумма: {order.total_amount}")
             print(f"- User ID: {order.user_id}")
             
-            # Получаем товары из OrderItem
-            order_items = OrderItem.query.filter_by(order_id=order.id).all()
+            # Получаем товары из заказа
             items = []
-            total = 0
-            
-            for item in order_items:
-                item_total = item.price * item.quantity
-                total += item_total
-                
-                # Получаем изображение товара
-                product = item.product
-                image = get_random_product_image(product.category_id) if product else 'img/products/default-product.jpg'
-                
-                items.append({
-                    'name': product.name if product else 'Товар недоступен',
-                    'price': item.price,
-                    'quantity': item.quantity,
-                    'size': item.size,
-                    'color': item.color,
-                    'total': item_total,
-                    'image': image
-                })
-            
-            # Если нет товаров в OrderItem, пробуем использовать JSON данные
-            if not items and order.items and isinstance(order.items, list):
+            if order.items and isinstance(order.items, list):
                 items = order.items
-                total = sum(item.get('total', 0) for item in items)
+            else:
+                # Если items не в JSON, получаем из OrderItem
+                order_items = OrderItem.query.filter_by(order_id=order.id).all()
+                for item in order_items:
+                    product = item.product
+                    if product:
+                        items.append({
+                            'name': product.name,
+                            'price': item.price,
+                            'quantity': item.quantity,
+                            'size': item.size,
+                            'color': item.color,
+                            'total': item.price * item.quantity,
+                            'image': get_random_product_image(product.category_id)
+                        })
             
             if items:
                 orders_with_items.append({
-                    'order': {
-                        'id': order.id,
-                        'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
-                        'status': order.status,
-                        'total_amount': total,
-                        'customer_info': order.customer_info
-                    },
+                    'order': order,
                     'items': items
                 })
         

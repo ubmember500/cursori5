@@ -18,25 +18,25 @@
     {% endwith %}
     
     {% if orders %}
-        {% for order in orders %}
+        {% for order_data in orders %}
             <div class="card mb-4">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Заказ #{{ order.id }}</h5>
-                        <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status == 'processing' else 'secondary' }}">
-                            {{ order.status }}
+                        <h5 class="mb-0">Заказ #{{ order_data.order.id }}</h5>
+                        <span class="badge bg-{{ 'success' if order_data.order.status == 'completed' else 'warning' if order_data.order.status == 'processing' else 'secondary' }}">
+                            {{ order_data.order.status }}
                         </span>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Дата заказа:</strong> {{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
-                            <p><strong>Сумма заказа:</strong> {{ "%.2f"|format(order.total_amount) }} грн</p>
+                            <p><strong>Дата заказа:</strong> {{ order_data.order.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                            <p><strong>Сумма заказа:</strong> {{ "%.2f"|format(order_data.order.total_amount) }} грн</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Способ оплаты:</strong> {{ order.payment_method }}</p>
-                            <p><strong>Статус оплаты:</strong> {{ 'Оплачен' if order.is_paid else 'Не оплачен' }}</p>
+                            <p><strong>Способ оплаты:</strong> {{ order_data.order.payment_method }}</p>
+                            <p><strong>Статус оплаты:</strong> {{ 'Оплачен' if order_data.order.payment_method == 'card' else 'При получении' }}</p>
                         </div>
                     </div>
                     
@@ -54,26 +54,26 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in order.items %}
+                                {% for item in order_data.items %}
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center">
-                                                <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="me-2" style="width: 50px; height: 50px; object-fit: cover;">
-                                                {{ item.product.name }}
+                                                <img src="{{ url_for('static', filename=item.image) }}" alt="{{ item.name }}" class="me-2" style="width: 50px; height: 50px; object-fit: cover;">
+                                                {{ item.name }}
                                             </div>
                                         </td>
                                         <td>{{ item.size }}</td>
                                         <td>{{ item.color }}</td>
                                         <td>{{ item.quantity }}</td>
                                         <td>{{ "%.2f"|format(item.price) }} грн</td>
-                                        <td>{{ "%.2f"|format(item.price * item.quantity) }} грн</td>
+                                        <td>{{ "%.2f"|format(item.total) }} грн</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr>
                                     <td colspan="5" class="text-end"><strong>Итого:</strong></td>
-                                    <td><strong>{{ "%.2f"|format(order.total_amount) }} грн</strong></td>
+                                    <td><strong>{{ "%.2f"|format(order_data.order.total_amount) }} грн</strong></td>
                                 </tr>
                             </tfoot>
                         </table>
