@@ -322,6 +322,20 @@ def init_db():
         # Только после создания таблиц пытаемся очистить сессии
         cleanup_old_sessions()
         
+        # Инициализируем значения sizes и colors для существующих продуктов
+        try:
+            products = Product.query.all()
+            for product in products:
+                if not product.sizes:
+                    product.sizes = ['S', 'M', 'L', 'XL']
+                if not product.colors:
+                    product.colors = ['Белый', 'Черный', 'Синий']
+            db.session.commit()
+            print("Успешно обновлены значения sizes и colors для существующих товаров")
+        except Exception as e:
+            print(f"Ошибка при обновлении товаров: {str(e)}")
+            db.session.rollback()
+        
         # Add sample data if the database is empty
         if not Category.query.first():
             categories = [
@@ -1614,25 +1628,6 @@ def send_order_confirmation_email(email, order, is_admin=False):
     except Exception as e:
         print(f"Ошибка в функции send_order_confirmation_email: {str(e)}")
         raise
-
-# Инициализация продуктов при запуске
-def initialize_products():
-    try:
-        with app.app_context():
-            products = Product.query.all()
-            for product in products:
-                if not product.sizes:
-                    product.sizes = ['S', 'M', 'L', 'XL']
-                if not product.colors:
-                    product.colors = ['Белый', 'Черный', 'Синий']
-            db.session.commit()
-            print("Успешно обновлены значения sizes и colors для существующих товаров")
-    except Exception as e:
-        print(f"Ошибка при обновлении товаров: {str(e)}")
-        db.session.rollback()
-
-# Вызываем функцию инициализации при запуске
-initialize_products()
 
 if __name__ == '__main__':
     init_db()
