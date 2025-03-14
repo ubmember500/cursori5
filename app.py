@@ -1158,7 +1158,7 @@ def my_orders():
         print("\n=== Начало получения заказов пользователя ===")
         print(f"Пользователь: {current_user.username} (ID: {current_user.id})")
         
-        # Получаем заказы пользователя
+        # Получаем заказы пользователя, сортируем по дате (новые сверху)
         orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
         print(f"Найдено заказов: {len(orders)}")
         
@@ -1170,10 +1170,25 @@ def my_orders():
             print(f"- Статус: {order.status}")
             print(f"- Сумма: {order.total_amount}")
             
+            # Получаем информацию о доставке
+            delivery_cost = order.customer_info.get('delivery_cost', 60.0) if order.customer_info else 60.0
+            
             # Получаем товары из заказа
             items = []
             if order.items and isinstance(order.items, list):
-                items = order.items
+                for item in order.items:
+                    item_data = {
+                        'name': item['name'],
+                        'price': item['price'],
+                        'quantity': item['quantity'],
+                        'size': item.get('size', 'standard'),
+                        'color': item.get('color', 'standard'),
+                        'total': item['price'] * item['quantity'],
+                        'image': item.get('image') or get_random_product_image(1),
+                        'product_id': item.get('product_id')
+                    }
+                    items.append(item_data)
+                    print(f"- Товар: {item_data['name']} (количество: {item_data['quantity']})")
             else:
                 # Если items не в JSON, получаем из OrderItem
                 order_items = OrderItem.query.filter_by(order_id=order.id).all()
@@ -1184,16 +1199,30 @@ def my_orders():
                             'name': product.name,
                             'price': item.price,
                             'quantity': item.quantity,
-                            'size': item.size,
-                            'color': item.color,
+                            'size': item.size or 'standard',
+                            'color': item.color or 'standard',
                             'total': item.price * item.quantity,
-                            'image': get_random_product_image(product.category_id)
+                            'image': get_random_product_image(product.category_id),
+                            'product_id': product.id
                         })
+                        print(f"- Товар из OrderItem: {product.name} (количество: {item.quantity})")
             
-            orders_with_items.append({
+            # Добавляем информацию о заказе
+            order_info = {
                 'order': order,
-                'items': items
-            })
+                'items': items,
+                'delivery_cost': delivery_cost,
+                'subtotal': sum(item['total'] for item in items),
+                'total': order.total_amount,
+                'customer_info': order.customer_info or {},
+                'order_date': order.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'status_history': order.customer_info.get('status_history', []) if order.customer_info else [],
+                'payment_info': {
+                    'method': order.payment_method,
+                    'status': order.customer_info.get('payment_status', 'pending') if order.customer_info else 'pending'
+                }
+            }
+            orders_with_items.append(order_info)
         
         print("=== Завершение получения заказов пользователя ===\n")
         return render_template('my_orders.html', orders=orders_with_items)
@@ -1291,126 +1320,151 @@ def send_email_smtp(recipient, subject, body):
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
+        print("\n=== НАЧАЛО ОБРАБОТКИ БЫСТРОГО ЗАКАЗА ===")
+        
+        # Получаем и логируем входящие данные
         data = request.get_json()
-        print(f"\n=== Получены данные для быстрого заказа ===")
-        print(f"Данные заказа: {data}")
+        print(f"Получены данные заказа: {data}")
         
-        # Проверяем обязательные поля
-        required_fields = [
-            'product_id', 'size', 'color', 'quantity',
-            'customer_name', 'customer_email', 'customer_phone',
-            'payment_method', 'address'
-        ]
+        if not data:
+            print("Ошибка: Данные не получены")
+            return jsonify({
+                'success': False,
+                'message': 'Данные заказа не получены'
+            }), 400
         
+        # Проверяем наличие всех необходимых полей
+        required_fields = ['product_id', 'quantity', 'customer_name', 'customer_email', 'customer_phone']
         missing_fields = [field for field in required_fields if not data.get(field)]
+        
         if missing_fields:
             print(f"Отсутствуют обязательные поля: {missing_fields}")
             return jsonify({
                 'success': False,
-                'message': f'Отсутствуют обязательные поля: {", ".join(missing_fields)}'
+                'message': f'Пожалуйста, заполните все обязательные поля: {", ".join(missing_fields)}'
             }), 400
 
         try:
+            # Преобразуем и проверяем product_id и quantity
             product_id = int(data['product_id'])
-            quantity = int(data['quantity'])
+            quantity = int(data.get('quantity', 1))
+            
+            if product_id <= 0 or quantity <= 0:
+                raise ValueError("Некорректные значения product_id или quantity")
+                
             print(f"ID товара: {product_id}, Количество: {quantity}")
+            
         except ValueError as e:
             print(f"Ошибка преобразования данных: {e}")
             return jsonify({
                 'success': False,
-                'message': 'Некорректный формат данных'
+                'message': 'Некорректный формат данных товара'
             }), 400
 
-        # Получаем товар
-        product = Product.query.get_or_404(product_id)
-        print(f"Товар найден: {product.name}")
-        
-        # Проверяем наличие товара
-        if product.stock < quantity:
-            print(f"Недостаточно товара на складе. Запрошено: {quantity}, В наличии: {product.stock}")
+        # Получаем товар из базы
+        product = Product.query.get(product_id)
+        if not product:
+            print(f"Товар с ID {product_id} не найден")
             return jsonify({
                 'success': False,
-                'message': 'Недостаточно товара на складе'
+                'message': 'Товар не найден'
+            }), 404
+
+        print(f"Товар найден: {product.name}, В наличии: {product.stock}")
+
+        # Проверяем наличие товара
+        if product.stock < quantity:
+            print(f"Недостаточно товара. Запрошено: {quantity}, В наличии: {product.stock}")
+            return jsonify({
+                'success': False,
+                'message': f'К сожалению, товара недостаточно. В наличии: {product.stock}'
             }), 400
 
-        # Проверяем метод оплаты
-        payment_status = 'paid' if data['payment_method'] == 'card' and data.get('card_info') else 'pending'
-        print(f"Метод оплаты: {data['payment_method']}, Статус оплаты: {payment_status}")
-
         # Создаем заказ
-        order = Order(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            total_amount=product.price * quantity + 60,  # +60 грн за доставку
-            status='processing' if payment_status == 'paid' else 'pending',
-            items=[{
+        try:
+            # Рассчитываем стоимость
+            item_total = float(product.price * quantity)
+            delivery_cost = 60.0  # Фиксированная стоимость доставки
+            total_amount = item_total + delivery_cost
+
+            # Формируем информацию о товаре
+            order_item = {
                 'product_id': product_id,
                 'name': product.name,
-                'price': product.price,
+                'price': float(product.price),
                 'quantity': quantity,
-                'size': data['size'],
-                'color': data['color'],
-                'image': product.image,
-                'total': product.price * quantity
-            }],
-            customer_info={
+                'size': data.get('size', 'standard'),
+                'color': data.get('color', 'standard'),
+                'total': item_total,
+                'image': product.image
+            }
+
+            # Формируем информацию о клиенте
+            customer_info = {
                 'name': data['customer_name'],
                 'email': data['customer_email'],
                 'phone': data['customer_phone'],
-                'address': data['address'],
-                'payment_method': data['payment_method'],
-                'payment_status': payment_status
-            },
-            customer_name=data['customer_name'],
-            customer_email=data['customer_email'],
-            customer_phone=data['customer_phone'],
-            payment_method=data['payment_method']
-        )
+                'address': data.get('address', ''),
+                'payment_method': data.get('payment_method', 'cash'),
+                'delivery_cost': delivery_cost,
+                'order_date': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+                'is_authenticated_user': current_user.is_authenticated
+            }
 
-        print("\n=== Сохранение заказа в базу данных ===")
-        try:
+            # Создаем объект заказа
+            order = Order(
+                user_id=current_user.id if current_user.is_authenticated else None,
+                total_amount=total_amount,
+                status='pending',
+                items=[order_item],
+                customer_info=customer_info,
+                customer_name=data['customer_name'],
+                customer_email=data['customer_email'],
+                customer_phone=data['customer_phone'],
+                payment_method=data.get('payment_method', 'cash')
+            )
+
+            print("\nСохранение заказа в базу данных...")
             db.session.add(order)
+            
+            # Уменьшаем количество товара
             product.stock -= quantity
+            print(f"Обновление остатка товара: {product.stock}")
+            
             db.session.commit()
-            print("Заказ успешно сохранен в базе данных")
+            print(f"Заказ #{order.id} успешно сохранен")
+
+            try:
+                print("\nОтправка email подтверждения...")
+                send_order_confirmation_email(order.customer_email, order)
+                print("Email клиенту отправлен успешно")
+            except Exception as e:
+                print(f"Ошибка отправки email клиенту: {str(e)}")
+                # Продолжаем выполнение, так как заказ уже создан
+
+            return jsonify({
+                'success': True,
+                'message': 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.',
+                'order_id': order.id
+            })
+
         except Exception as e:
             print(f"Ошибка при сохранении заказа: {str(e)}")
             db.session.rollback()
             return jsonify({
                 'success': False,
-                'message': 'Произошла ошибка при создании заказа'
+                'message': 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.'
             }), 500
 
-        print("\n=== Отправка уведомлений о заказе ===")
-        # Отправляем email подтверждения клиенту
-        try:
-            send_order_confirmation_email(data['customer_email'], order)
-            print("Email клиенту отправлен успешно")
-        except Exception as e:
-            print(f"Ошибка при отправке email клиенту: {str(e)}")
-            # Не прерываем выполнение, так как заказ уже создан
-
-        # Отправляем уведомление администратору
-        try:
-            admin_email = app.config.get('ADMIN_EMAIL')
-            if admin_email:
-                send_order_confirmation_email(admin_email, order, is_admin=True)
-                print("Email администратору отправлен успешно")
-        except Exception as e:
-            print(f"Ошибка при отправке email администратору: {str(e)}")
-            # Не прерываем выполнение, так как заказ уже создан
-
-        return jsonify({
-            'success': True,
-            'message': 'Заказ успешно создан',
-            'order_id': order.id
-        })
-
     except Exception as e:
-        print(f"Общая ошибка при обработке заказа: {str(e)}")
+        print(f"Общая ошибка обработки заказа: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Произошла ошибка при обработке заказа'
         }), 500
+
+    finally:
+        print("=== ЗАВЕРШЕНИЕ ОБРАБОТКИ БЫСТРОГО ЗАКАЗА ===\n")
 
 def send_order_confirmation_email(email, order, is_admin=False):
     try:
@@ -1457,8 +1511,8 @@ Email: {order.customer_info.get('email')}
 
         body += f"""
 Подытог: {total} грн
-Доставка: 60 грн
-Итого к оплате: {total + 60} грн
+Доставка: {delivery_cost} грн
+Итого к оплате: {total + delivery_cost} грн
 
 Статус заказа: {order.status}
 """
