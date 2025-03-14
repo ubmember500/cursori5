@@ -245,7 +245,7 @@ class NewsletterSubscription(db.Model):
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='pending')  # pending, processing, shipped, delivered, cancelled
     total_amount = db.Column(db.Float, nullable=False)
@@ -697,77 +697,140 @@ def remove_from_cart(product_id):
 
 
 @app.route('/checkout', methods=['GET', 'POST'])
+@login_required
 def checkout():
-    if not current_user.is_authenticated:
-        flash('Для оформления заказа необходимо авторизоваться', 'warning')
-        return redirect(url_for('login', next=url_for('checkout')))
-
-    if 'cart' not in session or not session['cart']:
-        flash('Ваша корзина пуста', 'warning')
-        return redirect(url_for('cart'))
-
-    cart_items = []
-    total = 0
-
-    # Проверяем наличие всех товаров перед оформлением
-    for item in session['cart']:
-        product = Product.query.get(item['id'])
-        if not product:
-            flash(f'Товар {item["name"]} больше не доступен', 'error')
-            return redirect(url_for('cart'))
+    try:
+        print("\n=== Начало оформления заказа ===")
         
-        if item['quantity'] > product.stock:
-            flash(f'Товар {item["name"]} доступен только в количестве {product.stock} шт.', 'error')
+        # Проверяем, авторизован ли пользователь
+        if not current_user.is_authenticated:
+            print("Ошибка: Пользователь не авторизован")
+            flash('Для оформления заказа необходимо авторизоваться', 'warning')
+            return redirect(url_for('login', next=url_for('checkout')))
+            
+        # Проверяем, не заблокирован ли пользователь
+        if not current_user.is_active:
+            print("Ошибка: Пользователь заблокирован")
+            flash('Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.', 'error')
+            return redirect(url_for('home'))
+            
+        print(f"Текущий пользователь: {current_user.username} (ID: {current_user.id})")
+
+        if 'cart' not in session or not session['cart']:
+            print("Ошибка: Корзина пуста")
+            flash('Ваша корзина пуста', 'warning')
             return redirect(url_for('cart'))
 
-        item_total = item['price'] * item['quantity']
-        cart_items.append({
-            'name': item['name'],
-            'price': item['price'],
-            'quantity': item['quantity'],
-            'total': item_total,
-            'image': item.get('image', '')
-        })
-        total += item_total
+        cart_items = []
+        total = 0
 
-    if request.method == 'POST':
-        try:
-            # Создаем новый заказ в базе данных
-            new_order = Order(
-                user_id=current_user.id,
-                total_amount=total,
-                status='pending',
-                items=cart_items,
-                customer_info={
-                    'name': current_user.first_name + ' ' + current_user.last_name,
-                    'phone': current_user.phone,
-                    'email': current_user.email,
-                    'address': current_user.address
-                }
-            )
-            
-            # Уменьшаем количество товаров на складе
-            for item in session['cart']:
+        # Проверяем наличие всех товаров перед оформлением
+        for item in session['cart']:
+            try:
                 product = Product.query.get(item['id'])
-                if product:
-                    product.stock -= item['quantity']
-            
-            db.session.add(new_order)
-            db.session.commit()
-            
-            # Очищаем корзину
-            session.pop('cart', None)
-            
-            flash('Заказ успешно оформлен!', 'success')
-            return redirect(url_for('my_orders'))
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"Ошибка при создании заказа: {str(e)}")
-            flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
-            return redirect(url_for('cart'))
+                if not product:
+                    print(f"Ошибка: Товар {item['name']} не найден")
+                    flash(f'Товар {item["name"]} больше не доступен', 'error')
+                    return redirect(url_for('cart'))
+                
+                if item['quantity'] > product.stock:
+                    print(f"Ошибка: Недостаточно товара {item['name']}")
+                    flash(f'Товар {item["name"]} доступен только в количестве {product.stock} шт.', 'error')
+                    return redirect(url_for('cart'))
 
-    return render_template('checkout.html', cart_items=cart_items, total=total)
+                item_total = item['price'] * item['quantity']
+                
+                # Проверяем и корректируем изображение товара
+                image = item.get('image', '')
+                if not image or image == 'None':
+                    image = get_random_product_image(product.category_id)
+                elif not image.startswith('img/products/'):
+                    if '/' in image:
+                        image = image.split('/')[-1]
+                    image = f'img/products/{image}'
+                
+                cart_items.append({
+                    'name': item['name'],
+                    'price': item['price'],
+                    'quantity': item['quantity'],
+                    'total': item_total,
+                    'image': image,
+                    'size': item.get('size'),
+                    'color': item.get('color')
+                })
+                total += item_total
+            except Exception as e:
+                print(f"Ошибка при обработке товара {item.get('name', 'Unknown')}: {str(e)}")
+                flash('Произошла ошибка при обработке товаров', 'error')
+                return redirect(url_for('cart'))
+
+        if request.method == 'POST':
+            try:
+                print("Создание нового заказа...")
+                # Создаем новый заказ в базе данных
+                new_order = Order(
+                    user_id=current_user.id,
+                    total_amount=total,
+                    status='pending',
+                    items=cart_items,
+                    customer_info={
+                        'name': current_user.first_name + ' ' + current_user.last_name,
+                        'phone': current_user.phone,
+                        'email': current_user.email,
+                        'address': current_user.address,
+                        'payment_method': request.form.get('payment_method', 'Не указан'),
+                        'telegram': request.form.get('telegram'),
+                        'viber': request.form.get('viber')
+                    }
+                )
+                
+                # Уменьшаем количество товаров на складе
+                for item in session['cart']:
+                    product = Product.query.get(item['id'])
+                    if product:
+                        product.stock -= item['quantity']
+                
+                db.session.add(new_order)
+                db.session.commit()
+                print(f"Заказ успешно создан с ID: {new_order.id}")
+                
+                # Отправляем email с подтверждением
+                email_sent = send_order_confirmation_email(current_user.email, new_order)
+                if not email_sent:
+                    print(f"Ошибка при отправке email для заказа #{new_order.id}")
+                    # Отправляем уведомление администратору
+                    admin_notification = f"""
+                    Ошибка отправки email для заказа #{new_order.id}
+                    
+                    Детали заказа:
+                    - Покупатель: {current_user.first_name} {current_user.last_name}
+                    - Email: {current_user.email}
+                    - Телефон: {current_user.phone}
+                    - Сумма: {total}
+                    
+                    Пожалуйста, свяжитесь с покупателем для подтверждения заказа.
+                    """
+                    send_email_smtp(app.config['ADMIN_EMAIL'], f'Ошибка отправки email для заказа #{new_order.id}', admin_notification)
+                
+                # Очищаем корзину
+                session.pop('cart', None)
+                
+                flash('Заказ успешно оформлен!', 'success')
+                return redirect(url_for('my_orders'))
+                
+            except Exception as e:
+                db.session.rollback()
+                print(f"Ошибка при создании заказа: {str(e)}")
+                flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
+                return redirect(url_for('cart'))
+
+        print("=== Завершение оформления заказа ===\n")
+        return render_template('checkout.html', cart_items=cart_items, total=total)
+        
+    except Exception as e:
+        print(f"Критическая ошибка при оформлении заказа: {str(e)}")
+        flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
+        return redirect(url_for('cart'))
 
 
 @app.route('/place_order', methods=['POST'])
@@ -1113,8 +1176,13 @@ def my_orders():
             return redirect(url_for('home'))
         
         # Получаем заказы текущего пользователя по user_id
-        orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
-        print(f"Найдено заказов: {len(orders)}")
+        try:
+            orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
+            print(f"Найдено заказов: {len(orders)}")
+        except Exception as e:
+            print(f"Ошибка при получении заказов из базы данных: {str(e)}")
+            flash('Произошла ошибка при получении заказов из базы данных', 'error')
+            return redirect(url_for('home'))
         
         orders_with_items = []
         for order in orders:
@@ -1146,12 +1214,22 @@ def my_orders():
                 total = sum(item.get('total', 0) for item in items)
                 print(f"- Количество товаров: {len(items)}")
                 
+                # Добавляем изображения к товарам
+                for item in items:
+                    if not item.get('image'):
+                        # Если изображение отсутствует, используем стандартное
+                        item['image'] = 'img/products/default-product.jpg'
+                    elif not item['image'].startswith('img/products/'):
+                        # Если путь к изображению некорректный, исправляем его
+                        item['image'] = f"img/products/{item['image'].split('/')[-1]}"
+                
                 orders_with_items.append({
                     'order': {
                         'id': order.id,
                         'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
                         'status': order.status,
-                        'total_amount': total
+                        'total_amount': total,
+                        'customer_info': order.customer_info
                     },
                     'items': items
                 })
@@ -1307,19 +1385,27 @@ def quick_order():
         # Ищем пользователя по email
         user = User.query.filter_by(email=email).first()
         print(f"Поиск пользователя по email {email}: {'Найден' if user else 'Не найден'}")
-        if user:
-            print(f"ID пользователя: {user.id}")
-            # Проверяем, не заблокирован ли пользователь
-            if not user.is_active:
-                print("Ошибка: Пользователь заблокирован")
-                return jsonify({
-                    'success': False,
-                    'message': 'Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.'
-                })
+        
+        if not user:
+            print("Ошибка: Пользователь не найден")
+            return jsonify({
+                'success': False,
+                'message': 'Для оформления заказа необходимо зарегистрироваться'
+            })
+            
+        print(f"ID пользователя: {user.id}")
+        
+        # Проверяем, не заблокирован ли пользователь
+        if not user.is_active:
+            print("Ошибка: Пользователь заблокирован")
+            return jsonify({
+                'success': False,
+                'message': 'Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.'
+            })
         
         # Создаем новый заказ
         new_order = Order(
-            user_id=user.id if user else None,
+            user_id=user.id,  # Теперь user_id всегда будет установлен
             total_amount=price * quantity,
             status='pending',
             items=[{
@@ -1348,14 +1434,13 @@ def quick_order():
         db.session.add(new_order)
         db.session.commit()
         print(f"Заказ успешно создан с ID: {new_order.id}")
-        print(f"Привязан к пользователю: {'Да' if new_order.user_id else 'Нет'}")
+        print(f"Привязан к пользователю: Да (ID: {user.id})")
 
         # Отправляем email с подтверждением
         email_sent = send_order_confirmation_email(email, new_order)
         if not email_sent:
             print(f"Ошибка при отправке email для заказа #{new_order.id}")
             # Не отменяем заказ, если email не отправился
-            # Но логируем ошибку для администратора
             # Отправляем уведомление администратору
             admin_notification = f"""
             Ошибка отправки email для заказа #{new_order.id}

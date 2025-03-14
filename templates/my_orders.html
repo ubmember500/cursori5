@@ -37,6 +37,17 @@
                             <p><strong>Дата заказа:</strong> {{ order_data.order.created_at }}</p>
                             <p><strong>Общая сумма:</strong> {{ "%.2f"|format(order_data.order.total_amount) }} грн</p>
                         </div>
+                        <div class="col-md-6">
+                            {% if order_data.order.customer_info %}
+                                <p><strong>Способ оплаты:</strong> {{ order_data.order.customer_info.get('payment_method', 'Не указан') }}</p>
+                                {% if order_data.order.customer_info.get('telegram') %}
+                                    <p><strong>Telegram:</strong> {{ order_data.order.customer_info.telegram }}</p>
+                                {% endif %}
+                                {% if order_data.order.customer_info.get('viber') %}
+                                    <p><strong>Viber:</strong> {{ order_data.order.customer_info.viber }}</p>
+                                {% endif %}
+                            {% endif %}
+                        </div>
                     </div>
                     
                     {% if order_data.items %}
@@ -56,19 +67,20 @@
                                         <tr>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    {% if item.image %}
                                                     <img src="{{ url_for('static', filename=item.image) }}" 
                                                          alt="{{ item.name }}" 
                                                          class="img-thumbnail me-2" 
-                                                         style="width: 50px; height: 50px; object-fit: cover;">
-                                                    {% endif %}
-                                                    {{ item.name }}
-                                                    {% if item.size or item.color %}
-                                                        <small class="text-muted ms-2">
-                                                            {% if item.size %}Размер: {{ item.size }}{% endif %}
-                                                            {% if item.color %}, Цвет: {{ item.color }}{% endif %}
-                                                        </small>
-                                                    {% endif %}
+                                                         style="width: 50px; height: 50px; object-fit: cover;"
+                                                         onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}';">
+                                                    <div>
+                                                        <div>{{ item.name }}</div>
+                                                        {% if item.size or item.color %}
+                                                            <small class="text-muted">
+                                                                {% if item.size %}Размер: {{ item.size }}{% endif %}
+                                                                {% if item.color %}, Цвет: {{ item.color }}{% endif %}
+                                                            </small>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>{{ item.quantity }}</td>
@@ -88,6 +100,16 @@
                     {% else %}
                         <div class="alert alert-warning">
                             В заказе отсутствуют товары
+                        </div>
+                    {% endif %}
+                    
+                    {% if order_data.order.customer_info %}
+                        <div class="mt-3">
+                            <h6>Информация о доставке:</h6>
+                            <p><strong>Получатель:</strong> {{ order_data.order.customer_info.get('name', 'Не указан') }}</p>
+                            <p><strong>Телефон:</strong> {{ order_data.order.customer_info.get('phone', 'Не указан') }}</p>
+                            <p><strong>Email:</strong> {{ order_data.order.customer_info.get('email', 'Не указан') }}</p>
+                            <p><strong>Адрес:</strong> {{ order_data.order.customer_info.get('address', 'Не указан') }}</p>
                         </div>
                     {% endif %}
                 </div>
