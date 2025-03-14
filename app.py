@@ -1173,7 +1173,7 @@ def my_orders():
         if not current_user.is_active:
             print("Ошибка: Пользователь заблокирован")
             flash('Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.', 'error')
-            return redirect(url_for('home'))
+            return render_template('my_orders.html', orders=[])
         
         # Получаем заказы текущего пользователя по user_id
         try:
@@ -1182,7 +1182,7 @@ def my_orders():
         except Exception as e:
             print(f"Ошибка при получении заказов из базы данных: {str(e)}")
             flash('Произошла ошибка при получении заказов из базы данных', 'error')
-            return redirect(url_for('home'))
+            return render_template('my_orders.html', orders=[])
         
         orders_with_items = []
         for order in orders:
@@ -1243,7 +1243,7 @@ def my_orders():
     except Exception as e:
         print(f"Критическая ошибка при получении заказов: {str(e)}")
         flash('Произошла ошибка при загрузке заказов. Пожалуйста, попробуйте позже.', 'error')
-        return redirect(url_for('home'))
+        return render_template('my_orders.html', orders=[])
 
 @app.route('/test_email')
 def test_email():
