@@ -898,6 +898,29 @@ body .btn:contains("В избранное") {
     </div>
 </div>
 
+<!-- Модальное окно с подтверждением заказа -->
+<div class="modal fade" id="orderSuccessModal" tabindex="-1" aria-labelledby="orderSuccessModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="orderSuccessModalLabel">Заказ успешно создан!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                    <p class="mt-3">Спасибо за ваш заказ! Мы свяжемся с вами в ближайшее время.</p>
+                    <p>Вы можете просмотреть статус вашего заказа в разделе "Мои заказы".</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Продолжить покупки</button>
+                <a href="/my_orders" class="btn btn-primary">Перейти к заказам</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function openQuickOrder() {
     const size = document.querySelector('input[name="size"]:checked')?.value;
@@ -1225,11 +1248,25 @@ function handleQuickOrder(event) {
         },
         body: JSON.stringify(orderData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Произошла ошибка при создании заказа');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            alert('Заказ успешно создан! Мы свяжемся с вами в ближайшее время.');
-            closeQuickOrderModal();
+            // Закрываем модальное окно заказа
+            const quickOrderModal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
+            quickOrderModal.hide();
+            
+            // Показываем модальное окно с подтверждением
+            const successModal = new bootstrap.Modal(document.getElementById('orderSuccessModal'));
+            successModal.show();
+            
+            // Очищаем форму
             form.reset();
         } else {
             alert(data.message || 'Произошла ошибка при создании заказа');
@@ -1237,7 +1274,12 @@ function handleQuickOrder(event) {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Произошла ошибка при отправке заказа');
+        if (error.message === 'Для оформления заказа необходимо авторизоваться') {
+            // Перенаправляем на страницу входа
+            window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+            alert(error.message || 'Произошла ошибка при отправке заказа');
+        }
     })
     .finally(() => {
         // Восстанавливаем кнопку
@@ -1246,13 +1288,13 @@ function handleQuickOrder(event) {
     });
 }
 
-// Добавляем обработчик для предотвращения закрытия формы с несохраненными данными
-document.getElementById('quickOrderModal').addEventListener('hide.bs.modal', function (event) {
-    const form = document.getElementById('quickOrderForm');
-    if (form.checkValidity()) {
-        if (!confirm('Вы уверены, что хотите закрыть форму? Все введенные данные будут потеряны.')) {
-            event.preventDefault();
-        }
+// Добавляем обработчик для кнопки "Перейти к заказам" в модальном окне подтверждения
+document.addEventListener('DOMContentLoaded', function() {
+    const viewOrdersButton = document.querySelector('#orderSuccessModal .btn-primary');
+    if (viewOrdersButton) {
+        viewOrdersButton.addEventListener('click', function() {
+            window.location.href = '/my_orders';
+        });
     }
 });
 </script>

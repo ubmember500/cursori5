@@ -1304,6 +1304,13 @@ def quick_order():
     try:
         data = request.get_json()
         
+        # Проверяем, авторизован ли пользователь
+        if not current_user.is_authenticated:
+            return jsonify({
+                'success': False,
+                'message': 'Для оформления заказа необходимо авторизоваться'
+            }), 401
+        
         # Проверяем обязательные поля
         required_fields = ['product_id', 'name', 'price', 'size', 'color', 'quantity', 
                          'customer_name', 'customer_email', 'customer_phone', 'payment_method', 'address']
@@ -1356,7 +1363,7 @@ def quick_order():
 
         # Создаем заказ
         order = Order(
-            user_id=current_user.id if current_user.is_authenticated else None,
+            user_id=current_user.id,  # Теперь всегда используем ID текущего пользователя
             total_amount=product.price * data['quantity'] + 60,
             status='pending',
             items=[{
@@ -1386,6 +1393,22 @@ def quick_order():
 
         try:
             db.session.add(order)
+            db.session.flush()  # Получаем ID заказа
+
+            # Создаем OrderItem
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                quantity=data['quantity'],
+                price=product.price,
+                size=data['size'],
+                color=data['color']
+            )
+            db.session.add(order_item)
+
+            # Уменьшаем количество товара на складе
+            product.stock -= data['quantity']
+
             db.session.commit()
 
             # Отправляем email клиенту
