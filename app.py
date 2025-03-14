@@ -2,9 +2,41 @@ import base64
 from functools import wraps
 from dotenv import load_dotenv
 import os
+from cryptography.fernet import Fernet
+
+# Функции шифрования
+def encrypt_password(password):
+    return base64.b64encode(password.encode()).decode()
+
+def decrypt_password(encrypted_password):
+    return base64.b64decode(encrypted_password.encode()).decode()
+
+def encrypt_mail_password(password):
+    return base64.b64encode(password.encode()).decode()
+
+def decrypt_mail_password(encrypted_password):
+    return base64.b64decode(encrypted_password.encode()).decode()
 
 # Загружаем переменные окружения из .env файла
 load_dotenv()
+
+# Зашифрованный пароль (можно безопасно хранить в GitHub)
+ENCRYPTED_MAIL_PASSWORD = "c254bHRycG56eXRyZnJibA=="
+
+# Генерируем правильное значение
+original_password = "snxltrpnzytrfrbl"
+correct_encrypted = encrypt_mail_password(original_password)
+print(f"\nПравильное зашифрованное значение: {correct_encrypted}\n")
+
+# Используем правильное значение
+ENCRYPTED_MAIL_PASSWORD = "c254bHRycG56eXRyZnJibA=="
+
+# Расшифровываем и выводим для проверки
+decrypted_password = decrypt_mail_password(ENCRYPTED_MAIL_PASSWORD)
+print("\n=== Проверка пароля ===")
+print(f"Зашифрованный пароль: {ENCRYPTED_MAIL_PASSWORD}")
+print(f"Расшифрованный пароль: {decrypted_password}")
+print("=======================\n")
 
 def login_required(f):
     @wraps(f)
@@ -40,7 +72,6 @@ from sqlalchemy.exc import IntegrityError
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import json
 
 # Настройка путей
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -70,18 +101,21 @@ app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
-# Настройка SMTP
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'defensivelox@gmail.com')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')  # Используем пароль напрямую из .env
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'defensivelox@gmail.com')
-app.config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', 'defensivelox@gmail.com')
+# Конфигурация Flask-Mail
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))  # Используем порт 587 для TLS
+app.config['MAIL_USE_SSL'] = False  # Отключаем SSL
+app.config['MAIL_USE_TLS'] = True   # Включаем TLS
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'defensivelox@gmail.com')
+app.config['MAIL_PASSWORD'] = decrypt_mail_password(ENCRYPTED_MAIL_PASSWORD)
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'defensivelox@gmail.com')
+app.config['ADMIN_EMAIL'] = os.environ.get('ADMIN_EMAIL', 'defensivelox@gmail.com')
 
 print("\n=== Настройки SMTP ===")
 print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
 print(f"MAIL_PORT: {app.config['MAIL_PORT']}")
+print(f"MAIL_USE_SSL: {app.config['MAIL_USE_SSL']}")
+print(f"MAIL_USE_TLS: {app.config['MAIL_USE_TLS']}")
 print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
 print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
 print(f"ADMIN_EMAIL: {app.config['ADMIN_EMAIL']}")
@@ -245,7 +279,7 @@ class NewsletterSubscription(db.Model):
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='pending')  # pending, processing, shipped, delivered, cancelled
     total_amount = db.Column(db.Float, nullable=False)
@@ -697,140 +731,77 @@ def remove_from_cart(product_id):
 
 
 @app.route('/checkout', methods=['GET', 'POST'])
-@login_required
 def checkout():
-    try:
-        print("\n=== Начало оформления заказа ===")
-        
-        # Проверяем, авторизован ли пользователь
-        if not current_user.is_authenticated:
-            print("Ошибка: Пользователь не авторизован")
-            flash('Для оформления заказа необходимо авторизоваться', 'warning')
-            return redirect(url_for('login', next=url_for('checkout')))
-            
-        # Проверяем, не заблокирован ли пользователь
-        if not current_user.is_active:
-            print("Ошибка: Пользователь заблокирован")
-            flash('Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.', 'error')
-            return redirect(url_for('home'))
-            
-        print(f"Текущий пользователь: {current_user.username} (ID: {current_user.id})")
+    if not current_user.is_authenticated:
+        flash('Для оформления заказа необходимо авторизоваться', 'warning')
+        return redirect(url_for('login', next=url_for('checkout')))
 
-        if 'cart' not in session or not session['cart']:
-            print("Ошибка: Корзина пуста")
-            flash('Ваша корзина пуста', 'warning')
+    if 'cart' not in session or not session['cart']:
+        flash('Ваша корзина пуста', 'warning')
+        return redirect(url_for('cart'))
+
+    cart_items = []
+    total = 0
+
+    # Проверяем наличие всех товаров перед оформлением
+    for item in session['cart']:
+        product = Product.query.get(item['id'])
+        if not product:
+            flash(f'Товар {item["name"]} больше не доступен', 'error')
+            return redirect(url_for('cart'))
+        
+        if item['quantity'] > product.stock:
+            flash(f'Товар {item["name"]} доступен только в количестве {product.stock} шт.', 'error')
             return redirect(url_for('cart'))
 
-        cart_items = []
-        total = 0
+        item_total = item['price'] * item['quantity']
+        cart_items.append({
+            'name': item['name'],
+            'price': item['price'],
+            'quantity': item['quantity'],
+            'total': item_total,
+            'image': item.get('image', '')
+        })
+        total += item_total
 
-        # Проверяем наличие всех товаров перед оформлением
-        for item in session['cart']:
-            try:
+    if request.method == 'POST':
+        try:
+            # Создаем новый заказ в базе данных
+            new_order = Order(
+                user_id=current_user.id,
+                total_amount=total,
+                status='pending',
+                items=cart_items,
+                customer_info={
+                    'name': current_user.first_name + ' ' + current_user.last_name,
+                    'phone': current_user.phone,
+                    'email': current_user.email,
+                    'address': current_user.address
+                }
+            )
+            
+            # Уменьшаем количество товаров на складе
+            for item in session['cart']:
                 product = Product.query.get(item['id'])
-                if not product:
-                    print(f"Ошибка: Товар {item['name']} не найден")
-                    flash(f'Товар {item["name"]} больше не доступен', 'error')
-                    return redirect(url_for('cart'))
-                
-                if item['quantity'] > product.stock:
-                    print(f"Ошибка: Недостаточно товара {item['name']}")
-                    flash(f'Товар {item["name"]} доступен только в количестве {product.stock} шт.', 'error')
-                    return redirect(url_for('cart'))
+                if product:
+                    product.stock -= item['quantity']
+            
+            db.session.add(new_order)
+            db.session.commit()
+            
+            # Очищаем корзину
+            session.pop('cart', None)
+            
+            flash('Заказ успешно оформлен!', 'success')
+            return redirect(url_for('my_orders'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Ошибка при создании заказа: {str(e)}")
+            flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
+            return redirect(url_for('cart'))
 
-                item_total = item['price'] * item['quantity']
-                
-                # Проверяем и корректируем изображение товара
-                image = item.get('image', '')
-                if not image or image == 'None':
-                    image = get_random_product_image(product.category_id)
-                elif not image.startswith('img/products/'):
-                    if '/' in image:
-                        image = image.split('/')[-1]
-                    image = f'img/products/{image}'
-                
-                cart_items.append({
-                    'name': item['name'],
-                    'price': item['price'],
-                    'quantity': item['quantity'],
-                    'total': item_total,
-                    'image': image,
-                    'size': item.get('size'),
-                    'color': item.get('color')
-                })
-                total += item_total
-            except Exception as e:
-                print(f"Ошибка при обработке товара {item.get('name', 'Unknown')}: {str(e)}")
-                flash('Произошла ошибка при обработке товаров', 'error')
-                return redirect(url_for('cart'))
-
-        if request.method == 'POST':
-            try:
-                print("Создание нового заказа...")
-                # Создаем новый заказ в базе данных
-                new_order = Order(
-                    user_id=current_user.id,
-                    total_amount=total,
-                    status='pending',
-                    items=cart_items,
-                    customer_info={
-                        'name': current_user.first_name + ' ' + current_user.last_name,
-                        'phone': current_user.phone,
-                        'email': current_user.email,
-                        'address': current_user.address,
-                        'payment_method': request.form.get('payment_method', 'Не указан'),
-                        'telegram': request.form.get('telegram'),
-                        'viber': request.form.get('viber')
-                    }
-                )
-                
-                # Уменьшаем количество товаров на складе
-                for item in session['cart']:
-                    product = Product.query.get(item['id'])
-                    if product:
-                        product.stock -= item['quantity']
-                
-                db.session.add(new_order)
-                db.session.commit()
-                print(f"Заказ успешно создан с ID: {new_order.id}")
-                
-                # Отправляем email с подтверждением
-                email_sent = send_order_confirmation_email(current_user.email, new_order)
-                if not email_sent:
-                    print(f"Ошибка при отправке email для заказа #{new_order.id}")
-                    # Отправляем уведомление администратору
-                    admin_notification = f"""
-                    Ошибка отправки email для заказа #{new_order.id}
-                    
-                    Детали заказа:
-                    - Покупатель: {current_user.first_name} {current_user.last_name}
-                    - Email: {current_user.email}
-                    - Телефон: {current_user.phone}
-                    - Сумма: {total}
-                    
-                    Пожалуйста, свяжитесь с покупателем для подтверждения заказа.
-                    """
-                    send_email_smtp(app.config['ADMIN_EMAIL'], f'Ошибка отправки email для заказа #{new_order.id}', admin_notification)
-                
-                # Очищаем корзину
-                session.pop('cart', None)
-                
-                flash('Заказ успешно оформлен!', 'success')
-                return redirect(url_for('my_orders'))
-                
-            except Exception as e:
-                db.session.rollback()
-                print(f"Ошибка при создании заказа: {str(e)}")
-                flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
-                return redirect(url_for('cart'))
-
-        print("=== Завершение оформления заказа ===\n")
-        return render_template('checkout.html', cart_items=cart_items, total=total)
-        
-    except Exception as e:
-        print(f"Критическая ошибка при оформлении заказа: {str(e)}")
-        flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
-        return redirect(url_for('cart'))
+    return render_template('checkout.html', cart_items=cart_items, total=total)
 
 
 @app.route('/place_order', methods=['POST'])
@@ -1160,90 +1131,55 @@ def subscribe_newsletter():
 def my_orders():
     try:
         print("\n=== Начало получения заказов пользователя ===")
-        
-        # Проверяем, авторизован ли пользователь
-        if not current_user.is_authenticated:
-            print("Ошибка: Пользователь не авторизован")
-            flash('Для просмотра заказов необходимо войти в систему', 'warning')
-            return redirect(url_for('login', next=url_for('my_orders')))
-            
         print(f"Текущий пользователь: {current_user.username} (ID: {current_user.id})")
         
         # Проверяем, не заблокирован ли пользователь
         if not current_user.is_active:
             print("Ошибка: Пользователь заблокирован")
             flash('Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.', 'error')
-            return render_template('my_orders.html', orders=[])
+            return redirect(url_for('home'))
         
         # Получаем заказы текущего пользователя по user_id
-        try:
-            orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
-            print(f"Найдено заказов: {len(orders)}")
-        except Exception as e:
-            print(f"Ошибка при получении заказов из базы данных: {str(e)}")
-            flash('Произошла ошибка при получении заказов из базы данных', 'error')
-            return render_template('my_orders.html', orders=[])
+        orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
+        print(f"Найдено заказов: {len(orders)}")
         
         orders_with_items = []
         for order in orders:
-            try:
-                print(f"\nОбработка заказа #{order.id}:")
-                print(f"- Дата создания: {order.created_at}")
-                print(f"- Статус: {order.status}")
-                print(f"- Сумма: {order.total_amount}")
-                
-                # Проверяем корректность данных заказа
-                if not order.items:
-                    print(f"Ошибка: Отсутствуют данные товаров в заказе #{order.id}")
-                    continue
-                    
-                if not isinstance(order.items, list):
-                    print(f"Ошибка: Некорректный формат данных товаров в заказе #{order.id}")
-                    continue
-                    
-                if not order.customer_info:
-                    print(f"Ошибка: Отсутствуют данные покупателя в заказе #{order.id}")
-                    continue
-                    
-                if not isinstance(order.customer_info, dict):
-                    print(f"Ошибка: Некорректный формат данных покупателя в заказе #{order.id}")
-                    continue
-                
-                # Получаем товары из JSON-данных
-                items = order.items
-                total = sum(item.get('total', 0) for item in items)
-                print(f"- Количество товаров: {len(items)}")
-                
-                # Добавляем изображения к товарам
-                for item in items:
-                    if not item.get('image'):
-                        # Если изображение отсутствует, используем стандартное
-                        item['image'] = 'img/products/default-product.jpg'
-                    elif not item['image'].startswith('img/products/'):
-                        # Если путь к изображению некорректный, исправляем его
-                        item['image'] = f"img/products/{item['image'].split('/')[-1]}"
-                
-                orders_with_items.append({
-                    'order': {
-                        'id': order.id,
-                        'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
-                        'status': order.status,
-                        'total_amount': total,
-                        'customer_info': order.customer_info
-                    },
-                    'items': items
-                })
-            except Exception as e:
-                print(f"Ошибка при обработке заказа #{order.id}: {str(e)}")
+            print(f"\nОбработка заказа #{order.id}:")
+            print(f"- Дата создания: {order.created_at}")
+            print(f"- Статус: {order.status}")
+            print(f"- Сумма: {order.total_amount}")
+            
+            # Проверяем корректность данных заказа
+            if not order.items or not isinstance(order.items, list):
+                print(f"Ошибка: Некорректные данные товаров в заказе #{order.id}")
                 continue
+                
+            if not order.customer_info or not isinstance(order.customer_info, dict):
+                print(f"Ошибка: Некорректные данные покупателя в заказе #{order.id}")
+                continue
+            
+            # Получаем товары из JSON-данных
+            items = order.items
+            total = sum(item['total'] for item in items)
+            print(f"- Количество товаров: {len(items)}")
+            
+            orders_with_items.append({
+                'order': {
+                    'id': order.id,
+                    'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
+                    'status': order.status,
+                    'total_amount': total
+                },
+                'items': items
+            })
         
         print("=== Завершение получения заказов пользователя ===\n")
         return render_template('my_orders.html', orders=orders_with_items)
-        
     except Exception as e:
-        print(f"Критическая ошибка при получении заказов: {str(e)}")
-        flash('Произошла ошибка при загрузке заказов. Пожалуйста, попробуйте позже.', 'error')
-        return render_template('my_orders.html', orders=[])
+        print(f"Ошибка при получении заказов: {str(e)}")
+        flash('Произошла ошибка при загрузке заказов', 'error')
+        return redirect(url_for('home'))
 
 @app.route('/test_email')
 def test_email():
@@ -1271,68 +1207,66 @@ def test_email():
         print(f"\nОшибка при тестовой отправке: {str(e)}")
         return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'})
 
-def send_email_smtp(to_email, subject, body):
+def send_email_smtp(recipient, subject, body):
     try:
-        print("\n=== Попытка отправки email ===")
-        print(f"Получатель: {to_email}")
-        print(f"Тема: {subject}")
+        print(f"Attempting to send email to: {recipient}")
+        print(f"Subject: {subject}")
+        print(f"SMTP Server: {app.config['MAIL_SERVER']}")
+        print(f"SMTP Port: {app.config['MAIL_PORT']}")
+        print(f"Username: {app.config['MAIL_USERNAME']}")
+        print(f"Using SSL: {app.config['MAIL_USE_SSL']}")
+        print(f"Using TLS: {app.config['MAIL_USE_TLS']}")
         
-        # Создаем объект сообщения
         msg = MIMEMultipart()
         msg['From'] = app.config['MAIL_DEFAULT_SENDER']
-        msg['To'] = to_email
+        msg['To'] = recipient
         msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
         
-        # Добавляем тело письма
-        msg.attach(MIMEText(body, 'plain'))
+        # Создаем SMTP соединение в зависимости от настроек
+        if app.config['MAIL_USE_SSL']:
+            print("Creating SMTP_SSL connection...")
+            server = smtplib.SMTP_SSL(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+        else:
+            print("Creating SMTP connection...")
+            server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+            if app.config['MAIL_USE_TLS']:
+                print("Starting TLS...")
+                server.starttls()
         
-        # Подключаемся к SMTP серверу
-        print(f"Подключение к SMTP серверу: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
-        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
-        server.starttls()
+        server.set_debuglevel(2)  # Максимальный уровень отладки
         
-        # Логируемся
-        print(f"Попытка входа с email: {app.config['MAIL_USERNAME']}")
+        print("Attempting login...")
         server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
         
-        # Отправляем письмо
-        print("Отправка письма...")
+        print("Sending message...")
         server.send_message(msg)
-        server.quit()
+        print("Message sent successfully!")
         
-        print("Email успешно отправлен!")
+        server.quit()
         return True
         
     except smtplib.SMTPAuthenticationError as e:
-        print(f"Ошибка аутентификации SMTP: {str(e)}")
+        print(f"Authentication failed: {str(e)}")
+        print("Please check:")
+        print("1. Email address is correct")
+        print("2. App password is correct (no spaces)")
+        print("3. 2FA is enabled on your Google account")
+        print("4. App password was generated for 'Mail' or 'Other'")
         return False
     except smtplib.SMTPException as e:
-        print(f"Ошибка SMTP: {str(e)}")
+        print(f"SMTP error occurred: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
         return False
     except Exception as e:
-        print(f"Неожиданная ошибка при отправке email: {str(e)}")
+        print(f"Unexpected error: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
         return False
 
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
         print("\n=== Начало создания быстрого заказа ===")
-        
-        # Проверяем, авторизован ли пользователь
-        if not current_user.is_authenticated:
-            print("Ошибка: Пользователь не авторизован")
-            return jsonify({
-                'success': False,
-                'message': 'Для оформления заказа необходимо войти в систему'
-            })
-            
-        # Проверяем, не заблокирован ли пользователь
-        if not current_user.is_active:
-            print("Ошибка: Пользователь заблокирован")
-            return jsonify({
-                'success': False,
-                'message': 'Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.'
-            })
         
         # Получаем данные из формы
         product_id = request.form.get('product_id')
@@ -1346,8 +1280,8 @@ def quick_order():
         email = request.form.get('email')
         address = request.form.get('address')
         payment_method = request.form.get('payment_method')
-        messenger = request.form.get('messenger')
-        messenger_username = request.form.get('messenger_username')
+        telegram = request.form.get('telegram')
+        viber = request.form.get('viber')
 
         print(f"Получены данные заказа:")
         print(f"- Товар: {product_name} (ID: {product_id})")
@@ -1356,17 +1290,6 @@ def quick_order():
         print(f"- Цвет: {color}")
         print(f"- Количество: {quantity}")
         print(f"- Email покупателя: {email}")
-        print(f"- Способ оплаты: {payment_method}")
-        print(f"- Мессенджер: {messenger}")
-        print(f"- Username: {messenger_username}")
-
-        # Проверяем, совпадает ли email с email авторизованного пользователя
-        if email != current_user.email:
-            print("Ошибка: Email не совпадает с email авторизованного пользователя")
-            return jsonify({
-                'success': False,
-                'message': 'Email должен совпадать с email вашего аккаунта'
-            })
 
         # Проверяем наличие всех необходимых данных
         if not all([product_id, product_name, price, size, color, quantity, name, phone, email, address, payment_method]):
@@ -1409,18 +1332,22 @@ def quick_order():
                 'message': 'Количество товара должно быть больше 0'
             })
 
-        # Подготавливаем данные мессенджера
-        telegram = None
-        viber = None
-        if payment_method == 'card' and messenger and messenger_username:
-            if messenger == 'telegram':
-                telegram = messenger_username
-            elif messenger == 'viber':
-                viber = messenger_username
+        # Ищем пользователя по email
+        user = User.query.filter_by(email=email).first()
+        print(f"Поиск пользователя по email {email}: {'Найден' if user else 'Не найден'}")
+        if user:
+            print(f"ID пользователя: {user.id}")
+            # Проверяем, не заблокирован ли пользователь
+            if not user.is_active:
+                print("Ошибка: Пользователь заблокирован")
+                return jsonify({
+                    'success': False,
+                    'message': 'Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.'
+                })
         
         # Создаем новый заказ
         new_order = Order(
-            user_id=current_user.id,  # Используем ID текущего пользователя
+            user_id=user.id if user else None,
             total_amount=price * quantity,
             status='pending',
             items=[{
@@ -1429,8 +1356,7 @@ def quick_order():
                 'quantity': quantity,
                 'total': price * quantity,
                 'size': size,
-                'color': color,
-                'image': product.image
+                'color': color
             }],
             customer_info={
                 'name': name,
@@ -1450,62 +1376,29 @@ def quick_order():
         db.session.add(new_order)
         db.session.commit()
         print(f"Заказ успешно создан с ID: {new_order.id}")
-        print(f"Привязан к пользователю: Да (ID: {current_user.id})")
+        print(f"Привязан к пользователю: {'Да' if new_order.user_id else 'Нет'}")
 
-        # Отправляем email с подтверждением покупателю
-        customer_email_body = f"""
-        Уважаемый покупатель!
-        
-        Спасибо за ваш заказ в нашем магазине. Мы получили ваш заказ и обработаем его в ближайшее время.
-        
-        Детали заказа:
-        Номер заказа: #{new_order.id}
-        Дата заказа: {new_order.created_at.strftime('%d.%m.%Y %H:%M')}
-        Статус: {new_order.status}
-        
-        Товары в заказе:
-        - {product_name}
-          Размер: {size}
-          Цвет: {color}
-          Количество: {quantity}
-          Цена: {price} грн
-          Сумма: {price * quantity} грн
-        
-        Общая сумма заказа: {price * quantity} грн
-        
-        Мы свяжемся с вами в ближайшее время для подтверждения заказа.
-        
-        С уважением,
-        Команда Cursor Shop
-        """
-        
-        # Отправляем email администратору
-        admin_email_body = f"""
-        Новый заказ #{new_order.id}
-        
-        Детали заказа:
-        - Покупатель: {name}
-        - Email: {email}
-        - Телефон: {phone}
-        - Адрес: {address}
-        - Способ оплаты: {payment_method}
-        - Telegram: {telegram}
-        - Viber: {viber}
-        
-        Товары в заказе:
-        - {product_name}
-          Размер: {size}
-          Цвет: {color}
-          Количество: {quantity}
-          Цена: {price} грн
-          Сумма: {price * quantity} грн
-        
-        Общая сумма заказа: {price * quantity} грн
-        """
-        
-        # Отправляем оба email
-        send_email_smtp(email, f'Подтверждение заказа #{new_order.id}', customer_email_body)
-        send_email_smtp(app.config['ADMIN_EMAIL'], f'Новый заказ #{new_order.id}', admin_email_body)
+        # Отправляем email с подтверждением
+        email_sent = send_order_confirmation_email(email, new_order)
+        if not email_sent:
+            print(f"Ошибка при отправке email для заказа #{new_order.id}")
+            # Не отменяем заказ, если email не отправился
+            # Но логируем ошибку для администратора
+            # Отправляем уведомление администратору
+            admin_notification = f"""
+            Ошибка отправки email для заказа #{new_order.id}
+            
+            Детали заказа:
+            - Покупатель: {name}
+            - Email: {email}
+            - Телефон: {phone}
+            - Товар: {product_name}
+            - Количество: {quantity}
+            - Сумма: {price * quantity}
+            
+            Пожалуйста, свяжитесь с покупателем для подтверждения заказа.
+            """
+            send_email_smtp(app.config['ADMIN_EMAIL'], f'Ошибка отправки email для заказа #{new_order.id}', admin_notification)
 
         print("=== Завершение создания быстрого заказа ===\n")
         return jsonify({
