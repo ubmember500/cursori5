@@ -1334,7 +1334,8 @@ def quick_order():
             }), 400
         
         # Проверяем наличие всех необходимых полей
-        required_fields = ['product_id', 'quantity', 'customer_name', 'customer_email', 'customer_phone', 'size', 'color', 'address']
+        required_fields = ['product_id', 'quantity', 'customer_name', 'customer_email', 
+                         'customer_phone', 'size', 'color', 'address', 'payment_method']
         missing_fields = [field for field in required_fields if not data.get(field)]
         
         if missing_fields:
@@ -1342,6 +1343,20 @@ def quick_order():
             return jsonify({
                 'success': False,
                 'message': f'Пожалуйста, заполните все обязательные поля: {", ".join(missing_fields)}'
+            }), 400
+
+        # Валидация email
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", data['customer_email']):
+            return jsonify({
+                'success': False,
+                'message': 'Пожалуйста, введите корректный email адрес'
+            }), 400
+
+        # Валидация телефона
+        if not re.match(r'^\+?[0-9]{10,15}$', data['customer_phone']):
+            return jsonify({
+                'success': False,
+                'message': 'Пожалуйста, введите корректный номер телефона'
             }), 400
 
         try:
@@ -1390,6 +1405,14 @@ def quick_order():
                 'message': 'Пожалуйста, выберите размер и цвет товара'
             }), 400
 
+        # Проверяем метод оплаты
+        payment_method = data.get('payment_method')
+        if payment_method not in ['cash', 'card']:
+            return jsonify({
+                'success': False,
+                'message': 'Пожалуйста, выберите корректный способ оплаты'
+            }), 400
+
         # Создаем заказ
         try:
             # Рассчитываем стоимость
@@ -1415,7 +1438,7 @@ def quick_order():
                 'email': data['customer_email'],
                 'phone': data['customer_phone'],
                 'address': data['address'],
-                'payment_method': data.get('payment_method', 'cash'),
+                'payment_method': payment_method,
                 'delivery_cost': delivery_cost,
                 'order_date': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             }
@@ -1438,7 +1461,7 @@ def quick_order():
                 customer_name=data['customer_name'],
                 customer_email=data['customer_email'],
                 customer_phone=data['customer_phone'],
-                payment_method=data.get('payment_method', 'cash')
+                payment_method=payment_method
             )
 
             print("\nСохранение заказа в базу данных...")

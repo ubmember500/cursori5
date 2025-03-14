@@ -751,10 +751,10 @@ body .btn:contains("В избранное") {
                                 </div>
                                 
                                 <form id="quickOrderForm" onsubmit="handleQuickOrder(event)" novalidate>
-                                    <input type="hidden" id="quick_order_product_id" name="product_id">
+                                    <input type="hidden" id="quick_order_product_id" name="product_id" value="{{ product.id }}">
                                     <input type="hidden" id="quick_order_size" name="size">
                                     <input type="hidden" id="quick_order_color" name="color">
-                                    <input type="hidden" id="quick_order_quantity" name="quantity">
+                                    <input type="hidden" id="quick_order_quantity" name="quantity" value="1">
                                     
                                     <div class="mb-3">
                                         <label for="customer_name" class="form-label">Ваше имя *</label>
@@ -778,25 +778,30 @@ body .btn:contains("В избранное") {
                                     
                                     <div class="mb-3">
                                         <label for="payment_method" class="form-label">Способ оплаты *</label>
-                                        <select class="form-control" id="payment_method" name="payment_method" required>
+                                        <select class="form-control" id="payment_method" name="payment_method" required onchange="togglePaymentFields()">
                                             <option value="cash">Наличными при получении</option>
                                             <option value="card">Оплата картой онлайн</option>
                                         </select>
                                     </div>
                                     
-                                    <div id="cardPaymentFields">
+                                    <div id="cardPaymentFields" style="display: none;">
                                         <div class="mb-3">
                                             <label for="card_number" class="form-label">Номер карты *</label>
-                                            <input type="text" class="form-control" id="card_number" name="card_number">
+                                            <input type="text" class="form-control" id="card_number" name="card_number" 
+                                                   pattern="\d{4}\s\d{4}\s\d{4}\s\d{4}" 
+                                                   oninput="formatCardNumber(this)">
                                         </div>
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="card_expiry" class="form-label">Срок действия *</label>
-                                                <input type="text" class="form-control" id="card_expiry" name="card_expiry" placeholder="MM/YY">
+                                                <input type="text" class="form-control" id="card_expiry" name="card_expiry" 
+                                                       placeholder="MM/YY" pattern="\d{2}/\d{2}"
+                                                       oninput="formatCardExpiry(this)">
                                             </div>
                                             <div class="col-md-6 mb-3">
                                                 <label for="card_cvv" class="form-label">CVV *</label>
-                                                <input type="text" class="form-control" id="card_cvv" name="card_cvv">
+                                                <input type="text" class="form-control" id="card_cvv" name="card_cvv" 
+                                                       pattern="\d{3}" maxlength="3">
                                             </div>
                                         </div>
                                     </div>
@@ -935,7 +940,7 @@ function openQuickOrder() {
     const size = document.querySelector('input[name="size"]:checked')?.value;
     const color = document.querySelector('.color-option.active')?.dataset.color;
     const quantity = parseInt(document.getElementById('quantity').value) || 1;
-    const maxStock = {{ product.stock }};
+    const maxStock = parseInt('{{ product.stock }}');
     
     if (!size || !color) {
         alert('Пожалуйста, выберите размер и цвет товара');
@@ -955,19 +960,19 @@ function openQuickOrder() {
     const form = document.getElementById('quickOrderForm');
     
     // Заполняем скрытые поля формы
-    document.getElementById('quick_order_product_id').value = "{{ product.id }}";
+    document.getElementById('quick_order_product_id').value = '{{ product.id }}';
     document.getElementById('quick_order_size').value = size;
     document.getElementById('quick_order_color').value = color;
     document.getElementById('quick_order_quantity').value = quantity;
     
     // Заполняем детали заказа в модальном окне
-    document.getElementById('order_product_name').textContent = "{{ product.name }}";
+    document.getElementById('order_product_name').textContent = '{{ product.name }}';
     document.getElementById('order_size').textContent = size;
     document.getElementById('order_color').textContent = color;
     document.getElementById('order_quantity').textContent = quantity;
     
     // Обновляем цены
-    const productPrice = {{ product.price }};
+    const productPrice = parseFloat('{{ product.price }}');
     const productTotal = productPrice * quantity;
     const deliveryCost = 60;
     const totalAmount = productTotal + deliveryCost;
@@ -980,276 +985,12 @@ function openQuickOrder() {
     modal.show();
 }
 
-function closeQuickOrder() {
-    const modal = document.getElementById('quickOrderModal');
-    const backdrop = document.querySelector('.modal-backdrop');
-    
-    if (modal) {
-        modal.classList.remove('show');
-        modal.classList.add('hiding');
-    }
-    
-    if (backdrop) {
-        backdrop.classList.remove('show');
-        backdrop.classList.add('hiding');
-    }
-    
-    // Даем время на анимацию
-    setTimeout(() => {
-        if (modal) modal.style.display = 'none';
-        if (backdrop) backdrop.remove();
-        document.body.style.overflow = '';
-        
-        // Удаляем классы hiding
-        if (modal) modal.classList.remove('hiding');
-    }, 300);
-}
-
-function updateOrderTotal() {
-    const quantity = parseInt(document.getElementById('quick_order_quantity').value) || 1;
-    const productPrice = parseFloat('{{ product.price }}');
-    const productTotal = productPrice * quantity;
-    
-    const productTotalElement = document.getElementById('product_total');
-    const codTotalElement = document.getElementById('cod_total');
-    
-    if (productTotalElement) {
-        productTotalElement.textContent = productTotal.toFixed(2);
-    }
-    
-    if (codTotalElement) {
-        codTotalElement.textContent = (productTotal + 60).toFixed(2);
-    }
-}
-
-// Добавляем обработчики событий при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    // Инициализация Bootstrap модального окна
-    const quickOrderModal = new bootstrap.Modal(document.getElementById('quickOrderModal'));
-    
-    // Обработчики изменения количества товара
-    const quantityInput = document.getElementById('quantity');
-    if (quantityInput) {
-        quantityInput.addEventListener('change', function() {
-            document.getElementById('cart_quantity').value = this.value;
-            updateOrderTotal();
-        });
-    }
-
-    // Обработчики изменения размера
-    document.querySelectorAll('input[name="size"]').forEach(input => {
-        input.addEventListener('change', function() {
-            document.getElementById('cart_size').value = this.value;
-        });
-    });
-
-    // Обработчики изменения цвета
-    document.querySelectorAll('.color-option').forEach(option => {
-        option.addEventListener('click', function() {
-            // Удаляем класс active у всех опций
-            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
-            // Добавляем класс active к выбранной опции
-            this.classList.add('active');
-            // Устанавливаем значение в скрытое поле
-            document.getElementById('cart_color').value = this.dataset.color;
-        });
-    });
-
-    // Обработчик изменения количества в модальном окне
-    const quickQuantityInput = document.getElementById('quick_order_quantity');
-    if (quickQuantityInput) {
-        quickQuantityInput.addEventListener('change', updateOrderTotal);
-    }
-
-    // Обработчик кнопки "Купить"
-    document.querySelector('.btn-primary').addEventListener('click', function(e) {
-        e.preventDefault();
-        const size = document.getElementById('cart_size').value;
-        const color = document.getElementById('cart_color').value;
-        const quantity = document.getElementById('cart_quantity').value;
-
-        if (!size || !color) {
-            alert('Пожалуйста, выберите размер и цвет');
-            return;
-        }
-
-        if (quantity < 1) {
-            alert('Пожалуйста, выберите количество');
-            return;
-        }
-
-        // Заполняем форму данными
-        const form = document.getElementById('quickOrderForm');
-        form.querySelector('input[name="quick_order_product_name"]').value = "{{ product.name }}";
-        form.querySelector('input[name="quick_order_size"]').value = size;
-        form.querySelector('input[name="quick_order_color"]').value = color;
-        form.querySelector('input[name="quick_order_quantity"]').value = quantity;
-        form.querySelector('input[name="quick_order_price"]').value = {{ product.price }};
-        
-        // Заполняем детали заказа
-        document.getElementById('order_product_name').textContent = "{{ product.name }}";
-        document.getElementById('order_size').textContent = size;
-        document.getElementById('order_color').textContent = color;
-        document.getElementById('order_quantity').textContent = quantity;
-        document.getElementById('order_price').textContent = ({{ product.price }} * quantity).toFixed(2);
-        document.getElementById('order_total').textContent = ({{ product.price }} * quantity + 60).toFixed(2);
-        
-        // Показываем модальное окно
-        quickOrderModal.show();
-    });
-
-    // Обработчик закрытия модального окна
-    document.getElementById('quickOrderModal').addEventListener('hidden.bs.modal', function () {
-        document.body.style.overflow = '';
-    });
-
-    // Обработчики для синхронизации значений между формами
-    document.querySelectorAll('input[name="size"]').forEach(input => {
-        input.addEventListener('change', function() {
-            document.getElementById('cart_size').value = this.value;
-        });
-    });
-
-    document.querySelectorAll('input[name="color"]').forEach(input => {
-        input.addEventListener('change', function() {
-            document.getElementById('cart_color').value = this.value;
-        });
-    });
-
-    document.getElementById('quantity').addEventListener('change', function() {
-        document.getElementById('cart_quantity').value = this.value;
-    });
-
-    const decreaseBtn = document.getElementById('decrease-qty');
-    const increaseBtn = document.getElementById('increase-qty');
-
-    decreaseBtn.addEventListener('click', function() {
-        let value = parseInt(quantityInput.value);
-        if (value > 1) {
-            quantityInput.value = value - 1;
-            document.getElementById('cart_quantity').value = value - 1;
-        }
-    });
-
-    increaseBtn.addEventListener('click', function() {
-        let value = parseInt(quantityInput.value);
-        let maxStock = {{ product.stock }};
-        if (value < maxStock) {
-            quantityInput.value = value + 1;
-            document.getElementById('cart_quantity').value = value + 1;
-        }
-    });
-
-    // Color options
-    const colorOptions = document.querySelectorAll('.color-option');
-    colorOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            colorOptions.forEach(opt => opt.classList.remove('active'));
-            this.classList.add('active');
-            document.getElementById('cart_color').value = this.dataset.color;
-        });
-    });
-
-    // Функция для переключения полей оплаты картой
-    const form = document.getElementById('quickOrderForm');
-    const cardFields = document.getElementById('cardPaymentFields');
-    
-    // Обработчик изменения способа оплаты
-    form.addEventListener('change', function(e) {
-        if (e.target.name === 'payment_method') {
-            cardFields.style.display = e.target.value === 'card' ? 'block' : 'none';
-        }
-    });
-    
-    // Форматирование номера карты
-    const cardNumber = document.getElementById('card_number');
-    cardNumber.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        value = value.substring(0, 16);
-        value = value.replace(/(.{4})(?=\d)/g, '$1 ');
-        e.target.value = value;
-    });
-    
-    // Форматирование срока действия карты
-    const cardExpiry = document.getElementById('card_expiry');
-    cardExpiry.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        value = value.substring(0, 4);
-        if (value.length > 2) {
-            value = value.substring(0, 2) + '/' + value.substring(2);
-        }
-        e.target.value = value;
-    });
-    
-    // Форматирование CVV
-    const cardCvv = document.getElementById('card_cvv');
-    cardCvv.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        e.target.value = value.substring(0, 3);
-    });
-    
-    // Добавляем обработчик отправки формы
-    form.addEventListener('submit', handleQuickOrder);
-});
-
-function changeImage(src) {
-    document.getElementById('mainImage').src = src;
-}
-
-function togglePaymentFields() {
-    const paymentMethod = document.getElementById('payment_method').value;
-    const cardFields = document.getElementById('cardPaymentFields');
-    
-    if (paymentMethod === 'card') {
-        cardFields.style.display = 'block';
-        document.getElementById('card_number').required = true;
-        document.getElementById('card_expiry').required = true;
-        document.getElementById('card_cvv').required = true;
-    } else {
-        cardFields.style.display = 'none';
-        document.getElementById('card_number').required = false;
-        document.getElementById('card_expiry').required = false;
-        document.getElementById('card_cvv').required = false;
-    }
-}
-
-// Обновляем цены при изменении количества
-document.getElementById('cart_quantity').addEventListener('change', function() {
-    if (document.getElementById('payment_method').value === 'cod') {
-        const productPrice = parseFloat('{{ product.price }}');
-        const quantity = parseInt(this.value);
-        const productTotal = productPrice * quantity;
-        document.getElementById('product_total').textContent = productTotal.toFixed(2);
-        document.getElementById('cod_total').textContent = (productTotal + 60).toFixed(2);
-    }
-});
-
 function validateEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function validatePhone(phone) {
     return /^\+?[0-9]{10,15}$/.test(phone);
-}
-
-function validateForm(formData) {
-    const requiredFields = ['customer_name', 'customer_email', 'customer_phone', 'address'];
-    const missingFields = requiredFields.filter(field => !formData.get(field));
-    
-    if (missingFields.length > 0) {
-        alert(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
-        return false;
-    }
-
-    // Валидация количества
-    const quantity = parseInt(document.getElementById('quick_order_quantity').value);
-    const maxStock = {{ product.stock }};
-    if (quantity > maxStock) {
-        alert(`Максимальное количество товара: ${maxStock}`);
-        return false;
-    }
-
-    return true;
 }
 
 async function handleQuickOrder(event) {
@@ -1274,7 +1015,7 @@ async function handleQuickOrder(event) {
         };
         
         // Проверяем наличие всех необходимых данных
-        const requiredFields = ['product_id', 'size', 'color', 'quantity', 'customer_name', 'customer_email', 'customer_phone', 'address'];
+        const requiredFields = ['product_id', 'size', 'color', 'quantity', 'customer_name', 'customer_email', 'customer_phone', 'address', 'payment_method'];
         const missingFields = requiredFields.filter(field => !orderData[field]);
         
         if (missingFields.length > 0) {
@@ -1295,8 +1036,9 @@ async function handleQuickOrder(event) {
         }
 
         // Валидация количества
-        if (orderData.quantity <= 0 || orderData.quantity > {{ product.stock }}) {
-            alert(`Пожалуйста, выберите количество от 1 до {{ product.stock }}`);
+        const maxStock = parseInt('{{ product.stock }}');
+        if (orderData.quantity <= 0 || orderData.quantity > maxStock) {
+            alert(`Пожалуйста, выберите количество от 1 до ${maxStock}`);
             return;
         }
         
@@ -1314,6 +1056,10 @@ async function handleQuickOrder(event) {
             
             if (!cardNumber || !cardExpiry || !cardCvv) {
                 alert('Пожалуйста, заполните все данные карты');
+                submitButton.disabled = false;
+                if (loadingSpinner) {
+                    loadingSpinner.style.display = 'none';
+                }
                 return;
             }
             
@@ -1334,12 +1080,12 @@ async function handleQuickOrder(event) {
             body: JSON.stringify(orderData)
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         const result = await response.json();
         console.log('Ответ сервера:', result);
+        
+        if (!response.ok) {
+            throw new Error(result.message || `HTTP error! status: ${response.status}`);
+        }
         
         if (result.success) {
             // Скрываем модальное окно заказа
@@ -1355,11 +1101,11 @@ async function handleQuickOrder(event) {
             // Очищаем форму
             form.reset();
         } else {
-            alert(result.message || 'Произошла ошибка при оформлении заказа');
+            throw new Error(result.message || 'Произошла ошибка при оформлении заказа');
         }
     } catch (error) {
         console.error('Ошибка:', error);
-        alert('Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.');
+        alert(error.message || 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.');
     } finally {
         // Скрываем индикатор загрузки
         submitButton.disabled = false;
@@ -1369,8 +1115,41 @@ async function handleQuickOrder(event) {
     }
 }
 
-// Добавляем обработчик для кнопки "Перейти к заказам" в модальном окне подтверждения
+function togglePaymentFields() {
+    const paymentMethod = document.getElementById('payment_method').value;
+    const cardFields = document.getElementById('cardPaymentFields');
+    const cardInputs = cardFields.querySelectorAll('input');
+    
+    if (paymentMethod === 'card') {
+        cardFields.style.display = 'block';
+        cardInputs.forEach(input => input.required = true);
+    } else {
+        cardFields.style.display = 'none';
+        cardInputs.forEach(input => input.required = false);
+    }
+}
+
+function formatCardNumber(input) {
+    let value = input.value.replace(/\D/g, '');
+    value = value.substring(0, 16);
+    value = value.replace(/(.{4})/g, '$1 ').trim();
+    input.value = value;
+}
+
+function formatCardExpiry(input) {
+    let value = input.value.replace(/\D/g, '');
+    if (value.length >= 2) {
+        value = value.slice(0, 2) + '/' + value.slice(2, 4);
+    }
+    input.value = value;
+}
+
+// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация полей оплаты
+    togglePaymentFields();
+    
+    // Добавляем обработчики событий для кнопок
     const viewOrdersButton = document.querySelector('#orderSuccessModal .btn-primary');
     if (viewOrdersButton) {
         viewOrdersButton.addEventListener('click', function() {
@@ -1379,18 +1158,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function formatCardNumber(input) {
-    let value = input.value.replace(/\D/g, '');
-    value = value.replace(/(.{4})/g, '$1 ').trim();
-    input.value = value;
-}
-
-function formatCardExpiry(input) {
-    let value = input.value.replace(/\D/g, '');
-    if (value.length >= 2) {
-        value = value.slice(0, 2) + '/' + value.slice(2);
-    }
-    input.value = value;
+function changeImage(src) {
+    document.getElementById('mainImage').src = src;
 }
 </script>
 {% endblock %}
