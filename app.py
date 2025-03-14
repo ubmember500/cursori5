@@ -1318,6 +1318,22 @@ def quick_order():
     try:
         print("\n=== Начало создания быстрого заказа ===")
         
+        # Проверяем, авторизован ли пользователь
+        if not current_user.is_authenticated:
+            print("Ошибка: Пользователь не авторизован")
+            return jsonify({
+                'success': False,
+                'message': 'Для оформления заказа необходимо войти в систему'
+            })
+            
+        # Проверяем, не заблокирован ли пользователь
+        if not current_user.is_active:
+            print("Ошибка: Пользователь заблокирован")
+            return jsonify({
+                'success': False,
+                'message': 'Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.'
+            })
+        
         # Получаем данные из формы
         product_id = request.form.get('product_id')
         product_name = request.form.get('product_name')
@@ -1330,8 +1346,8 @@ def quick_order():
         email = request.form.get('email')
         address = request.form.get('address')
         payment_method = request.form.get('payment_method')
-        telegram = request.form.get('telegram')
-        viber = request.form.get('viber')
+        messenger = request.form.get('messenger')
+        messenger_username = request.form.get('messenger_username')
 
         print(f"Получены данные заказа:")
         print(f"- Товар: {product_name} (ID: {product_id})")
@@ -1340,6 +1356,17 @@ def quick_order():
         print(f"- Цвет: {color}")
         print(f"- Количество: {quantity}")
         print(f"- Email покупателя: {email}")
+        print(f"- Способ оплаты: {payment_method}")
+        print(f"- Мессенджер: {messenger}")
+        print(f"- Username: {messenger_username}")
+
+        # Проверяем, совпадает ли email с email авторизованного пользователя
+        if email != current_user.email:
+            print("Ошибка: Email не совпадает с email авторизованного пользователя")
+            return jsonify({
+                'success': False,
+                'message': 'Email должен совпадать с email вашего аккаунта'
+            })
 
         # Проверяем наличие всех необходимых данных
         if not all([product_id, product_name, price, size, color, quantity, name, phone, email, address, payment_method]):
@@ -1382,30 +1409,18 @@ def quick_order():
                 'message': 'Количество товара должно быть больше 0'
             })
 
-        # Ищем пользователя по email
-        user = User.query.filter_by(email=email).first()
-        print(f"Поиск пользователя по email {email}: {'Найден' if user else 'Не найден'}")
-        
-        if not user:
-            print("Ошибка: Пользователь не найден")
-            return jsonify({
-                'success': False,
-                'message': 'Для оформления заказа необходимо зарегистрироваться'
-            })
-            
-        print(f"ID пользователя: {user.id}")
-        
-        # Проверяем, не заблокирован ли пользователь
-        if not user.is_active:
-            print("Ошибка: Пользователь заблокирован")
-            return jsonify({
-                'success': False,
-                'message': 'Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.'
-            })
+        # Подготавливаем данные мессенджера
+        telegram = None
+        viber = None
+        if payment_method == 'card' and messenger and messenger_username:
+            if messenger == 'telegram':
+                telegram = messenger_username
+            elif messenger == 'viber':
+                viber = messenger_username
         
         # Создаем новый заказ
         new_order = Order(
-            user_id=user.id,  # Теперь user_id всегда будет установлен
+            user_id=current_user.id,  # Используем ID текущего пользователя
             total_amount=price * quantity,
             status='pending',
             items=[{
@@ -1414,7 +1429,8 @@ def quick_order():
                 'quantity': quantity,
                 'total': price * quantity,
                 'size': size,
-                'color': color
+                'color': color,
+                'image': product.image
             }],
             customer_info={
                 'name': name,
@@ -1434,28 +1450,62 @@ def quick_order():
         db.session.add(new_order)
         db.session.commit()
         print(f"Заказ успешно создан с ID: {new_order.id}")
-        print(f"Привязан к пользователю: Да (ID: {user.id})")
+        print(f"Привязан к пользователю: Да (ID: {current_user.id})")
 
-        # Отправляем email с подтверждением
-        email_sent = send_order_confirmation_email(email, new_order)
-        if not email_sent:
-            print(f"Ошибка при отправке email для заказа #{new_order.id}")
-            # Не отменяем заказ, если email не отправился
-            # Отправляем уведомление администратору
-            admin_notification = f"""
-            Ошибка отправки email для заказа #{new_order.id}
-            
-            Детали заказа:
-            - Покупатель: {name}
-            - Email: {email}
-            - Телефон: {phone}
-            - Товар: {product_name}
-            - Количество: {quantity}
-            - Сумма: {price * quantity}
-            
-            Пожалуйста, свяжитесь с покупателем для подтверждения заказа.
-            """
-            send_email_smtp(app.config['ADMIN_EMAIL'], f'Ошибка отправки email для заказа #{new_order.id}', admin_notification)
+        # Отправляем email с подтверждением покупателю
+        customer_email_body = f"""
+        Уважаемый покупатель!
+        
+        Спасибо за ваш заказ в нашем магазине. Мы получили ваш заказ и обработаем его в ближайшее время.
+        
+        Детали заказа:
+        Номер заказа: #{new_order.id}
+        Дата заказа: {new_order.created_at.strftime('%d.%m.%Y %H:%M')}
+        Статус: {new_order.status}
+        
+        Товары в заказе:
+        - {product_name}
+          Размер: {size}
+          Цвет: {color}
+          Количество: {quantity}
+          Цена: {price} грн
+          Сумма: {price * quantity} грн
+        
+        Общая сумма заказа: {price * quantity} грн
+        
+        Мы свяжемся с вами в ближайшее время для подтверждения заказа.
+        
+        С уважением,
+        Команда Cursor Shop
+        """
+        
+        # Отправляем email администратору
+        admin_email_body = f"""
+        Новый заказ #{new_order.id}
+        
+        Детали заказа:
+        - Покупатель: {name}
+        - Email: {email}
+        - Телефон: {phone}
+        - Адрес: {address}
+        - Способ оплаты: {payment_method}
+        - Telegram: {telegram}
+        - Viber: {viber}
+        
+        Товары в заказе:
+        - {product_name}
+          Размер: {size}
+          Цвет: {color}
+          Количество: {quantity}
+          Цена: {price} грн
+          Сумма: {price * quantity} грн
+        
+        Общая сумма заказа: {price * quantity} грн
+        """
+        
+        # Отправляем оба email
+        send_email_smtp(email, f'Подтверждение заказа #{new_order.id}', customer_email_body)
+        send_email_smtp(app.config['ADMIN_EMAIL'], f'Новый заказ #{new_order.id}', admin_email_body)
 
         print("=== Завершение создания быстрого заказа ===\n")
         return jsonify({

@@ -747,8 +747,6 @@ body .btn:contains("В избранное") {
                                     <input type="hidden" name="size" id="quick_order_size">
                                     <input type="hidden" name="color" id="quick_order_color">
                                     <input type="hidden" name="quantity" id="quick_order_quantity">
-                                    <input type="hidden" name="telegram" id="telegram_field">
-                                    <input type="hidden" name="viber" id="viber_field">
                                     
                                     <div class="form-group mb-3">
                                         <label for="name">Ваше имя *</label>
@@ -772,7 +770,7 @@ body .btn:contains("В избранное") {
 
                                     <div class="form-group mb-3">
                                         <label for="payment_method">Способ оплаты *</label>
-                                        <select class="form-control" id="payment_method" name="payment_method" required onchange="togglePaymentFields()">
+                                        <select class="form-control" id="payment_method" name="payment_method" required>
                                             <option value="">Выберите способ оплаты</option>
                                             <option value="card">Оплата картой</option>
                                             <option value="cod">Оплата при получении</option>
@@ -1250,34 +1248,30 @@ function handleQuickOrder(event) {
     // Валидация телефона
     const phoneInput = form.querySelector('[name="phone"]');
     const phoneRegex = /^\+?[0-9]{10,15}$/;
-    if (!phoneRegex.test(phoneInput.value.trim().replace(/\D/g, ''))) {
+    if (!phoneRegex.test(phoneInput.value.replace(/\s/g, ''))) {
         alert('Пожалуйста, введите корректный номер телефона');
         phoneInput.focus();
         return;
     }
     
-    // Проверяем дополнительные поля для оплаты картой
+    // Проверяем способ оплаты
     const paymentMethod = form.querySelector('[name="payment_method"]').value;
     if (paymentMethod === 'card') {
-        const messenger = form.querySelector('[name="messenger"]:checked')?.value;
-        const messengerUsername = form.querySelector('[name="messenger_username"]').value.trim();
+        const messenger = form.querySelector('[name="messenger"]').value;
+        const messengerUsername = form.querySelector('[name="messenger_username"]').value;
         
         if (!messenger || !messengerUsername) {
-            alert('Для оплаты картой необходимо указать мессенджер и ваш username');
+            alert('Для оплаты картой необходимо указать мессенджер и username');
             return;
-        }
-        
-        // Устанавливаем значения в скрытые поля
-        if (messenger === 'telegram') {
-            form.querySelector('[name="telegram"]').value = messengerUsername;
-            form.querySelector('[name="viber"]').value = '';
-        } else if (messenger === 'viber') {
-            form.querySelector('[name="viber"]').value = messengerUsername;
-            form.querySelector('[name="telegram"]').value = '';
         }
     }
     
-    // Создаем объект FormData
+    // Отключаем кнопку отправки формы
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Обработка...';
+    
+    // Создаем FormData объект
     const formData = new FormData(form);
     
     // Добавляем данные о товаре
@@ -1288,16 +1282,7 @@ function handleQuickOrder(event) {
     formData.append('color', document.getElementById('quick_order_color').value);
     formData.append('quantity', document.getElementById('quick_order_quantity').value);
     
-    // Отключаем кнопку отправки формы
-    const submitButton = form.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
-    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Отправка...';
-    
-    // Удаляем предыдущие сообщения об ошибках или успехе
-    const existingMessages = form.querySelectorAll('.alert');
-    existingMessages.forEach(msg => msg.remove());
-    
-    // Отправляем данные на сервер
+    // Отправляем запрос
     fetch('/quick_order', {
         method: 'POST',
         body: formData
@@ -1329,6 +1314,9 @@ function handleQuickOrder(event) {
             setTimeout(() => {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
                 modal.hide();
+                
+                // Перенаправляем на страницу "Мои заказы"
+                window.location.href = '/my_orders';
             }, 3000);
         } else {
             throw new Error(data.message || 'Произошла ошибка при оформлении заказа');
