@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Подтверждение заказа</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .order-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .order-items {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .order-items th,
+        .order-items td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        .order-items th {
+            background-color: #f8f9fa;
+        }
+        .total-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+            color: #666;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .status-pending {
+            background-color: #ffeeba;
+            color: #856404;
+        }
+        .status-processing {
+            background-color: #b8daff;
+            color: #004085;
+        }
+        .payment-info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Спасибо за ваш заказ!</h1>
+        <p>Заказ #{{ order.id }} от {{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+    </div>
+
+    <div class="order-info">
+        <h2>Информация о заказе</h2>
+        <p><strong>Статус заказа:</strong> 
+            <span class="status {% if order.status == 'pending' %}status-pending{% else %}status-processing{% endif %}">
+                {{ 'Ожидает оплаты' if order.status == 'pending' else 'В обработке' }}
+            </span>
+        </p>
+        <p><strong>Способ оплаты:</strong> {{ 'Банковской картой' if order.customer_info.payment_method == 'card' else 'Наложенный платеж' }}</p>
+        <p><strong>Статус оплаты:</strong> {{ 'Оплачен' if order.customer_info.payment_status == 'paid' else 'Ожидает оплаты' }}</p>
+    </div>
+
+    <div class="order-items">
+        <h2>Товары в заказе</h2>
+        <table class="order-items">
+            <thead>
+                <tr>
+                    <th>Товар</th>
+                    <th>Размер</th>
+                    <th>Цвет</th>
+                    <th>Кол-во</th>
+                    <th>Цена</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.size }}</td>
+                    <td>{{ item.color }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ "%.2f"|format(item.price) }} грн</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="total-info">
+        <p><strong>Стоимость товаров:</strong> {{ "%.2f"|format(order.total_amount - 60) }} грн</p>
+        <p><strong>Доставка:</strong> 60.00 грн</p>
+        <p><strong>Итого к оплате:</strong> {{ "%.2f"|format(order.total_amount) }} грн</p>
+    </div>
+
+    <div class="payment-info">
+        <h3>Информация о доставке</h3>
+        <p><strong>Получатель:</strong> {{ order.customer_name }}</p>
+        <p><strong>Телефон:</strong> {{ order.customer_phone }}</p>
+        <p><strong>Email:</strong> {{ order.customer_email }}</p>
+        <p><strong>Адрес доставки:</strong> {{ order.customer_info.address }}</p>
+    </div>
+
+    {% if order.status == 'pending' and order.customer_info.payment_method == 'card' %}
+    <div class="payment-info">
+        <h3>Оплата заказа</h3>
+        <p>Для оплаты заказа перейдите по ссылке:</p>
+        <p><a href="{{ url_for('pay_order', order_id=order.id, _external=True) }}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Оплатить заказ</a></p>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p>Если у вас возникли вопросы, свяжитесь с нами:</p>
+        <p>Email: support@example.com</p>
+        <p>Телефон: +380 XX XXX XX XX</p>
+    </div>
+</body>
+</html> 

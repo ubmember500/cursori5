@@ -1276,26 +1276,18 @@ def send_email_smtp(recipient, subject, body):
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
-        print("\n=== Начало обработки быстрого заказа ===")
         data = request.get_json()
-        print(f"Полученные данные: {data}")
-        
-        # Проверяем авторизацию
-        if not current_user.is_authenticated:
-            print("Ошибка: Пользователь не авторизован")
-            return jsonify({
-                'success': False,
-                'message': 'Для оформления заказа необходимо авторизоваться'
-            }), 401
-        
-        print(f"Пользователь: {current_user.username} (ID: {current_user.id})")
+        print(f"Получены данные для быстрого заказа: {data}")
         
         # Проверяем обязательные поля
-        required_fields = ['product_id', 'size', 'color', 'quantity', 'payment_method', 'address']
+        required_fields = [
+            'product_id', 'size', 'color', 'quantity',
+            'customer_name', 'customer_email', 'customer_phone',
+            'payment_method', 'address'
+        ]
         
         missing_fields = [field for field in required_fields if not data.get(field)]
         if missing_fields:
-            print(f"Ошибка: Отсутствуют обязательные поля: {missing_fields}")
             return jsonify({
                 'success': False,
                 'message': f'Отсутствуют обязательные поля: {", ".join(missing_fields)}'
@@ -1303,23 +1295,33 @@ def quick_order():
 
         # Получаем товар
         product = Product.query.get_or_404(data['product_id'])
-        print(f"\nТовар: {product.name} (ID: {product.id})")
-        print(f"Цена: {product.price}")
-        print(f"В наличии: {product.stock}")
         
         # Проверяем наличие товара
         if product.stock < data['quantity']:
-            print(f"Ошибка: Недостаточно товара на складе")
             return jsonify({
                 'success': False,
                 'message': 'Недостаточно товара на складе'
             }), 400
 
-        # Создаем заказ с данными пользователя
+        # Проверяем метод оплаты и валидируем данные карты если нужно
+        if data['payment_method'] == 'card':
+            if not data.get('card_info'):
+                return jsonify({
+                    'success': False,
+                    'message': 'Отсутствуют данные банковской карты'
+                }), 400
+                
+            # Здесь должна быть интеграция с платежной системой
+            # В данном примере просто имитируем успешную оплату
+            payment_status = 'paid'
+        else:
+            payment_status = 'pending'
+
+        # Создаем заказ
         order = Order(
-            user_id=current_user.id,  # Привязываем заказ к текущему пользователю
-            total_amount=product.price * data['quantity'] + 60,
-            status='pending',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            total_amount=product.price * data['quantity'] + 60,  # +60 грн за доставку
+            status='processing' if payment_status == 'paid' else 'pending',
             items=[{
                 'product_id': product.id,
                 'name': product.name,
@@ -1331,123 +1333,87 @@ def quick_order():
                 'total': product.price * data['quantity']
             }],
             customer_info={
-                'name': current_user.first_name + ' ' + current_user.last_name,
-                'phone': current_user.phone,
-                'email': current_user.email,
-                'address': data.get('address'),
-                'payment_method': data.get('payment_method')
+                'name': data['customer_name'],
+                'email': data['customer_email'],
+                'phone': data['customer_phone'],
+                'address': data['address'],
+                'payment_method': data['payment_method'],
+                'payment_status': payment_status
             },
-            customer_name=current_user.first_name + ' ' + current_user.last_name,
-            customer_email=current_user.email,
-            customer_phone=current_user.phone,
-            payment_method=data.get('payment_method')
+            customer_name=data['customer_name'],
+            customer_email=data['customer_email'],
+            customer_phone=data['customer_phone'],
+            payment_method=data['payment_method']
         )
 
         try:
-            print("\nСохранение заказа в базу данных...")
+            # Сохраняем заказ
             db.session.add(order)
-            db.session.flush()
-            print(f"Создан заказ с ID: {order.id}")
-
-            # Создаем OrderItem
-            order_item = OrderItem(
-                order_id=order.id,
-                product_id=product.id,
-                quantity=data['quantity'],
-                price=product.price,
-                size=data['size'],
-                color=data['color']
-            )
-            db.session.add(order_item)
-
-            # Уменьшаем количество товара
+            
+            # Уменьшаем количество товара на складе
             product.stock -= data['quantity']
-
+            
             db.session.commit()
-            print("Заказ успешно сохранен")
 
-            # Отправляем email клиенту
-            print(f"\nОтправка email клиенту: {current_user.email}")
-            if not send_order_confirmation_email(current_user.email, order):
-                print("Ошибка: Не удалось отправить email клиенту")
+            # Отправляем email подтверждения
+            send_order_confirmation_email(data['customer_email'], order)
+            
+            # Отправляем уведомление администратору
+            admin_email = app.config.get('ADMIN_EMAIL')
+            if admin_email:
+                send_order_confirmation_email(admin_email, order, is_admin=True)
 
-            # Отправляем email администратору
-            admin_email = app.config['ADMIN_EMAIL']
-            print(f"\nОтправка email администратору: {admin_email}")
-            if not send_order_confirmation_email(admin_email, order, is_admin=True):
-                print("Ошибка: Не удалось отправить email администратору")
-
-            print("\n=== Заказ успешно создан ===")
             return jsonify({
                 'success': True,
-                'message': 'Заказ успешно создан'
+                'message': 'Заказ успешно создан',
+                'order_id': order.id
             })
 
         except Exception as e:
             db.session.rollback()
-            print(f"\nОшибка при сохранении заказа: {str(e)}")
+            print(f"Ошибка при сохранении заказа: {str(e)}")
             return jsonify({
                 'success': False,
                 'message': 'Произошла ошибка при сохранении заказа'
             }), 500
 
     except Exception as e:
-        print(f"\nОшибка при создании заказа: {str(e)}")
+        print(f"Ошибка при обработке заказа: {str(e)}")
         return jsonify({
             'success': False,
-            'message': 'Произошла ошибка при создании заказа'
+            'message': 'Произошла ошибка при обработке заказа'
         }), 500
 
 def send_order_confirmation_email(email, order, is_admin=False):
     try:
-        # Формируем тему письма
-        subject = f'Подтверждение заказа #{order.id}'
-        
-        # Формируем тело письма
-        body = f"""
-        Уважаемый покупатель!
-        
-        Спасибо за ваш заказ в нашем магазине. Мы получили ваш заказ и обработаем его в ближайшее время.
-        
-        Детали заказа:
-        Номер заказа: #{order.id}
-        Дата заказа: {order.created_at.strftime('%d.%m.%Y %H:%M')}
-        Статус: {order.status}
-        
-        Товары в заказе:
-        """
-        
-        # Добавляем информацию о товарах
-        for item in order.items:
-            body += f"""
-            - {item['name']}
-              Размер: {item['size']}
-              Цвет: {item['color']}
-              Количество: {item['quantity']}
-              Цена: {item['price']} грн
-              Сумма: {item['total']} грн
-            """
-        
-        body += f"""
-        
-        Стоимость доставки: 60 грн
-        Общая сумма заказа: {order.total_amount} грн
-        
-        Адрес доставки: {order.customer_info.get('address', 'Не указан')}
-        Способ оплаты: {order.customer_info.get('payment_method', 'Не указан')}
-        """
-        
-        body += """
-        
-        Мы свяжемся с вами в ближайшее время для подтверждения заказа.
-        
-        С уважением,
-        Команда Cursor Shop
-        """
-        
-        # Отправляем письмо через SMTP
-        return send_email_smtp(email, subject, body)
-        
+        if is_admin:
+            subject = f'Новый заказ #{order.id}'
+            template = 'email/admin_order_notification.html'
+        else:
+            subject = f'Подтверждение заказа #{order.id}'
+            template = 'email/order_confirmation.html'
+
+        # Формируем контекст для шаблона
+        context = {
+            'order': order,
+            'items': order.items,
+            'customer_info': order.customer_info,
+            'is_admin': is_admin
+        }
+
+        # Рендерим HTML шаблон
+        html = render_template(template, **context)
+
+        # Отправляем email
+        msg = Message(
+            subject,
+            sender=app.config['MAIL_DEFAULT_SENDER'],
+            recipients=[email]
+        )
+        msg.html = html
+        mail.send(msg)
+
+        return True
     except Exception as e:
         print(f"Ошибка при отправке email: {str(e)}")
         return False
