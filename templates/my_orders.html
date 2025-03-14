@@ -4,6 +4,14 @@
 <div class="container mt-5">
     <h1 class="mb-4">Мои заказы</h1>
     
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
     {% if orders %}
         {% for order_data in orders %}
             <div class="card mb-4">
@@ -31,45 +39,57 @@
                         </div>
                     </div>
                     
-                    <h6 class="mt-3">Товары в заказе:</h6>
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Товар</th>
-                                    <th>Количество</th>
-                                    <th>Цена</th>
-                                    <th>Сумма</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in order_data.items %}
+                    {% if order_data.items %}
+                        <h6 class="mt-3">Товары в заказе:</h6>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
                                     <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                {% if item.image %}
-                                                <img src="{{ url_for('static', filename=item.image) }}" 
-                                                     alt="{{ item.name }}" 
-                                                     class="img-thumbnail me-2" 
-                                                     style="width: 50px; height: 50px; object-fit: cover;">
-                                                {% endif %}
-                                                {{ item.name }}
-                                            </div>
-                                        </td>
-                                        <td>{{ item.quantity }}</td>
-                                        <td>{{ "%.2f"|format(item.price) }} грн</td>
-                                        <td>{{ "%.2f"|format(item.total) }} грн</td>
+                                        <th>Товар</th>
+                                        <th>Количество</th>
+                                        <th>Цена</th>
+                                        <th>Сумма</th>
                                     </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="3" class="text-end"><strong>Итого:</strong></td>
-                                    <td><strong>{{ "%.2f"|format(order_data.order.total_amount) }} грн</strong></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {% for item in order_data.items %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    {% if item.image %}
+                                                    <img src="{{ url_for('static', filename=item.image) }}" 
+                                                         alt="{{ item.name }}" 
+                                                         class="img-thumbnail me-2" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% endif %}
+                                                    {{ item.name }}
+                                                    {% if item.size or item.color %}
+                                                        <small class="text-muted ms-2">
+                                                            {% if item.size %}Размер: {{ item.size }}{% endif %}
+                                                            {% if item.color %}, Цвет: {{ item.color }}{% endif %}
+                                                        </small>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>{{ "%.2f"|format(item.price) }} грн</td>
+                                            <td>{{ "%.2f"|format(item.total) }} грн</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Итого:</strong></td>
+                                        <td><strong>{{ "%.2f"|format(order_data.order.total_amount) }} грн</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            В заказе отсутствуют товары
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         {% endfor %}
