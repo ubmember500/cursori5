@@ -1289,11 +1289,30 @@ def quick_order():
         print(f"- Размер: {size}")
         print(f"- Цвет: {color}")
         print(f"- Количество: {quantity}")
+        print(f"- Имя покупателя: {name}")
+        print(f"- Телефон: {phone}")
         print(f"- Email покупателя: {email}")
+        print(f"- Адрес: {address}")
+        print(f"- Способ оплаты: {payment_method}")
+        print(f"- Telegram: {telegram}")
+        print(f"- Viber: {viber}")
 
         # Проверяем наличие всех необходимых данных
         if not all([product_id, product_name, price, size, color, quantity, name, phone, email, address, payment_method]):
-            print("Ошибка: Отсутствуют обязательные поля в форме")
+            missing_fields = []
+            if not product_id: missing_fields.append('product_id')
+            if not product_name: missing_fields.append('product_name')
+            if not price: missing_fields.append('price')
+            if not size: missing_fields.append('size')
+            if not color: missing_fields.append('color')
+            if not quantity: missing_fields.append('quantity')
+            if not name: missing_fields.append('name')
+            if not phone: missing_fields.append('phone')
+            if not email: missing_fields.append('email')
+            if not address: missing_fields.append('address')
+            if not payment_method: missing_fields.append('payment_method')
+            
+            print(f"Ошибка: Отсутствуют обязательные поля: {', '.join(missing_fields)}")
             return jsonify({
                 'success': False,
                 'message': 'Пожалуйста, заполните все обязательные поля'
@@ -1317,6 +1336,9 @@ def quick_order():
 
         # Проверяем наличие товара
         product = Product.query.get_or_404(product_id)
+        print(f"Найден товар: {product.name} (ID: {product.id})")
+        print(f"Текущее количество на складе: {product.stock}")
+        
         if quantity > product.stock:
             print(f"Ошибка: Недостаточно товара на складе. Запрошено: {quantity}, доступно: {product.stock}")
             return jsonify({
@@ -1346,6 +1368,7 @@ def quick_order():
                 })
         
         # Создаем новый заказ
+        print("Создание нового заказа...")
         new_order = Order(
             user_id=user.id if user else None,
             total_amount=price * quantity,
@@ -1370,15 +1393,18 @@ def quick_order():
         )
 
         # Уменьшаем количество товара на складе
+        print(f"Уменьшение количества товара на складе с {product.stock} до {product.stock - quantity}")
         product.stock -= quantity
 
         # Сохраняем заказ в базу данных
+        print("Сохранение заказа в базу данных...")
         db.session.add(new_order)
         db.session.commit()
         print(f"Заказ успешно создан с ID: {new_order.id}")
         print(f"Привязан к пользователю: {'Да' if new_order.user_id else 'Нет'}")
 
         # Отправляем email с подтверждением
+        print("Отправка email с подтверждением...")
         email_sent = send_order_confirmation_email(email, new_order)
         if not email_sent:
             print(f"Ошибка при отправке email для заказа #{new_order.id}")
@@ -1409,7 +1435,10 @@ def quick_order():
 
     except Exception as e:
         db.session.rollback()
-        print(f"Ошибка при создании быстрого заказа: {str(e)}")
+        print(f"Критическая ошибка при создании быстрого заказа: {str(e)}")
+        print(f"Тип ошибки: {type(e).__name__}")
+        import traceback
+        print(f"Трейсбек ошибки:\n{traceback.format_exc()}")
         return jsonify({
             'success': False,
             'message': 'Произошла ошибка при оформлении заказа. Попробуйте позже.'
