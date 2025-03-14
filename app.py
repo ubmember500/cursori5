@@ -1417,16 +1417,23 @@ def quick_order():
                 'address': data['address'],
                 'payment_method': data.get('payment_method', 'cash'),
                 'delivery_cost': delivery_cost,
-                'order_date': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-                'is_authenticated_user': current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False
+                'order_date': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             }
+
+            # Проверяем аутентификацию пользователя
+            user_id = None
+            if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+                user_id = current_user.id
+                customer_info['is_authenticated_user'] = True
+            else:
+                customer_info['is_authenticated_user'] = False
 
             # Создаем объект заказа
             order = Order(
-                user_id=current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None,
+                user_id=user_id,
                 total_amount=total_amount,
                 status='pending',
-                items=[order_item],
+                items=[order_item],  # Передаем список с одним элементом
                 customer_info=customer_info,
                 customer_name=data['customer_name'],
                 customer_email=data['customer_email'],
@@ -1437,33 +1444,42 @@ def quick_order():
             print("\nСохранение заказа в базу данных...")
             db.session.add(order)
             
-            # Уменьшаем количество товара
-            product.stock -= quantity
-            print(f"Обновление остатка товара: {product.stock}")
-            
-            db.session.commit()
-            print(f"Заказ #{order.id} успешно сохранен")
-
             try:
-                print("\nОтправка email подтверждения...")
-                send_order_confirmation_email(order.customer_email, order)
-                print("Email клиенту отправлен успешно")
-            except Exception as e:
-                print(f"Ошибка отправки email клиенту: {str(e)}")
-                # Продолжаем выполнение, так как заказ уже создан
+                # Уменьшаем количество товара
+                product.stock -= quantity
+                print(f"Обновление остатка товара: {product.stock}")
+                
+                # Сохраняем изменения в базе данных
+                db.session.commit()
+                print(f"Заказ #{order.id} успешно сохранен")
 
-            return jsonify({
-                'success': True,
-                'message': 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.',
-                'order_id': order.id
-            })
+                try:
+                    print("\nОтправка email подтверждения...")
+                    send_order_confirmation_email(order.customer_email, order)
+                    print("Email клиенту отправлен успешно")
+                except Exception as e:
+                    print(f"Ошибка отправки email клиенту: {str(e)}")
+                    # Продолжаем выполнение, так как заказ уже создан
+
+                return jsonify({
+                    'success': True,
+                    'message': 'Заказ успешно оформлен! Мы свяжемся с вами в ближайшее время.',
+                    'order_id': order.id
+                })
+
+            except Exception as e:
+                print(f"Ошибка при сохранении изменений в базе данных: {str(e)}")
+                db.session.rollback()
+                return jsonify({
+                    'success': False,
+                    'message': 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.'
+                }), 500
 
         except Exception as e:
-            print(f"Ошибка при сохранении заказа: {str(e)}")
-            db.session.rollback()
+            print(f"Ошибка при создании заказа: {str(e)}")
             return jsonify({
                 'success': False,
-                'message': 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.'
+                'message': 'Произошла ошибка при создании заказа. Пожалуйста, попробуйте позже.'
             }), 500
 
     except Exception as e:

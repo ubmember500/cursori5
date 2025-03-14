@@ -1259,29 +1259,18 @@ async function handleQuickOrder(event) {
     const submitButton = form.querySelector('button[type="submit"]');
     const loadingSpinner = document.getElementById('loadingSpinner');
     
-    // Проверяем валидность формы
-    const formData = new FormData(form);
-    if (!validateForm(formData)) {
-        return;
-    }
-    
-    // Показываем индикатор загрузки
-    submitButton.disabled = true;
-    if (loadingSpinner) {
-        loadingSpinner.style.display = 'inline-block';
-    }
-    
     try {
+        // Собираем данные формы
         const orderData = {
             product_id: document.getElementById('quick_order_product_id').value,
             size: document.getElementById('quick_order_size').value,
             color: document.getElementById('quick_order_color').value,
             quantity: parseInt(document.getElementById('quick_order_quantity').value),
-            customer_name: form.customer_name.value,
-            customer_email: form.customer_email.value,
-            customer_phone: form.customer_phone.value,
+            customer_name: form.customer_name.value.trim(),
+            customer_email: form.customer_email.value.trim(),
+            customer_phone: form.customer_phone.value.trim(),
             payment_method: form.payment_method.value,
-            address: form.address.value
+            address: form.address.value.trim()
         };
         
         // Проверяем наличие всех необходимых данных
@@ -1292,15 +1281,50 @@ async function handleQuickOrder(event) {
             alert(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
             return;
         }
+
+        // Валидация email
+        if (!validateEmail(orderData.customer_email)) {
+            alert('Пожалуйста, введите корректный email адрес');
+            return;
+        }
+
+        // Валидация телефона
+        if (!validatePhone(orderData.customer_phone)) {
+            alert('Пожалуйста, введите корректный номер телефона');
+            return;
+        }
+
+        // Валидация количества
+        if (orderData.quantity <= 0 || orderData.quantity > {{ product.stock }}) {
+            alert(`Пожалуйста, выберите количество от 1 до {{ product.stock }}`);
+            return;
+        }
+        
+        // Показываем индикатор загрузки
+        submitButton.disabled = true;
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'inline-block';
+        }
         
         // Добавляем данные карты если выбрана оплата картой
         if (orderData.payment_method === 'card') {
+            const cardNumber = form.card_number.value.replace(/\s/g, '');
+            const cardExpiry = form.card_expiry.value.replace(/\s/g, '');
+            const cardCvv = form.card_cvv.value.trim();
+            
+            if (!cardNumber || !cardExpiry || !cardCvv) {
+                alert('Пожалуйста, заполните все данные карты');
+                return;
+            }
+            
             orderData.card_info = {
-                number: form.card_number.value,
-                expiry: form.card_expiry.value,
-                cvv: form.card_cvv.value
+                number: cardNumber,
+                expiry: cardExpiry,
+                cvv: cardCvv
             };
         }
+        
+        console.log('Отправляемые данные:', orderData);
         
         const response = await fetch('/quick_order', {
             method: 'POST',
@@ -1310,22 +1334,32 @@ async function handleQuickOrder(event) {
             body: JSON.stringify(orderData)
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const result = await response.json();
+        console.log('Ответ сервера:', result);
         
         if (result.success) {
             // Скрываем модальное окно заказа
             const orderModal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
-            orderModal.hide();
+            if (orderModal) {
+                orderModal.hide();
+            }
             
             // Показываем модальное окно успеха
             const successModal = new bootstrap.Modal(document.getElementById('orderSuccessModal'));
             successModal.show();
+            
+            // Очищаем форму
+            form.reset();
         } else {
             alert(result.message || 'Произошла ошибка при оформлении заказа');
         }
     } catch (error) {
         console.error('Ошибка:', error);
-        alert('Произошла ошибка при оформлении заказа');
+        alert('Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.');
     } finally {
         // Скрываем индикатор загрузки
         submitButton.disabled = false;
