@@ -1329,6 +1329,14 @@ def quick_order():
                 'message': 'Неверный формат телефона'
             }), 400
 
+        # Проверяем поля мессенджера для оплаты картой
+        if data.get('payment_method') == 'card':
+            if not data.get('messenger') or not data.get('messenger_username'):
+                return jsonify({
+                    'success': False,
+                    'message': 'Для оплаты картой необходимо указать мессенджер и username'
+                }), 400
+
         # Получаем товар
         product = Product.query.get_or_404(data['product_id'])
         
@@ -1339,10 +1347,17 @@ def quick_order():
                 'message': 'Недостаточно товара на складе'
             }), 400
 
+        # Проверяем максимальное количество
+        if data['quantity'] > product.stock:
+            return jsonify({
+                'success': False,
+                'message': f'Максимальное количество товара: {product.stock}'
+            }), 400
+
         # Создаем заказ
         order = Order(
-            user_id=current_user.id if current_user.is_authenticated else None,  # Привязываем к пользователю, если он авторизован
-            total_amount=product.price * data['quantity'] + 60,  # Добавляем стоимость доставки
+            user_id=current_user.id if current_user.is_authenticated else None,
+            total_amount=product.price * data['quantity'] + 60,
             status='pending',
             items=[{
                 'product_id': product.id,
@@ -1352,14 +1367,16 @@ def quick_order():
                 'size': data['size'],
                 'color': data['color'],
                 'image': product.image,
-                'total': product.price * data['quantity']  # Добавляем общую сумму для товара
+                'total': product.price * data['quantity']
             }],
             customer_info={
                 'name': data.get('customer_name'),
                 'phone': data.get('customer_phone'),
                 'email': data.get('customer_email'),
                 'address': data.get('address'),
-                'payment_method': data.get('payment_method')
+                'payment_method': data.get('payment_method'),
+                'messenger': data.get('messenger'),
+                'messenger_username': data.get('messenger_username')
             },
             customer_name=data.get('customer_name'),
             customer_email=data.get('customer_email'),
@@ -1367,24 +1384,34 @@ def quick_order():
             payment_method=data.get('payment_method')
         )
 
-        db.session.add(order)
-        db.session.commit()
+        try:
+            db.session.add(order)
+            db.session.commit()
 
-        # Отправляем email клиенту
-        send_order_confirmation_email(data.get('customer_email'), order)
+            # Отправляем email клиенту
+            if not send_order_confirmation_email(data.get('customer_email'), order):
+                app.logger.error(f"Failed to send confirmation email to customer: {data.get('customer_email')}")
 
-        # Отправляем email администратору
-        admin_email = "ubmember500@gmail.com"
-        send_order_confirmation_email(admin_email, order, is_admin=True)
+            # Отправляем email администратору
+            admin_email = "ubmember500@gmail.com"
+            if not send_order_confirmation_email(admin_email, order, is_admin=True):
+                app.logger.error(f"Failed to send confirmation email to admin: {admin_email}")
 
-        return jsonify({
-            'success': True,
-            'message': 'Заказ успешно создан'
-        })
+            return jsonify({
+                'success': True,
+                'message': 'Заказ успешно создан'
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Database error in quick_order: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': 'Произошла ошибка при сохранении заказа'
+            }), 500
 
     except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error creating quick order: {str(e)}")
+        app.logger.error(f"Error in quick_order: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Произошла ошибка при создании заказа'
@@ -1427,6 +1454,16 @@ def send_order_confirmation_email(email, order, is_admin=False):
         
         Адрес доставки: {order.customer_info.get('address', 'Не указан')}
         Способ оплаты: {order.customer_info.get('payment_method', 'Не указан')}
+        """
+        
+        # Добавляем информацию о мессенджере, если указан
+        if order.customer_info.get('messenger') and order.customer_info.get('messenger_username'):
+            body += f"""
+            Мессенджер: {order.customer_info.get('messenger')}
+            Username: {order.customer_info.get('messenger_username')}
+            """
+        
+        body += """
         
         Мы свяжемся с вами в ближайшее время для подтверждения заказа.
         
