@@ -34,8 +34,12 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Дата заказа:</strong> {{ order_data.order.created_at }}</p>
-                            <p><strong>Общая сумма:</strong> {{ "%.2f"|format(order_data.order.total_amount) }} грн</p>
+                            <div class="order-details">
+                                <p><strong>Дата заказа:</strong> {{ order_data.order.created_at }}</p>
+                                <p><strong>Статус:</strong> {{ order_data.order.status }}</p>
+                                <p><strong>Сумма заказа:</strong> {{ order_data.order.total_amount }} ₴</p>
+                                <p><strong>Адрес доставки:</strong> {{ order_data.order.customer_info.get('address', 'Не указан') }}</p>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             {% if order_data.order.customer_info %}

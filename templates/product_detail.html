@@ -754,21 +754,22 @@ body .btn:contains("В избранное") {
                                     </div>
                                     
                                     <div class="form-group mb-3">
-                                        <label for="phone">Телефон *</label>
-                                        <input type="tel" class="form-control" id="phone" name="phone" required>
+                                        <label for="customer_phone" class="form-label">Телефон</label>
+                                        <input type="tel" class="form-control" id="customer_phone" name="customer_phone" required>
                                     </div>
                                     
                                     <div class="form-group mb-3">
-                                        <label for="email">Email *</label>
-                                        <input type="email" class="form-control" id="email" name="email" required>
+                                        <label for="address" class="form-label">Адрес доставки *</label>
+                                        <textarea class="form-control" id="address" name="address" rows="3" required></textarea>
                                     </div>
                                     
                                     <div class="form-group mb-3">
-                                        <label for="payment_method">Способ оплаты *</label>
-                                        <select class="form-control" id="payment_method" name="payment_method" required>
+                                        <label for="payment_method" class="form-label">Способ оплаты</label>
+                                        <select class="form-select" id="payment_method" name="payment_method" required>
                                             <option value="">Выберите способ оплаты</option>
                                             <option value="cash">Наличными при получении</option>
-                                            <option value="card">Оплата картой</option>
+                                            <option value="card">Банковской картой</option>
+                                            <option value="transfer">Банковским переводом</option>
                                         </select>
                                     </div>
 
@@ -1209,135 +1210,49 @@ function handleAddToCart(event) {
     event.target.submit();
 }
 
-function handleQuickOrder(event) {
-    event.preventDefault();
-    
-    // Получаем форму
+function handleQuickOrder() {
     const form = document.getElementById('quickOrderForm');
-    
-    // Проверяем обязательные поля
-    const requiredFields = ['name', 'phone', 'email', 'address', 'payment_method'];
-    const missingFields = [];
-    
-    requiredFields.forEach(field => {
-        const input = form.querySelector(`[name="${field}"]`);
-        if (!input || !input.value.trim()) {
-            missingFields.push(input ? input.placeholder : field);
-        }
-    });
-    
-    if (missingFields.length > 0) {
-        alert(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
-        return;
-    }
-    
-    // Валидация email
-    const emailInput = form.querySelector('[name="email"]');
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailInput.value.trim())) {
-        alert('Пожалуйста, введите корректный email адрес');
-        emailInput.focus();
-        return;
-    }
-    
-    // Валидация телефона
-    const phoneInput = form.querySelector('[name="phone"]');
-    const phoneRegex = /^\+?[0-9]{10,15}$/;
-    if (!phoneRegex.test(phoneInput.value.replace(/\s/g, ''))) {
-        alert('Пожалуйста, введите корректный номер телефона');
-        phoneInput.focus();
-        return;
-    }
-    
-    // Проверяем способ оплаты
-    const paymentMethod = form.querySelector('[name="payment_method"]').value;
-    if (paymentMethod === 'card') {
-        const messenger = form.querySelector('[name="messenger"]').value;
-        const messengerUsername = form.querySelector('[name="messenger_username"]').value;
-        
-        if (!messenger || !messengerUsername) {
-            alert('Для оплаты картой необходимо указать мессенджер и username');
-            return;
-        }
-    }
-    
-    // Отключаем кнопку отправки формы
-    const submitButton = form.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
-    submitButton.textContent = 'Обработка...';
-    
-    // Создаем FormData объект
     const formData = new FormData(form);
     
-    // Добавляем данные о товаре
-    formData.append('product_id', document.getElementById('quick_order_product_id').value);
-    formData.append('product_name', document.getElementById('quick_order_product_name').value);
-    formData.append('price', document.getElementById('quick_order_price').value);
-    formData.append('size', document.getElementById('quick_order_size').value);
-    formData.append('color', document.getElementById('quick_order_color').value);
-    formData.append('quantity', document.getElementById('quick_order_quantity').value);
-    
-    // Отправляем запрос
+    const orderData = {
+        product_id: {{ product.id }},
+        name: "{{ product.name }}",
+        price: {{ product.price }},
+        size: formData.get('size'),
+        color: formData.get('color'),
+        quantity: parseInt(formData.get('quantity')),
+        customer_name: formData.get('name'),
+        customer_email: formData.get('email'),
+        customer_phone: formData.get('customer_phone'),
+        address: formData.get('address'),
+        payment_method: formData.get('payment_method')
+    };
+
+    // Отправляем запрос на сервер
     fetch('/quick_order', {
         method: 'POST',
-        body: formData
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Ошибка сети при отправке заказа');
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
             // Показываем сообщение об успехе
-            const successMessage = document.createElement('div');
-            successMessage.className = 'alert alert-success mt-3';
-            successMessage.innerHTML = `
-                <h4 class="alert-heading">Заказ успешно оформлен!</h4>
-                <p>Номер вашего заказа: #${data.order_id}</p>
-                <p>Мы свяжемся с вами в ближайшее время для подтверждения заказа.</p>
-                <p>Пожалуйста, проверьте вашу почту - мы отправили вам подтверждение заказа.</p>
-                <p class="mb-0">Если вы не нашли письмо, проверьте папку "Спам".</p>
-            `;
-            form.appendChild(successMessage);
-            
+            showMessage('success', 'Заказ успешно создан! Мы свяжемся с вами в ближайшее время.');
+            // Закрываем модальное окно
+            $('#quickOrderModal').modal('hide');
             // Очищаем форму
             form.reset();
-            
-            // Закрываем модальное окно через 3 секунды
-            setTimeout(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('quickOrderModal'));
-                modal.hide();
-                
-                // Перенаправляем на страницу "Мои заказы"
-                window.location.href = '/my_orders';
-            }, 3000);
         } else {
-            throw new Error(data.message || 'Произошла ошибка при оформлении заказа');
+            // Показываем сообщение об ошибке
+            showMessage('error', data.message || 'Произошла ошибка при создании заказа.');
         }
     })
     .catch(error => {
-        console.error('Ошибка:', error);
-        // Показываем сообщение об ошибке
-        const errorMessage = document.createElement('div');
-        errorMessage.className = 'alert alert-danger mt-3';
-        errorMessage.innerHTML = `
-            <h4 class="alert-heading">Ошибка при оформлении заказа</h4>
-            <p>${error.message}</p>
-            <p class="mb-0">Пожалуйста, попробуйте позже или свяжитесь с нашей службой поддержки.</p>
-        `;
-        form.appendChild(errorMessage);
-        
-        // Удаляем сообщение об ошибке через 5 секунд
-        setTimeout(() => {
-            errorMessage.remove();
-        }, 5000);
-    })
-    .finally(() => {
-        // Включаем кнопку отправки формы
-        submitButton.disabled = false;
-        submitButton.textContent = 'Оформить заказ';
+        console.error('Error:', error);
+        showMessage('error', 'Произошла ошибка при создании заказа. Попробуйте позже.');
     });
 }
 

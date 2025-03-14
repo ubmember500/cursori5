@@ -1309,7 +1309,7 @@ def quick_order():
         
         # Проверяем наличие всех необходимых полей
         required_fields = ['product_id', 'name', 'price', 'size', 'color', 'quantity', 
-                         'customer_name', 'customer_email', 'customer_phone', 'payment_method']
+                         'customer_name', 'customer_email', 'customer_phone', 'payment_method', 'address']
         missing_fields = [field for field in required_fields if field not in data]
         
         if missing_fields:
@@ -1376,7 +1376,8 @@ def quick_order():
                 'name': data['customer_name'],
                 'email': data['customer_email'],
                 'phone': data['customer_phone'],
-                'payment_method': data['payment_method']
+                'payment_method': data['payment_method'],
+                'address': data['address']
             }
         )
         print(f"Заказ создан: {order.id}")
@@ -1415,6 +1416,8 @@ def quick_order():
             Количество: {data['quantity']}
             Сумма: {data['price'] * data['quantity']} руб.
             
+            Адрес доставки: {data['address']}
+            
             Статус заказа: {order.status}
             
             Мы свяжемся с вами в ближайшее время для подтверждения заказа.
@@ -1441,6 +1444,7 @@ def quick_order():
             Имя: {data['customer_name']}
             Email: {data['customer_email']}
             Телефон: {data['customer_phone']}
+            Адрес: {data['address']}
             Способ оплаты: {data['payment_method']}
             '''
             
