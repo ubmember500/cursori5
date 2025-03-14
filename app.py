@@ -1334,7 +1334,7 @@ def quick_order():
             }), 400
         
         # Проверяем наличие всех необходимых полей
-        required_fields = ['product_id', 'quantity', 'customer_name', 'customer_email', 'customer_phone']
+        required_fields = ['product_id', 'quantity', 'customer_name', 'customer_email', 'customer_phone', 'size', 'color', 'address']
         missing_fields = [field for field in required_fields if not data.get(field)]
         
         if missing_fields:
@@ -1380,6 +1380,16 @@ def quick_order():
                 'message': f'К сожалению, товара недостаточно. В наличии: {product.stock}'
             }), 400
 
+        # Проверяем валидность размера и цвета
+        size = data.get('size')
+        color = data.get('color')
+        
+        if not size or not color:
+            return jsonify({
+                'success': False,
+                'message': 'Пожалуйста, выберите размер и цвет товара'
+            }), 400
+
         # Создаем заказ
         try:
             # Рассчитываем стоимость
@@ -1393,8 +1403,8 @@ def quick_order():
                 'name': product.name,
                 'price': float(product.price),
                 'quantity': quantity,
-                'size': data.get('size', 'standard'),
-                'color': data.get('color', 'standard'),
+                'size': size,
+                'color': color,
                 'total': item_total,
                 'image': product.image
             }
@@ -1404,16 +1414,16 @@ def quick_order():
                 'name': data['customer_name'],
                 'email': data['customer_email'],
                 'phone': data['customer_phone'],
-                'address': data.get('address', ''),
+                'address': data['address'],
                 'payment_method': data.get('payment_method', 'cash'),
                 'delivery_cost': delivery_cost,
                 'order_date': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-                'is_authenticated_user': current_user.is_authenticated
+                'is_authenticated_user': current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False
             }
 
             # Создаем объект заказа
             order = Order(
-                user_id=current_user.id if current_user.is_authenticated else None,
+                user_id=current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None,
                 total_amount=total_amount,
                 status='pending',
                 items=[order_item],

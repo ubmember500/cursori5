@@ -750,7 +750,7 @@ body .btn:contains("В избранное") {
                                     <p>Итого с доставкой: <span id="order_total"></span></p>
                                 </div>
                                 
-                                <form id="quickOrderForm" novalidate>
+                                <form id="quickOrderForm" onsubmit="handleQuickOrder(event)" novalidate>
                                     <input type="hidden" id="quick_order_product_id" name="product_id">
                                     <input type="hidden" id="quick_order_size" name="size">
                                     <input type="hidden" id="quick_order_color" name="color">
@@ -777,15 +777,11 @@ body .btn:contains("В избранное") {
                                     </div>
                                     
                                     <div class="mb-3">
-                                        <label class="form-label">Способ оплаты *</label>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card" checked>
-                                            <label class="form-check-label" for="payment_card">Оплата картой</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_cash" value="cash">
-                                            <label class="form-check-label" for="payment_cash">Наложенный платеж</label>
-                                        </div>
+                                        <label for="payment_method" class="form-label">Способ оплаты *</label>
+                                        <select class="form-control" id="payment_method" name="payment_method" required>
+                                            <option value="cash">Наличными при получении</option>
+                                            <option value="card">Оплата картой онлайн</option>
+                                        </select>
                                     </div>
                                     
                                     <div id="cardPaymentFields">
@@ -808,10 +804,8 @@ body .btn:contains("В избранное") {
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                                         <button type="submit" class="btn btn-primary">
+                                            <span id="loadingSpinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;"></span>
                                             Оформить заказ
-                                            <span id="loadingSpinner" class="spinner-border spinner-border-sm ms-2" role="status" style="display: none;">
-                                                <span class="visually-hidden">Загрузка...</span>
-                                            </span>
                                         </button>
                                     </div>
                                 </form>
@@ -958,10 +952,9 @@ function openQuickOrder() {
         return;
     }
     
-    // Сначала сбрасываем форму
-    document.getElementById('quickOrderForm').reset();
+    const form = document.getElementById('quickOrderForm');
     
-    // Затем заполняем скрытые поля формы
+    // Заполняем скрытые поля формы
     document.getElementById('quick_order_product_id').value = "{{ product.id }}";
     document.getElementById('quick_order_size').value = size;
     document.getElementById('quick_order_color').value = color;
@@ -1240,7 +1233,7 @@ function validatePhone(phone) {
 }
 
 function validateForm(formData) {
-    const requiredFields = ['size', 'color', 'quantity', 'payment_method', 'address'];
+    const requiredFields = ['customer_name', 'customer_email', 'customer_phone', 'address'];
     const missingFields = requiredFields.filter(field => !formData.get(field));
     
     if (missingFields.length > 0) {
@@ -1249,7 +1242,7 @@ function validateForm(formData) {
     }
 
     // Валидация количества
-    const quantity = parseInt(formData.get('quantity'));
+    const quantity = parseInt(document.getElementById('quick_order_quantity').value);
     const maxStock = {{ product.stock }};
     if (quantity > maxStock) {
         alert(`Максимальное количество товара: ${maxStock}`);
@@ -1266,9 +1259,17 @@ async function handleQuickOrder(event) {
     const submitButton = form.querySelector('button[type="submit"]');
     const loadingSpinner = document.getElementById('loadingSpinner');
     
+    // Проверяем валидность формы
+    const formData = new FormData(form);
+    if (!validateForm(formData)) {
+        return;
+    }
+    
     // Показываем индикатор загрузки
     submitButton.disabled = true;
-    loadingSpinner.style.display = 'inline-block';
+    if (loadingSpinner) {
+        loadingSpinner.style.display = 'inline-block';
+    }
     
     try {
         const orderData = {
@@ -1282,6 +1283,15 @@ async function handleQuickOrder(event) {
             payment_method: form.payment_method.value,
             address: form.address.value
         };
+        
+        // Проверяем наличие всех необходимых данных
+        const requiredFields = ['product_id', 'size', 'color', 'quantity', 'customer_name', 'customer_email', 'customer_phone', 'address'];
+        const missingFields = requiredFields.filter(field => !orderData[field]);
+        
+        if (missingFields.length > 0) {
+            alert(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
+            return;
+        }
         
         // Добавляем данные карты если выбрана оплата картой
         if (orderData.payment_method === 'card') {
@@ -1319,7 +1329,9 @@ async function handleQuickOrder(event) {
     } finally {
         // Скрываем индикатор загрузки
         submitButton.disabled = false;
-        loadingSpinner.style.display = 'none';
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'none';
+        }
     }
 }
 
