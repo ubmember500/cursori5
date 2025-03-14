@@ -26,7 +26,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('contacts') }}">Контакты</a>
                     </li>
-                    {% if g.user %}
+                    {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('my_orders') }}">Мои заказы</a>
                     </li>
@@ -42,10 +42,10 @@
                             {% endif %}
                         </a>
                     </li>
-                    {% if g.user %}
+                    {% if current_user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                {{ g.user.username }}
+                                {{ current_user.username }}
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ url_for('logout') }}">Выйти</a></li>
