@@ -584,31 +584,36 @@ def products():
 
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
-    product = Product.query.get_or_404(product_id)
-    # Получаем похожие товары из той же категории
-    similar_products = Product.query.filter(
-        Product.category_id == product.category_id,
-        Product.id != product_id
-    ).limit(4).all()
-    
-    # Получаем актуальное изображение продукта
-    product_image = get_random_product_image(product.category_id)
-    
-    # Обновляем изображения для похожих товаров
-    similar_products_with_images = []
-    for similar_product in similar_products:
-        similar_products_with_images.append({
-            'id': similar_product.id,
-            'name': similar_product.name,
-            'price': similar_product.price,
-            'description': similar_product.description,
-            'image': get_random_product_image(similar_product.category_id)
-        })
-    
-    return render_template('product_detail.html', 
-                         product=product,
-                         product_image=product_image,
-                         similar_products=similar_products_with_images)
+    try:
+        product = Product.query.get_or_404(product_id)
+        # Получаем похожие товары из той же категории
+        similar_products = Product.query.filter(
+            Product.category_id == product.category_id,
+            Product.id != product_id
+        ).limit(4).all()
+        
+        # Получаем актуальное изображение продукта
+        product_image = get_random_product_image(product.category_id)
+        
+        # Обновляем изображения для похожих товаров
+        similar_products_with_images = []
+        for similar_product in similar_products:
+            similar_products_with_images.append({
+                'id': similar_product.id,
+                'name': similar_product.name,
+                'price': similar_product.price,
+                'description': similar_product.description,
+                'image': get_random_product_image(similar_product.category_id)
+            })
+        
+        return render_template('product_detail.html', 
+                             product=product,
+                             product_image=product_image,
+                             similar_products=similar_products_with_images)
+    except Exception as e:
+        print(f"Ошибка при получении продукта {product_id}: {str(e)}")
+        flash('Товар не найден или произошла ошибка при его загрузке', 'error')
+        return redirect(url_for('products'))
 
 
 @app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
@@ -1610,20 +1615,24 @@ def send_order_confirmation_email(email, order, is_admin=False):
         print(f"Ошибка в функции send_order_confirmation_email: {str(e)}")
         raise
 
-@app.before_first_request
+# Инициализация продуктов при запуске
 def initialize_products():
     try:
-        products = Product.query.all()
-        for product in products:
-            if not product.sizes:
-                product.sizes = ['S', 'M', 'L', 'XL']
-            if not product.colors:
-                product.colors = ['Белый', 'Черный', 'Синий']
-        db.session.commit()
-        print("Успешно обновлены значения sizes и colors для существующих товаров")
+        with app.app_context():
+            products = Product.query.all()
+            for product in products:
+                if not product.sizes:
+                    product.sizes = ['S', 'M', 'L', 'XL']
+                if not product.colors:
+                    product.colors = ['Белый', 'Черный', 'Синий']
+            db.session.commit()
+            print("Успешно обновлены значения sizes и colors для существующих товаров")
     except Exception as e:
         print(f"Ошибка при обновлении товаров: {str(e)}")
         db.session.rollback()
+
+# Вызываем функцию инициализации при запуске
+initialize_products()
 
 if __name__ == '__main__':
     init_db()
