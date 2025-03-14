@@ -218,20 +218,6 @@ class Category(db.Model):
     name = db.Column(db.String(50), nullable=False)
     products = db.relationship('Product', backref='category', lazy=True)
 
-
-class Product(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    image = db.Column(db.String(100), nullable=False)
-    stock = db.Column(db.Integer, nullable=False, default=10)
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    sizes = db.Column(db.JSON, default=lambda: ['S', 'M', 'L', 'XL'])  # Доступные размеры
-    colors = db.Column(db.JSON, default=lambda: ['Белый', 'Черный', 'Синий'])  # Доступные цвета
-
-
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -243,6 +229,7 @@ class User(UserMixin, db.Model):
     address = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    orders = db.relationship('Order', backref='user', lazy=True)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -263,43 +250,31 @@ class User(UserMixin, db.Model):
             'is_active': self.is_active
         }
 
-
-class PasswordReset(db.Model):
+class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    token = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    image = db.Column(db.String(100), nullable=False)
+    stock = db.Column(db.Integer, nullable=False, default=10)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    expires_at = db.Column(db.DateTime, nullable=False)
-
-
-class NewsletterSubscription(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    subscribed_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_active = db.Column(db.Boolean, default=True)
-
+    sizes = db.Column(db.JSON, default=lambda: ['S', 'M', 'L', 'XL'])
+    colors = db.Column(db.JSON, default=lambda: ['Белый', 'Черный', 'Синий'])
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='pending')  # pending, processing, shipped, delivered, cancelled
+    status = db.Column(db.String(20), default='pending')
     total_amount = db.Column(db.Float, nullable=False)
-    items = db.Column(db.JSON)  # Хранит список товаров в формате JSON
-    customer_info = db.Column(db.JSON)  # Хранит информацию о покупателе
+    items = db.Column(db.JSON)
+    customer_info = db.Column(db.JSON)
     customer_name = db.Column(db.String(100), nullable=False)
     customer_email = db.Column(db.String(120), nullable=False)
     customer_phone = db.Column(db.String(20), nullable=False)
     payment_method = db.Column(db.String(50), nullable=False)
-    user = db.relationship('User', backref='orders')
-
-
-class Session(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.String(255), unique=True)
-    data = db.Column(db.Text)
-    expiry = db.Column(db.DateTime)
-
+    order_items = db.relationship('OrderItem', backref='order', lazy=True)
 
 class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -309,9 +284,26 @@ class OrderItem(db.Model):
     price = db.Column(db.Float, nullable=False)
     size = db.Column(db.String(20))
     color = db.Column(db.String(50))
-    order = db.relationship('Order', backref='order_items')
     product = db.relationship('Product')
 
+class PasswordReset(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    token = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+class NewsletterSubscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    subscribed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+class Session(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(255), unique=True)
+    data = db.Column(db.Text)
+    expiry = db.Column(db.DateTime)
 
 # Create database tables
 def init_db():
