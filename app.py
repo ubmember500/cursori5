@@ -1341,7 +1341,7 @@ def quick_order():
 
         # Создаем заказ
         order = Order(
-            user_id=None,  # Убираем привязку к пользователю для быстрого заказа
+            user_id=current_user.id if current_user.is_authenticated else None,  # Привязываем к пользователю, если он авторизован
             total_amount=product.price * data['quantity'] + 60,  # Добавляем стоимость доставки
             status='pending',
             items=[{

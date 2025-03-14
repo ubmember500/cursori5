@@ -1151,7 +1151,7 @@ document.getElementById('cart_quantity').addEventListener('change', function() {
 
 function validateForm(formData) {
     const missingFields = [];
-    const requiredFields = ['name', 'phone', 'email', 'address', 'payment_method'];
+    const requiredFields = ['name', 'customer_phone', 'customer_email', 'address', 'payment_method'];
     
     requiredFields.forEach(field => {
         if (!formData.get(field)) {
