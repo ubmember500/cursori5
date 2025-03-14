@@ -1610,6 +1610,21 @@ def send_order_confirmation_email(email, order, is_admin=False):
         print(f"Ошибка в функции send_order_confirmation_email: {str(e)}")
         raise
 
+@app.before_first_request
+def initialize_products():
+    try:
+        products = Product.query.all()
+        for product in products:
+            if not product.sizes:
+                product.sizes = ['S', 'M', 'L', 'XL']
+            if not product.colors:
+                product.colors = ['Белый', 'Черный', 'Синий']
+        db.session.commit()
+        print("Успешно обновлены значения sizes и colors для существующих товаров")
+    except Exception as e:
+        print(f"Ошибка при обновлении товаров: {str(e)}")
+        db.session.rollback()
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, port=5001)
