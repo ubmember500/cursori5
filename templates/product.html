@@ -1,0 +1,110 @@
+<script>
+function submitQuickOrder(event) {
+    event.preventDefault();
+    console.log('Начало отправки формы быстрого заказа');
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = {
+        product_id: formData.get('product_id'),
+        name: formData.get('name'),
+        price: parseFloat(formData.get('price')),
+        size: formData.get('size'),
+        color: formData.get('color'),
+        quantity: parseInt(formData.get('quantity')),
+        customer_name: formData.get('customer_name'),
+        customer_email: formData.get('customer_email'),
+        customer_phone: formData.get('customer_phone'),
+        payment_method: formData.get('payment_method'),
+        address: formData.get('address')
+    };
+    
+    console.log('Отправляемые данные:', data);
+    
+    fetch('/quick_order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('Ответ сервера:', result);
+        if (result.success) {
+            alert(result.message);
+            if (result.redirect_url) {
+                window.location.href = result.redirect_url;
+            }
+        } else {
+            alert(result.message || 'Произошла ошибка при создании заказа');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        alert('Произошла ошибка при отправке заказа');
+    });
+}
+</script>
+
+<form id="quickOrderForm" onsubmit="submitQuickOrder(event)">
+    <input type="hidden" name="product_id" value="{{ product.id }}">
+    <input type="hidden" name="name" value="{{ product.name }}">
+    <input type="hidden" name="price" value="{{ product.price }}">
+    
+    <div class="form-group">
+        <label for="size">Размер:</label>
+        <select name="size" id="size" class="form-control" required>
+            <option value="">Выберите размер</option>
+            {% for size in product.sizes.split(',') %}
+            <option value="{{ size.strip() }}">{{ size.strip() }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="color">Цвет:</label>
+        <select name="color" id="color" class="form-control" required>
+            <option value="">Выберите цвет</option>
+            {% for color in product.colors.split(',') %}
+            <option value="{{ color.strip() }}">{{ color.strip() }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="quantity">Количество:</label>
+        <input type="number" name="quantity" id="quantity" class="form-control" min="1" max="{{ product.stock }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="customer_name">Ваше имя:</label>
+        <input type="text" name="customer_name" id="customer_name" class="form-control" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="customer_email">Email:</label>
+        <input type="email" name="customer_email" id="customer_email" class="form-control" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="customer_phone">Телефон:</label>
+        <input type="tel" name="customer_phone" id="customer_phone" class="form-control" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="payment_method">Способ оплаты:</label>
+        <select name="payment_method" id="payment_method" class="form-control" required>
+            <option value="">Выберите способ оплаты</option>
+            <option value="cash">Наличными при получении</option>
+            <option value="card">Банковской картой</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="address">Адрес доставки:</label>
+        <textarea name="address" id="address" class="form-control" required></textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Оформить заказ</button>
+</form> 

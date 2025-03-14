@@ -102,14 +102,14 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
 # Конфигурация Flask-Mail
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))  # Используем порт 587 для TLS
-app.config['MAIL_USE_SSL'] = False  # Отключаем SSL
-app.config['MAIL_USE_TLS'] = True   # Включаем TLS
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'defensivelox@gmail.com')
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'defensivelox@gmail.com'
 app.config['MAIL_PASSWORD'] = decrypt_mail_password(ENCRYPTED_MAIL_PASSWORD)
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'defensivelox@gmail.com')
-app.config['ADMIN_EMAIL'] = os.environ.get('ADMIN_EMAIL', 'defensivelox@gmail.com')
+app.config['MAIL_DEFAULT_SENDER'] = 'defensivelox@gmail.com'
+app.config['ADMIN_EMAIL'] = 'defensivelox@gmail.com'
 
 print("\n=== Настройки SMTP ===")
 print(f"MAIL_SERVER: {app.config['MAIL_SERVER']}")
@@ -1156,27 +1156,19 @@ def order_form():
 def my_orders():
     try:
         print("\n=== Начало получения заказов пользователя ===")
-        print(f"Текущий пользователь: {current_user.username} (ID: {current_user.id})")
-        print(f"Пользователь авторизован: {current_user.is_authenticated}")
+        print(f"Пользователь: {current_user.username} (ID: {current_user.id})")
         
-        # Проверяем, не заблокирован ли пользователь
-        if not current_user.is_active:
-            print("Ошибка: Пользователь заблокирован")
-            flash('Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администратором.', 'error')
-            return redirect(url_for('home'))
-        
-        # Получаем заказы текущего пользователя по user_id
+        # Получаем заказы пользователя
         orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
         print(f"Найдено заказов: {len(orders)}")
         
-        # Преобразуем заказы в нужный формат
+        # Формируем данные для отображения
         orders_with_items = []
         for order in orders:
             print(f"\nОбработка заказа #{order.id}:")
-            print(f"- Дата создания: {order.created_at}")
+            print(f"- Дата: {order.created_at}")
             print(f"- Статус: {order.status}")
             print(f"- Сумма: {order.total_amount}")
-            print(f"- User ID: {order.user_id}")
             
             # Получаем товары из заказа
             items = []
@@ -1206,8 +1198,9 @@ def my_orders():
         
         print("=== Завершение получения заказов пользователя ===\n")
         return render_template('my_orders.html', orders=orders_with_items)
+        
     except Exception as e:
-        print(f"Ошибка при получении заказов: {str(e)}")
+        print(f"\nОшибка при получении заказов: {str(e)}")
         flash('Произошла ошибка при загрузке заказов', 'error')
         return redirect(url_for('home'))
 
@@ -1239,13 +1232,13 @@ def test_email():
 
 def send_email_smtp(recipient, subject, body):
     try:
-        print(f"Attempting to send email to: {recipient}")
-        print(f"Subject: {subject}")
-        print(f"SMTP Server: {app.config['MAIL_SERVER']}")
-        print(f"SMTP Port: {app.config['MAIL_PORT']}")
-        print(f"Username: {app.config['MAIL_USERNAME']}")
-        print(f"Using SSL: {app.config['MAIL_USE_SSL']}")
-        print(f"Using TLS: {app.config['MAIL_USE_TLS']}")
+        print(f"\n=== Отправка email ===")
+        print(f"Получатель: {recipient}")
+        print(f"Тема: {subject}")
+        print(f"SMTP сервер: {app.config['MAIL_SERVER']}")
+        print(f"SMTP порт: {app.config['MAIL_PORT']}")
+        print(f"Использование SSL: {app.config['MAIL_USE_SSL']}")
+        print(f"Использование TLS: {app.config['MAIL_USE_TLS']}")
         
         msg = MIMEMultipart()
         msg['From'] = app.config['MAIL_DEFAULT_SENDER']
@@ -1253,61 +1246,50 @@ def send_email_smtp(recipient, subject, body):
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
         
-        # Создаем SMTP соединение в зависимости от настроек
+        # Создаем SMTP соединение
         if app.config['MAIL_USE_SSL']:
-            print("Creating SMTP_SSL connection...")
             server = smtplib.SMTP_SSL(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
         else:
-            print("Creating SMTP connection...")
             server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
             if app.config['MAIL_USE_TLS']:
-                print("Starting TLS...")
                 server.starttls()
         
-        server.set_debuglevel(2)  # Максимальный уровень отладки
+        # Включаем отладку
+        server.set_debuglevel(2)
         
-        print("Attempting login...")
+        # Логин
+        print("Попытка входа в SMTP...")
         server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
         
-        print("Sending message...")
+        # Отправка
+        print("Отправка сообщения...")
         server.send_message(msg)
-        print("Message sent successfully!")
+        print("Сообщение успешно отправлено!")
         
         server.quit()
         return True
         
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"Authentication failed: {str(e)}")
-        print("Please check:")
-        print("1. Email address is correct")
-        print("2. App password is correct (no spaces)")
-        print("3. 2FA is enabled on your Google account")
-        print("4. App password was generated for 'Mail' or 'Other'")
-        return False
-    except smtplib.SMTPException as e:
-        print(f"SMTP error occurred: {str(e)}")
-        print(f"Error type: {type(e).__name__}")
-        return False
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        print(f"Error type: {type(e).__name__}")
+        print(f"\nОшибка при отправке email: {str(e)}")
+        print(f"Тип ошибки: {type(e).__name__}")
         return False
 
 @app.route('/quick_order', methods=['POST'])
 def quick_order():
     try:
-        data = request.get_json()
         print("\n=== Начало обработки быстрого заказа ===")
-        print(f"Текущий пользователь: {current_user.username if current_user.is_authenticated else 'Не авторизован'}")
-        print(f"ID пользователя: {current_user.id if current_user.is_authenticated else 'Нет'}")
+        data = request.get_json()
+        print(f"Полученные данные: {data}")
         
-        # Проверяем, авторизован ли пользователь
+        # Проверяем авторизацию
         if not current_user.is_authenticated:
             print("Ошибка: Пользователь не авторизован")
             return jsonify({
                 'success': False,
                 'message': 'Для оформления заказа необходимо авторизоваться'
             }), 401
+        
+        print(f"Пользователь: {current_user.username} (ID: {current_user.id})")
         
         # Проверяем обязательные поля
         required_fields = ['product_id', 'name', 'price', 'size', 'color', 'quantity', 
@@ -1321,31 +1303,6 @@ def quick_order():
                 'message': f'Отсутствуют обязательные поля: {", ".join(missing_fields)}'
             }), 400
 
-        # Проверяем формат email
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", data.get('customer_email')):
-            print(f"Ошибка: Неверный формат email: {data.get('customer_email')}")
-            return jsonify({
-                'success': False,
-                'message': 'Неверный формат email'
-            }), 400
-
-        # Проверяем формат телефона
-        if not re.match(r'^\+?[0-9]{10,15}$', data.get('customer_phone')):
-            print(f"Ошибка: Неверный формат телефона: {data.get('customer_phone')}")
-            return jsonify({
-                'success': False,
-                'message': 'Неверный формат телефона'
-            }), 400
-
-        # Проверяем поля мессенджера для оплаты картой
-        if data.get('payment_method') == 'card':
-            if not data.get('messenger') or not data.get('messenger_username'):
-                print("Ошибка: Отсутствуют данные мессенджера для оплаты картой")
-                return jsonify({
-                    'success': False,
-                    'message': 'Для оплаты картой необходимо указать мессенджер и username'
-                }), 400
-
         # Получаем товар
         product = Product.query.get_or_404(data['product_id'])
         print(f"\nТовар: {product.name} (ID: {product.id})")
@@ -1354,23 +1311,15 @@ def quick_order():
         
         # Проверяем наличие товара
         if product.stock < data['quantity']:
-            print(f"Ошибка: Недостаточно товара на складе. Запрошено: {data['quantity']}, В наличии: {product.stock}")
+            print(f"Ошибка: Недостаточно товара на складе")
             return jsonify({
                 'success': False,
                 'message': 'Недостаточно товара на складе'
             }), 400
 
-        # Проверяем максимальное количество
-        if data['quantity'] > product.stock:
-            print(f"Ошибка: Превышено максимальное количество товара. Запрошено: {data['quantity']}, Максимум: {product.stock}")
-            return jsonify({
-                'success': False,
-                'message': f'Максимальное количество товара: {product.stock}'
-            }), 400
-
         # Создаем заказ
         order = Order(
-            user_id=current_user.id,  # Теперь всегда используем ID текущего пользователя
+            user_id=current_user.id,
             total_amount=product.price * data['quantity'] + 60,
             status='pending',
             items=[{
@@ -1388,9 +1337,7 @@ def quick_order():
                 'phone': data.get('customer_phone'),
                 'email': data.get('customer_email'),
                 'address': data.get('address'),
-                'payment_method': data.get('payment_method'),
-                'messenger': data.get('messenger'),
-                'messenger_username': data.get('messenger_username')
+                'payment_method': data.get('payment_method')
             },
             customer_name=data.get('customer_name'),
             customer_email=data.get('customer_email'),
@@ -1401,7 +1348,7 @@ def quick_order():
         try:
             print("\nСохранение заказа в базу данных...")
             db.session.add(order)
-            db.session.flush()  # Получаем ID заказа
+            db.session.flush()
             print(f"Создан заказ с ID: {order.id}")
 
             # Создаем OrderItem
@@ -1414,38 +1361,34 @@ def quick_order():
                 color=data['color']
             )
             db.session.add(order_item)
-            print("Создан OrderItem")
 
-            # Уменьшаем количество товара на складе
+            # Уменьшаем количество товара
             product.stock -= data['quantity']
-            print(f"Обновлено количество товара на складе: {product.stock}")
 
             db.session.commit()
-            print("Изменения сохранены в базу данных")
+            print("Заказ успешно сохранен")
 
             # Отправляем email клиенту
             print(f"\nОтправка email клиенту: {data.get('customer_email')}")
             if not send_order_confirmation_email(data.get('customer_email'), order):
                 print("Ошибка: Не удалось отправить email клиенту")
-                app.logger.error(f"Failed to send confirmation email to customer: {data.get('customer_email')}")
 
             # Отправляем email администратору
-            admin_email = "ubmember500@gmail.com"
+            admin_email = app.config['ADMIN_EMAIL']
             print(f"\nОтправка email администратору: {admin_email}")
             if not send_order_confirmation_email(admin_email, order, is_admin=True):
                 print("Ошибка: Не удалось отправить email администратору")
-                app.logger.error(f"Failed to send confirmation email to admin: {admin_email}")
 
             print("\n=== Заказ успешно создан ===")
             return jsonify({
                 'success': True,
-                'message': 'Заказ успешно создан'
+                'message': 'Заказ успешно создан',
+                'redirect_url': url_for('my_orders')
             })
 
         except Exception as e:
             db.session.rollback()
             print(f"\nОшибка при сохранении заказа: {str(e)}")
-            app.logger.error(f"Database error in quick_order: {str(e)}")
             return jsonify({
                 'success': False,
                 'message': 'Произошла ошибка при сохранении заказа'
@@ -1453,7 +1396,6 @@ def quick_order():
 
     except Exception as e:
         print(f"\nОшибка при создании заказа: {str(e)}")
-        app.logger.error(f"Error in quick_order: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Произошла ошибка при создании заказа'
@@ -1497,13 +1439,6 @@ def send_order_confirmation_email(email, order, is_admin=False):
         Адрес доставки: {order.customer_info.get('address', 'Не указан')}
         Способ оплаты: {order.customer_info.get('payment_method', 'Не указан')}
         """
-        
-        # Добавляем информацию о мессенджере, если указан
-        if order.customer_info.get('messenger') and order.customer_info.get('messenger_username'):
-            body += f"""
-            Мессенджер: {order.customer_info.get('messenger')}
-            Username: {order.customer_info.get('messenger_username')}
-            """
         
         body += """
         
