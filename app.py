@@ -1293,11 +1293,22 @@ def quick_order():
                 'message': f'Отсутствуют обязательные поля: {", ".join(missing_fields)}'
             }), 400
 
+        try:
+            # Преобразуем product_id в число
+            product_id = int(data['product_id'])
+            # Преобразуем quantity в число
+            quantity = int(data['quantity'])
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': 'Некорректный формат данных'
+            }), 400
+
         # Получаем товар
-        product = Product.query.get_or_404(data['product_id'])
+        product = Product.query.get_or_404(product_id)
         
         # Проверяем наличие товара
-        if product.stock < data['quantity']:
+        if product.stock < quantity:
             return jsonify({
                 'success': False,
                 'message': 'Недостаточно товара на складе'
@@ -1320,17 +1331,17 @@ def quick_order():
         # Создаем заказ
         order = Order(
             user_id=current_user.id if current_user.is_authenticated else None,
-            total_amount=product.price * data['quantity'] + 60,  # +60 грн за доставку
+            total_amount=product.price * quantity + 60,  # +60 грн за доставку
             status='processing' if payment_status == 'paid' else 'pending',
             items=[{
-                'product_id': product.id,
+                'product_id': product_id,
                 'name': product.name,
                 'price': product.price,
-                'quantity': data['quantity'],
+                'quantity': quantity,
                 'size': data['size'],
                 'color': data['color'],
                 'image': product.image,
-                'total': product.price * data['quantity']
+                'total': product.price * quantity
             }],
             customer_info={
                 'name': data['customer_name'],
@@ -1351,17 +1362,21 @@ def quick_order():
             db.session.add(order)
             
             # Уменьшаем количество товара на складе
-            product.stock -= data['quantity']
+            product.stock -= quantity
             
             db.session.commit()
 
             # Отправляем email подтверждения
-            send_order_confirmation_email(data['customer_email'], order)
-            
-            # Отправляем уведомление администратору
-            admin_email = app.config.get('ADMIN_EMAIL')
-            if admin_email:
-                send_order_confirmation_email(admin_email, order, is_admin=True)
+            try:
+                send_order_confirmation_email(data['customer_email'], order)
+                
+                # Отправляем уведомление администратору
+                admin_email = app.config.get('ADMIN_EMAIL')
+                if admin_email:
+                    send_order_confirmation_email(admin_email, order, is_admin=True)
+            except Exception as e:
+                print(f"Ошибка при отправке email: {str(e)}")
+                # Не возвращаем ошибку клиенту, так как заказ уже создан
 
             return jsonify({
                 'success': True,
@@ -1374,11 +1389,11 @@ def quick_order():
             print(f"Ошибка при сохранении заказа: {str(e)}")
             return jsonify({
                 'success': False,
-                'message': 'Произошла ошибка при сохранении заказа'
+                'message': 'Произошла ошибка при создании заказа'
             }), 500
 
     except Exception as e:
-        print(f"Ошибка при обработке заказа: {str(e)}")
+        print(f"Общая ошибка: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Произошла ошибка при обработке заказа'
@@ -1393,30 +1408,64 @@ def send_order_confirmation_email(email, order, is_admin=False):
             subject = f'Подтверждение заказа #{order.id}'
             template = 'email/order_confirmation.html'
 
+        # Проверяем наличие всех необходимых данных
+        if not order.items or not order.customer_info:
+            raise ValueError("Отсутствуют данные заказа")
+
+        # Форматируем данные для шаблона
+        items = []
+        total = 0
+        for item in order.items:
+            item_total = item['price'] * item['quantity']
+            total += item_total
+            items.append({
+                'name': item['name'],
+                'price': "{:.2f}".format(item['price']),
+                'quantity': item['quantity'],
+                'size': item['size'],
+                'color': item['color'],
+                'total': "{:.2f}".format(item_total)
+            })
+
         # Формируем контекст для шаблона
         context = {
-            'order': order,
-            'items': order.items,
+            'order': {
+                'id': order.id,
+                'created_at': order.created_at.strftime("%d.%m.%Y %H:%M"),
+                'status': order.status,
+                'total_amount': "{:.2f}".format(order.total_amount),
+                'delivery_cost': "60.00"
+            },
+            'items': items,
             'customer_info': order.customer_info,
-            'is_admin': is_admin
+            'is_admin': is_admin,
+            'subtotal': "{:.2f}".format(total)
         }
 
-        # Рендерим HTML шаблон
-        html = render_template(template, **context)
+        try:
+            # Рендерим HTML шаблон
+            html = render_template(template, **context)
+        except Exception as e:
+            print(f"Ошибка при рендеринге шаблона: {str(e)}")
+            raise
 
-        # Отправляем email
-        msg = Message(
-            subject,
-            sender=app.config['MAIL_DEFAULT_SENDER'],
-            recipients=[email]
-        )
-        msg.html = html
-        mail.send(msg)
+        try:
+            # Отправляем email
+            msg = Message(
+                subject,
+                sender=app.config['MAIL_DEFAULT_SENDER'],
+                recipients=[email]
+            )
+            msg.html = html
+            mail.send(msg)
+            print(f"Email успешно отправлен на адрес {email}")
+        except Exception as e:
+            print(f"Ошибка при отправке email: {str(e)}")
+            raise
 
-        return True
     except Exception as e:
-        print(f"Ошибка при отправке email: {str(e)}")
-        return False
+        print(f"Ошибка в функции send_order_confirmation_email: {str(e)}")
+        raise
 
 if __name__ == '__main__':
     init_db()
