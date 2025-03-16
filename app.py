@@ -550,6 +550,7 @@ def add_to_cart(product_id):
     size = request.form.get('size')
     color = request.form.get('color')
     image = request.form.get('image')
+    action = request.form.get('action', 'cart')  # Получаем действие (cart или buy)
 
     # Получаем товар
     product = Product.query.get_or_404(product_id)
@@ -567,7 +568,8 @@ def add_to_cart(product_id):
             image = image.split('/')[-1]
         image = f'img/products/{image}'
 
-    # Check if product is already in cart
+    # Проверяем, есть ли товар уже в корзине
+    item_in_cart = False
     for item in cart:
         if item['id'] == product_id and item.get('size') == size and item.get('color') == color:
             if item['quantity'] + quantity > product.stock:
@@ -576,22 +578,27 @@ def add_to_cart(product_id):
             item['quantity'] += quantity
             if not item.get('image') or item['image'] == 'None':
                 item['image'] = image
-            session.modified = True
-            flash('Товар добавлен в корзину!', 'success')
-            return redirect(request.referrer or url_for('products'))
+            item_in_cart = True
+            break
 
-    # Add new product to cart
-    cart.append({
-        'id': product_id,
-        'name': product.name,
-        'price': product.price,
-        'quantity': quantity,
-        'size': size,
-        'color': color,
-        'image': image
-    })
+    # Если товара нет в корзине, добавляем его
+    if not item_in_cart:
+        cart.append({
+            'id': product_id,
+            'name': product.name,
+            'price': product.price,
+            'quantity': quantity,
+            'size': size,
+            'color': color,
+            'image': image
+        })
+
     session.modified = True
-
+    
+    # Если действие "buy", перенаправляем на оформление заказа
+    if action == 'buy':
+        return redirect(url_for('checkout'))
+        
     flash('Товар добавлен в корзину!', 'success')
     return redirect(request.referrer or url_for('products'))
 

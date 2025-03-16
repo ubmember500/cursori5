@@ -394,105 +394,51 @@ body .btn:contains("В избранное") {
                 <div class="product-price">{{ "%.2f"|format(product.price) }} ₴</div>
                 <p class="product-description">{{ product.description }}</p>
 
-                <!-- Выбор размера -->
-                <div class="size-selector">
-                <h5>Размер:</h5>
-                    {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
-                    <input type="radio" name="size" id="size-{{ size }}" value="{{ size }}" required>
-                    <label for="size-{{ size }}">{{ size }}</label>
-                    {% endfor %}
-            </div>
-
-                <!-- Выбор цвета -->
-                <div class="color-selector">
-                <h5>Цвет:</h5>
-                    {% for color in ['Белый', 'Черный', 'Синий', 'Красный'] %}
-                    <input type="radio" name="color" id="color-{{ color }}" value="{{ color }}" required>
-                    <label for="color-{{ color }}">{{ color }}</label>
-                    {% endfor %}
-            </div>
-
-                <!-- Выбор количества -->
-                <div class="quantity-selector">
-                <h5>Количество:</h5>
-                    <input type="number" id="quantity" name="quantity" value="1" min="1" max="10">
-            </div>
-
-                <!-- Кнопки действий (полностью изолированный компонент) -->
-                <div class="isolated-buttons-component" style="contain: content; isolation: isolate;">
-                    <div class="isolated-button-wrapper" style="contain: content; isolation: isolate;">
-                        <button type="button" 
-                                class="isolated-button isolated-button--secondary" 
-                                onclick="handleAddToCart()"
-                                style="contain: content; isolation: isolate;">
-                            В корзину
-                </button>
-            </div>
-                </div>
-
-                <style>
-                    /* Изолируем компонент с кнопками */
-                    .isolated-buttons-component {
-                        --button-primary-color: #0d6efd;
-                        --button-secondary-color: #6c757d;
-                        --button-hover-brightness: 0.9;
-                        
-                        display: grid;
-                        grid-template-columns: 1fr;
-                        gap: 1rem;
-                        margin: 2rem 0;
-                        isolation: isolate;
-                        contain: content;
-                        position: relative;
-                    }
-
-                    /* Запрещаем добавление любых элементов кроме нашей кнопки */
-                    .isolated-buttons-component > *:not(.isolated-button-wrapper),
-                    .isolated-button-wrapper > *:not(.isolated-button),
-                    .isolated-button > *:not(.isolated-button-text) {
-                        display: none !important;
-                        visibility: hidden !important;
-                        opacity: 0 !important;
-                        width: 0 !important;
-                        height: 0 !important;
-                        position: absolute !important;
-                        pointer-events: none !important;
-                    }
-
-                    .isolated-button-wrapper {
-                        position: relative;
-                        isolation: isolate;
-                        contain: content;
-                    }
-
-                    .isolated-button {
-                        width: 100%;
-                        padding: 1rem 2rem;
-                        border: none;
-                        border-radius: 8px;
-                        font-size: 1.1rem;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: filter 0.2s;
-                        position: relative;
-                        isolation: isolate;
-                        contain: content;
-                    }
-
-                    .isolated-button:hover {
-                        filter: brightness(var(--button-hover-brightness));
-                    }
-
-                    .isolated-button:active {
-                        transform: translateY(1px);
-                    }
-
-                    .isolated-button--secondary {
-                        background-color: white;
-                        color: var(--button-secondary-color);
-                        border: 2px solid var(--button-secondary-color);
-                    }
-                </style>
+                <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="POST">
+                    <!-- Выбор размера -->
+                    <div class="size-selector mb-3">
+                        <h5>Размер:</h5>
+                        <div class="btn-group" role="group">
+                            {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
+                            <input type="radio" class="btn-check" name="size" id="size_{{ size }}" value="{{ size }}" required>
+                            <label class="btn btn-outline-primary" for="size_{{ size }}">{{ size }}</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Выбор цвета -->
+                    <div class="color-selector mb-3">
+                        <h5>Цвет:</h5>
+                        <div class="btn-group" role="group">
+                            {% for color in ['Белый', 'Черный', 'Серый', 'Синий'] %}
+                            <input type="radio" class="btn-check" name="color" id="color_{{ color }}" value="{{ color }}" required>
+                            <label class="btn btn-outline-primary" for="color_{{ color }}">{{ color }}</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Выбор количества -->
+                    <div class="quantity-selector mb-3">
+                        <h5>Количество:</h5>
+                        <div class="input-group" style="width: 150px;">
+                            <button class="btn btn-outline-secondary" type="button" onclick="updateQuantity(-1)">-</button>
+                            <input type="number" class="form-control text-center" name="quantity" id="quantity" value="1" min="1" max="{{ product.stock }}">
+                            <button class="btn btn-outline-secondary" type="button" onclick="updateQuantity(1)">+</button>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="image" value="{{ product_image }}">
+                    
+                    <!-- Кнопки действий -->
+                    <div class="action-buttons">
+                        <button type="submit" name="action" value="cart" class="btn btn-primary">
+                            <i class="fas fa-shopping-cart me-2"></i>В корзину
+                        </button>
+                        <button type="submit" name="action" value="buy" class="btn btn-success" formaction="{{ url_for('checkout') }}">
+                            <i class="fas fa-shopping-bag me-2"></i>Купить сейчас
+                        </button>
+                    </div>
+                </form>
 
                 <!-- Скрытые формы для отправки -->
                 <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="display: none;">
@@ -539,6 +485,14 @@ body .btn:contains("В избранное") {
 
                 function changeImage(src) {
                     document.getElementById('mainImage').src = src;
+                }
+
+                function updateQuantity(change) {
+                    const input = document.getElementById('quantity');
+                    const currentValue = parseInt(input.value) || 1;
+                    const maxStock = {{ product.stock }};
+                    const newValue = Math.max(1, Math.min(currentValue + change, maxStock));
+                    input.value = newValue;
                 }
                 </script>
             </div>
