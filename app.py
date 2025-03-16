@@ -1171,7 +1171,7 @@ def forgot_password():
                             sender='defensivelox@gmail.com',
                             recipients=[email])
                 msg.body = f'Для восстановления пароля перейдите по ссылке: {reset_url}'
-                mail.send(msg)
+                Thread(target=send_async_email, args=(app, msg)).start()
                 
                 flash('Инструкции по восстановлению пароля отправлены на ваш email', 'success')
                 return redirect(url_for('login'))
@@ -1638,7 +1638,7 @@ def cancel_order(order_id):
             
             Если у вас есть вопросы, пожалуйста, свяжитесь с нами.
             '''
-            mail.send(msg)
+            Thread(target=send_async_email, args=(app, msg)).start()
             print(f"Email с уведомлением об отмене отправлен на {user.email}")
             
             # Отправляем уведомление администратору
@@ -1655,7 +1655,7 @@ def cancel_order(order_id):
             Адрес доставки: {order.shipping_address}, {order.shipping_city}
             Телефон: {order.phone_number}
             '''
-            mail.send(admin_msg)
+            Thread(target=send_async_email, args=(app, admin_msg)).start()
             print(f"Email с уведомлением об отмене заказа отправлен администратору")
         except Exception as e:
             print(f"Ошибка отправки email: {e}")
