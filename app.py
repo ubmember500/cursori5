@@ -209,7 +209,7 @@ class Session(db.Model):
 
 
 class Order(db.Model):
-    __tablename__ = 'orders'  # Явно указываем имя таблицы
+    __tablename__ = 'order'  # Исправляем имя таблицы с 'orders' на 'order'
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -225,6 +225,7 @@ class Order(db.Model):
     
     # Способ оплаты
     payment_method = db.Column(db.String(50))  # cash, card, bank_transfer
+    messenger_contact = db.Column(db.String(100))  # Контакт в мессенджере для оплаты картой
     
     # Связь с пользователем и товарами
     user = db.relationship('User', backref='orders')
@@ -232,10 +233,10 @@ class Order(db.Model):
 
 
 class OrderItem(db.Model):
-    __tablename__ = 'order_items'  # Явно указываем имя таблицы
+    __tablename__ = 'order_item'  # Исправляем имя таблицы с 'order_items' на 'order_item'
     
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)  # Обновляем ссылку на таблицу orders
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)  # Обновляем ссылку на таблицу order
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)  # Цена на момент заказа

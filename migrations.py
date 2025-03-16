@@ -1,42 +1,43 @@
 from app import db, app, Order, OrderItem
 import os
+from sqlalchemy import inspect, text
 
 def migrate():
     with app.app_context():
         # Проверяем существующие таблицы
-        from sqlalchemy import inspect
         inspector = inspect(db.engine)
-        existing_tables = inspector.get_table_names()
-        print(f"Существующие таблицы: {existing_tables}")
+        tables = inspector.get_table_names()
+        print(f"Существующие таблицы: {tables}")
         
-        # Проверяем, существует ли таблица orders
-        if 'orders' not in existing_tables:
-            print("Таблица 'orders' не существует, создаем...")
-        else:
-            print("Таблица 'orders' уже существует")
+        # Проверяем, существует ли таблица order
+        if 'order' in tables:
+            print("Таблица 'order' существует")
             
-        # Проверяем, существует ли таблица order_items
-        if 'order_items' not in existing_tables:
-            print("Таблица 'order_items' не существует, создаем...")
+            # Проверяем, есть ли колонка messenger_contact
+            columns = inspector.get_columns('order')
+            column_names = [col['name'] for col in columns]
+            
+            if 'messenger_contact' not in column_names:
+                print("Колонка 'messenger_contact' не существует, добавляем...")
+                
+                # Добавляем колонку messenger_contact
+                try:
+                    db.engine.execute(text("ALTER TABLE 'order' ADD COLUMN messenger_contact VARCHAR(100)"))
+                    print("Колонка 'messenger_contact' успешно добавлена")
+                except Exception as e:
+                    print(f"Ошибка при добавлении колонки: {e}")
+            else:
+                print("Колонка 'messenger_contact' уже существует")
         else:
-            print("Таблица 'order_items' уже существует")
+            print("Таблица 'order' не существует, создаем таблицы...")
+            db.create_all()
+            print("Таблицы созданы")
         
-        # Создаем таблицы для заказов
-        db.create_all()
-        
-        # Проверяем, что таблицы созданы
+        # Проверяем структуру таблиц после миграции
         inspector = inspect(db.engine)
-        updated_tables = inspector.get_table_names()
-        print(f"Таблицы после миграции: {updated_tables}")
-        
-        # Проверяем структуру таблиц
-        if 'orders' in updated_tables:
-            columns = inspector.get_columns('orders')
-            print(f"Структура таблицы 'orders': {[col['name'] for col in columns]}")
-        
-        if 'order_items' in updated_tables:
-            columns = inspector.get_columns('order_items')
-            print(f"Структура таблицы 'order_items': {[col['name'] for col in columns]}")
+        if 'order' in inspector.get_table_names():
+            columns = inspector.get_columns('order')
+            print(f"Структура таблицы 'order' после миграции: {[col['name'] for col in columns]}")
         
         print("Миграция успешно выполнена")
 

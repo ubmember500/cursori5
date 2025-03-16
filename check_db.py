@@ -1,13 +1,13 @@
 from app import db, app, Order, OrderItem, User
 import os
+from sqlalchemy import inspect
 
 def check_db():
     with app.app_context():
         # Проверяем существующие таблицы
-        from sqlalchemy import inspect
         inspector = inspect(db.engine)
-        existing_tables = inspector.get_table_names()
-        print(f"Существующие таблицы: {existing_tables}")
+        tables = inspector.get_table_names()
+        print("Таблицы в базе данных:", tables)
         
         # Проверяем пользователей
         users = User.query.all()
@@ -26,14 +26,26 @@ def check_db():
         except Exception as e:
             print(f"Ошибка при получении заказов: {e}")
         
-        # Проверяем структуру таблиц
-        if 'orders' in existing_tables:
-            columns = inspector.get_columns('orders')
-            print(f"Структура таблицы 'orders': {[col['name'] for col in columns]}")
+        # Проверяем таблицу order (а не orders)
+        if 'order' in tables:
+            columns = inspector.get_columns('order')
+            column_names = [col['name'] for col in columns]
+            print("Колонки в таблице order:", column_names)
+            
+            if 'messenger_contact' not in column_names:
+                print("ОШИБКА: Колонка 'messenger_contact' отсутствует в таблице order!")
+            else:
+                print("Колонка 'messenger_contact' присутствует в таблице order.")
+        else:
+            print("ОШИБКА: Таблица 'order' не найдена в базе данных!")
         
-        if 'order_items' in existing_tables:
-            columns = inspector.get_columns('order_items')
-            print(f"Структура таблицы 'order_items': {[col['name'] for col in columns]}")
+        # Проверяем таблицу order_item (а не order_items)
+        if 'order_item' in tables:
+            columns = inspector.get_columns('order_item')
+            column_names = [col['name'] for col in columns]
+            print("Колонки в таблице order_item:", column_names)
+        else:
+            print("ОШИБКА: Таблица 'order_item' не найдена в базе данных!")
 
 if __name__ == '__main__':
     check_db() 
