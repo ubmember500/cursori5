@@ -25,6 +25,7 @@ from auth_middleware import login_required
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import Header
 
 # Загрузка переменных окружения
 # load_dotenv()  # Убираем загрузку .env
@@ -62,7 +63,8 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # SMTP сервер Gmail
 app.config['MAIL_PORT'] = 587  # Порт для TLS
 app.config['MAIL_USE_TLS'] = True  # Использовать TLS шифрование
 app.config['MAIL_USERNAME'] = 'defensivelox@gmail.com'  # Email отправителя
-app.config['MAIL_PASSWORD'] = 'pgqm xxgl srss caue'  # Пароль приложения Google (не обычный пароль аккаунта)
+# Пароль приложения Google (обновлен)
+app.config['MAIL_PASSWORD'] = 'qpob pgme eczn pind'  # Пароль приложения Google (не обычный пароль аккаунта)
 app.config['MAIL_DEFAULT_SENDER'] = 'defensivelox@gmail.com'  # Email отправителя по умолчанию
 
 mail = Mail(app)
@@ -686,21 +688,42 @@ def remove_from_cart(product_id):
     return redirect(url_for('cart'))
 
 
-def send_async_email(app, msg):
+def send_async_email(app, msg, custom_password=None):
     with app.app_context():
         try:
             print(f"Попытка отправки email на {msg.recipients}")
             print(f"Используется SMTP сервер: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
             print(f"Учетные данные: {app.config['MAIL_USERNAME']}")
             
-            # Создаем MIME сообщение напрямую
-            email_msg = MIMEMultipart()
-            email_msg['From'] = app.config['MAIL_USERNAME']
-            email_msg['To'] = ', '.join(msg.recipients)
-            email_msg['Subject'] = msg.subject
-            email_msg.attach(MIMEText(msg.body, 'plain'))
+            # Используем пароль из параметра, если он указан, иначе из конфигурации
+            password = custom_password if custom_password else app.config['MAIL_PASSWORD']
             
+            # Отправляем через Flask-Mail (для простых сообщений без кириллицы)
             try:
+                mail.send(msg)
+                print(f"Email успешно отправлен через Flask-Mail на {msg.recipients}")
+                return
+            except Exception as mail_err:
+                print(f"Ошибка отправки через Flask-Mail: {mail_err}")
+                print("Пробуем отправить напрямую через SMTP...")
+            
+            # Если Flask-Mail не сработал, отправляем напрямую через SMTP
+            try:
+                # Импортируем необходимые модули
+                from email.mime.text import MIMEText
+                from email.mime.multipart import MIMEMultipart
+                from email.header import Header
+                
+                # Создаем сообщение
+                email_msg = MIMEMultipart()
+                email_msg['From'] = app.config['MAIL_USERNAME']
+                email_msg['To'] = ', '.join(msg.recipients)
+                email_msg['Subject'] = Header(msg.subject, 'utf-8').encode()
+                
+                # Добавляем текст сообщения
+                part = MIMEText(msg.body, 'plain', 'utf-8')
+                email_msg.attach(part)
+                
                 # Подключаемся к серверу
                 smtp = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
                 smtp.set_debuglevel(1)  # Включаем подробное логирование
@@ -711,28 +734,18 @@ def send_async_email(app, msg):
                     smtp.ehlo()
                 
                 # Логинимся
-                smtp.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+                smtp.login(app.config['MAIL_USERNAME'], password)
                 print(f"Успешный вход в SMTP сервер с учетными данными {app.config['MAIL_USERNAME']}")
                 
                 # Отправляем сообщение
-                smtp.sendmail(
-                    app.config['MAIL_USERNAME'], 
-                    msg.recipients, 
-                    email_msg.as_string()
-                )
-                print(f"Email успешно отправлен на {msg.recipients}")
+                smtp.send_message(email_msg)
+                print(f"Email успешно отправлен через SMTP на {msg.recipients}")
                 
                 # Закрываем соединение
                 smtp.quit()
                 
-            except smtplib.SMTPAuthenticationError as auth_err:
-                print(f"Ошибка аутентификации SMTP: {auth_err}")
-                print("Проверьте правильность логина и пароля для SMTP сервера")
-                import traceback
-                traceback.print_exc()
-                
-            except smtplib.SMTPException as smtp_err:
-                print(f"Ошибка SMTP: {smtp_err}")
+            except Exception as e:
+                print(f"Ошибка отправки через SMTP: {e}")
                 import traceback
                 traceback.print_exc()
                 
@@ -1685,5 +1698,4 @@ if __name__ == '__main__':
     init_db()
     app.run(debug=True, port=5001)
 
-print("Flask application for Cursor Clothing Shop is ready to run!")
 print("Flask application for Cursor Clothing Shop is ready to run!")
