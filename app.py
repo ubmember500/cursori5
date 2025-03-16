@@ -763,6 +763,12 @@ def checkout():
             })
             total += item_total
         print(f"Товары в корзине проверены, общая сумма: {total}")
+        
+        # Добавляем стоимость доставки
+        delivery_cost = 60.0
+        total_with_delivery = total + delivery_cost
+        print(f"Общая сумма с доставкой: {total_with_delivery}")
+        
     except Exception as e:
         print(f"Ошибка при проверке товаров в корзине: {str(e)}")
         flash('Произошла ошибка при проверке товаров. Попробуйте позже.', 'error')
@@ -777,18 +783,26 @@ def checkout():
             shipping_postal_code = request.form.get('shipping_postal_code')
             phone_number = request.form.get('phone_number')
             payment_method = request.form.get('payment_method')
+            messenger_contact = request.form.get('messenger_contact', '')
 
             print(f"Данные доставки: адрес={shipping_address}, город={shipping_city}, индекс={shipping_postal_code}, телефон={phone_number}, способ оплаты={payment_method}")
+            if payment_method == 'card' and messenger_contact:
+                print(f"Контакт для связи: {messenger_contact}")
 
             # Проверяем обязательные поля
             if not all([shipping_address, shipping_city, phone_number, payment_method]):
                 flash('Пожалуйста, заполните все обязательные поля', 'error')
                 return render_template('checkout.html', cart_items=cart_items, total=total)
+                
+            # Проверяем наличие контакта для связи при оплате картой
+            if payment_method == 'card' and not messenger_contact:
+                flash('Пожалуйста, укажите контакт для связи в Telegram/Viber', 'error')
+                return render_template('checkout.html', cart_items=cart_items, total=total)
 
-            # Создаем заказ
+            # Создаем заказ с учетом стоимости доставки
             order = Order(
                 user_id=g.user.id,
-                total_amount=total,
+                total_amount=total_with_delivery,  # Общая сумма с доставкой
                 status='pending',
                 shipping_address=shipping_address,
                 shipping_city=shipping_city,
@@ -796,6 +810,12 @@ def checkout():
                 phone_number=phone_number,
                 payment_method=payment_method
             )
+            
+            # Если выбрана оплата картой, сохраняем контакт в примечании к заказу
+            if payment_method == 'card' and messenger_contact:
+                # Добавляем информацию о контакте в адрес доставки
+                order.shipping_address = f"{shipping_address} (Контакт: {messenger_contact})"
+            
             db.session.add(order)
             print(f"Заказ создан для пользователя {g.user.id}")
             
@@ -834,11 +854,17 @@ def checkout():
                     sender='defensivelox@gmail.com',
                     recipients=[g.user.email]
                 )
+                
+                # Добавляем информацию о доставке в текст письма
+                delivery_info = "Стоимость доставки: 60.00 ₴"
+                
                 msg.body = f'''
                 Спасибо за ваш заказ!
                 
                 Номер заказа: {order.id}
-                Сумма заказа: {total} ₴
+                Сумма товаров: {total} ₴
+                {delivery_info}
+                Итого к оплате: {total_with_delivery} ₴
                 Статус: В обработке
                 
                 Адрес доставки:

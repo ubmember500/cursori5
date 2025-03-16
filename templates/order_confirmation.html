@@ -15,9 +15,31 @@
                     
                     <div class="order-details mt-4">
                         <h4>Детали заказа:</h4>
-                        <p><strong>Статус:</strong> {{ order.status }}</p>
-                        <p><strong>Сумма:</strong> {{ order.total_amount }} ₴</p>
-                        <p><strong>Способ оплаты:</strong> {{ order.payment_method }}</p>
+                        <p><strong>Статус:</strong> 
+                            {% if order.status == 'pending' %}Ожидает оплаты
+                            {% elif order.status == 'paid' %}Оплачен
+                            {% elif order.status == 'shipped' %}Отправлен
+                            {% elif order.status == 'delivered' %}Доставлен
+                            {% elif order.status == 'cancelled' %}Отменен
+                            {% else %}{{ order.status }}
+                            {% endif %}
+                        </p>
+                        
+                        <!-- Расчет стоимости товаров (без доставки) -->
+                        {% set subtotal = 0 %}
+                        {% for item in order.items %}
+                            {% set subtotal = subtotal + (item.price * item.quantity) %}
+                        {% endfor %}
+                        
+                        <p><strong>Стоимость товаров:</strong> {{ "%.2f"|format(subtotal) }} ₴</p>
+                        <p><strong>Стоимость доставки:</strong> 60.00 ₴</p>
+                        <p><strong>Итого к оплате:</strong> {{ "%.2f"|format(order.total_amount) }} ₴</p>
+                        <p><strong>Способ оплаты:</strong> 
+                            {% if order.payment_method == 'cash' %}Наличными при получении
+                            {% elif order.payment_method == 'card' %}Оплата картой онлайн
+                            {% else %}{{ order.payment_method }}
+                            {% endif %}
+                        </p>
                         
                         <h5 class="mt-4">Адрес доставки:</h5>
                         <p>{{ order.shipping_address }}<br>

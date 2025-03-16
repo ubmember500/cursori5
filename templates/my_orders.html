@@ -93,6 +93,19 @@
                     </div>
                     
                     <div class="mb-3">
+                        <p class="mb-1"><strong>Способ оплаты:</strong></p>
+                        <p>
+                            {% if order.payment_method == 'cash' %}
+                                Наличными при получении
+                            {% elif order.payment_method == 'card' %}
+                                Оплата картой онлайн
+                            {% else %}
+                                {{ order.payment_method }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
                         <p class="mb-1"><strong>Адрес доставки:</strong></p>
                         <p>{{ order.shipping_address }}, {{ order.shipping_city }}</p>
                     </div>
