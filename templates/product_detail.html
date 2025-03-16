@@ -504,7 +504,14 @@ body .btn:contains("В избранное") {
                     const form = document.querySelector('form');
                     
                     if (action === 'buy') {
+                        // Для кнопки "Купить сейчас" отправляем форму на checkout с action=buy
                         form.action = "{{ url_for('checkout') }}";
+                        // Добавляем скрытое поле для action=buy
+                        let actionInput = document.createElement('input');
+                        actionInput.type = 'hidden';
+                        actionInput.name = 'action';
+                        actionInput.value = 'buy';
+                        form.appendChild(actionInput);
                     }
                     
                     form.submit();
