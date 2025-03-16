@@ -218,9 +218,7 @@
 <script>
 function confirmCancel(orderId) {
     if (confirm('Вы уверены, что хотите отменить заказ #' + orderId + '?')) {
-        // Here you would redirect to a cancel order route
-        // window.location.href = '/cancel-order/' + orderId;
-        alert('Функция отмены заказа будет доступна в ближайшее время');
+        window.location.href = '/cancel-order/' + orderId;
     }
 }
 </script>

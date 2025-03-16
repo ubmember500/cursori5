@@ -1337,6 +1337,61 @@ def order_details(order_id):
         flash('Произошла ошибка при загрузке заказа', 'danger')
         return redirect(url_for('my_orders'))
 
+@app.route('/cancel-order/<int:order_id>', methods=['GET', 'POST'])
+@login_required
+def cancel_order(order_id):
+    """Отмена заказа пользователем"""
+    try:
+        # Получаем заказ и проверяем, принадлежит ли он текущему пользователю
+        order = Order.query.get_or_404(order_id)
+        if order.user_id != g.user.id:
+            flash('У вас нет прав для отмены этого заказа', 'danger')
+            return redirect(url_for('my_orders'))
+        
+        # Проверяем, можно ли отменить заказ (только в статусе "pending")
+        if order.status != 'pending':
+            flash('Этот заказ нельзя отменить, так как он уже обрабатывается или доставлен', 'warning')
+            return redirect(url_for('order_details', order_id=order_id))
+        
+        # Меняем статус заказа на "cancelled"
+        order.status = 'cancelled'
+        
+        # Возвращаем товары на склад
+        for item in order.items:
+            product = Product.query.get(item.product_id)
+            if product:
+                product.stock += item.quantity
+                print(f"Возвращено на склад: {item.quantity} шт. товара {product.name}")
+        
+        db.session.commit()
+        flash('Заказ успешно отменен', 'success')
+        
+        # Отправляем уведомление на email
+        try:
+            msg = Message(
+                'Отмена заказа',
+                sender='defensivelox@gmail.com',
+                recipients=[g.user.email]
+            )
+            msg.body = f'''
+            Ваш заказ #{order.id} был отменен.
+            
+            Если у вас есть вопросы, пожалуйста, свяжитесь с нами.
+            '''
+            mail.send(msg)
+        except Exception as e:
+            print(f"Ошибка отправки email: {e}")
+        
+        return redirect(url_for('my_orders'))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Ошибка при отмене заказа {order_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash('Произошла ошибка при отмене заказа. Попробуйте позже.', 'danger')
+        return redirect(url_for('my_orders'))
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, port=5001)
