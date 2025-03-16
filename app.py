@@ -22,6 +22,9 @@ import bleach
 import re
 from sqlalchemy.exc import IntegrityError
 from auth_middleware import login_required
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Загрузка переменных окружения
 # load_dotenv()  # Убираем загрузку .env
@@ -55,12 +58,12 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
 # Настройка почты
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'defensivelox@gmail.com'
-app.config['MAIL_PASSWORD'] = 'pgqm xxgl srss caue'
-app.config['MAIL_DEFAULT_SENDER'] = 'defensivelox@gmail.com'
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # SMTP сервер Gmail
+app.config['MAIL_PORT'] = 587  # Порт для TLS
+app.config['MAIL_USE_TLS'] = True  # Использовать TLS шифрование
+app.config['MAIL_USERNAME'] = 'defensivelox@gmail.com'  # Email отправителя
+app.config['MAIL_PASSWORD'] = 'pgqm xxgl srss caue'  # Пароль приложения Google (не обычный пароль аккаунта)
+app.config['MAIL_DEFAULT_SENDER'] = 'defensivelox@gmail.com'  # Email отправителя по умолчанию
 
 mail = Mail(app)
 db = SQLAlchemy(app)
@@ -683,6 +686,61 @@ def remove_from_cart(product_id):
     return redirect(url_for('cart'))
 
 
+def send_async_email(app, msg):
+    with app.app_context():
+        try:
+            print(f"Попытка отправки email на {msg.recipients}")
+            print(f"Используется SMTP сервер: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
+            print(f"Учетные данные: {app.config['MAIL_USERNAME']}")
+            
+            # Создаем MIME сообщение напрямую
+            email_msg = MIMEMultipart()
+            email_msg['From'] = app.config['MAIL_USERNAME']
+            email_msg['To'] = ', '.join(msg.recipients)
+            email_msg['Subject'] = msg.subject
+            email_msg.attach(MIMEText(msg.body, 'plain'))
+            
+            try:
+                # Подключаемся к серверу
+                smtp = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+                smtp.set_debuglevel(1)  # Включаем подробное логирование
+                smtp.ehlo()
+                
+                if app.config['MAIL_USE_TLS']:
+                    smtp.starttls()
+                    smtp.ehlo()
+                
+                # Логинимся
+                smtp.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+                print(f"Успешный вход в SMTP сервер с учетными данными {app.config['MAIL_USERNAME']}")
+                
+                # Отправляем сообщение
+                smtp.sendmail(
+                    app.config['MAIL_USERNAME'], 
+                    msg.recipients, 
+                    email_msg.as_string()
+                )
+                print(f"Email успешно отправлен на {msg.recipients}")
+                
+                # Закрываем соединение
+                smtp.quit()
+                
+            except smtplib.SMTPAuthenticationError as auth_err:
+                print(f"Ошибка аутентификации SMTP: {auth_err}")
+                print("Проверьте правильность логина и пароля для SMTP сервера")
+                import traceback
+                traceback.print_exc()
+                
+            except smtplib.SMTPException as smtp_err:
+                print(f"Ошибка SMTP: {smtp_err}")
+                import traceback
+                traceback.print_exc()
+                
+        except Exception as e:
+            print(f"Критическая ошибка отправки email: {e}")
+            import traceback
+            traceback.print_exc()
+
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     if not g.user:
@@ -843,67 +901,76 @@ def checkout():
                 # Используем email из формы, если он есть, иначе email пользователя
                 recipient_email = email if email else g.user.email
                 
-                msg = Message(
-                    'Подтверждение заказа',
-                    sender='defensivelox@gmail.com',
-                    recipients=[recipient_email]
-                )
-                
-                # Добавляем информацию о доставке в текст письма
-                delivery_info = "Стоимость доставки: 60.00 ₴"
-                
-                msg.body = f'''
-                Спасибо за ваш заказ!
-                
-                Номер заказа: {order.id}
-                Сумма товаров: {total} ₴
-                {delivery_info}
-                Итого к оплате: {total_with_delivery} ₴
-                Статус: В обработке
-                
-                Адрес доставки:
-                {shipping_address}
-                {shipping_city}
-                {shipping_postal_code}
-                
-                Способ оплаты: {payment_method}
-                
-                Мы свяжемся с вами по телефону {phone_number} для подтверждения заказа.
-                '''
-                mail.send(msg)
-                print(f"Email с подтверждением отправлен на {recipient_email}")
-                
-                # Отправляем копию администратору
-                admin_msg = Message(
-                    f'Новый заказ #{order.id}',
-                    sender='defensivelox@gmail.com',
-                    recipients=['defensivelox@gmail.com']
-                )
-                
-                admin_msg.body = f'''
-                Новый заказ от пользователя {g.user.username} ({recipient_email})!
-                
-                Номер заказа: {order.id}
-                Сумма товаров: {total} ₴
-                {delivery_info}
-                Итого к оплате: {total_with_delivery} ₴
-                
-                Адрес доставки:
-                {shipping_address}
-                {shipping_city}
-                {shipping_postal_code}
-                
-                Способ оплаты: {payment_method}
-                Телефон: {phone_number}
-                '''
-                
-                if payment_method == 'card' and messenger_contact:
-                    admin_msg.body += f'\nКонтакт в мессенджере: {messenger_contact}'
-                
-                mail.send(admin_msg)
-                print(f"Email с уведомлением о заказе отправлен администратору")
+                if recipient_email:
+                    # Создаем сообщение для клиента
+                    msg = Message(
+                        'Подтверждение заказа',
+                        sender='defensivelox@gmail.com',
+                        recipients=[recipient_email]
+                    )
+                    
+                    # Добавляем информацию о доставке в текст письма
+                    delivery_info = "Стоимость доставки: 60.00 ₴"
+                    
+                    msg.body = f'''
+                    Спасибо за ваш заказ!
+                    
+                    Номер заказа: {order.id}
+                    Сумма товаров: {total} ₴
+                    {delivery_info}
+                    Итого к оплате: {total_with_delivery} ₴
+                    Статус: В обработке
+                    
+                    Адрес доставки:
+                    {shipping_address}
+                    {shipping_city}
+                    {shipping_postal_code}
+                    
+                    Способ оплаты: {payment_method}
+                    
+                    Мы свяжемся с вами по телефону {phone_number} для подтверждения заказа.
+                    '''
+                    
+                    # Отправляем email асинхронно
+                    Thread(target=send_async_email, args=(app, msg)).start()
+                    print(f"Запущена асинхронная отправка email с подтверждением на {recipient_email}")
+                    
+                    # Отправляем копию администратору
+                    admin_msg = Message(
+                        f'Новый заказ #{order.id}',
+                        sender='defensivelox@gmail.com',
+                        recipients=['defensivelox@gmail.com']
+                    )
+                    
+                    admin_msg.body = f'''
+                    Новый заказ от пользователя {g.user.username} ({recipient_email})!
+                    
+                    Номер заказа: {order.id}
+                    Сумма товаров: {total} ₴
+                    {delivery_info}
+                    Итого к оплате: {total_with_delivery} ₴
+                    
+                    Адрес доставки:
+                    {shipping_address}
+                    {shipping_city}
+                    {shipping_postal_code}
+                    
+                    Способ оплаты: {payment_method}
+                    Телефон: {phone_number}
+                    '''
+                    
+                    if payment_method == 'card' and messenger_contact:
+                        admin_msg.body += f'\nКонтакт в мессенджере: {messenger_contact}'
+                    
+                    # Отправляем email асинхронно
+                    Thread(target=send_async_email, args=(app, admin_msg)).start()
+                    print(f"Запущена асинхронная отправка email с уведомлением администратору")
+                else:
+                    print("Email не указан, уведомление не отправлено")
             except Exception as e:
-                print(f"Ошибка отправки email: {e}")
+                print(f"Ошибка при подготовке email: {e}")
+                import traceback
+                traceback.print_exc()
             
             flash('Заказ успешно оформлен! Мы отправили подтверждение на ваш email.', 'success')
             return redirect(url_for('order_confirmation', order_id=order.id))
@@ -926,13 +993,6 @@ def place_order():
     flash('Your order has been placed successfully!', 'success')
     return redirect(url_for('home'))
 
-
-def send_async_email(app, msg):
-    with app.app_context():
-        try:
-            mail.send(msg)
-        except Exception as e:
-            print(f"Ошибка отправки email: {e}")
 
 @app.route('/contacts', methods=['GET', 'POST'])
 def contacts():
@@ -1596,6 +1656,30 @@ def cancel_order(order_id):
         traceback.print_exc()
         flash('Произошла ошибка при отмене заказа. Попробуйте позже.', 'danger')
         return redirect(url_for('my_orders'))
+
+@app.route('/test-email', methods=['GET'])
+def test_email():
+    """Тестовый маршрут для проверки отправки email"""
+    if not g.user or g.user.id != 1:  # Только для администратора (ID=1)
+        flash('Доступ запрещен', 'danger')
+        return redirect(url_for('home'))
+    
+    try:
+        # Создаем тестовое сообщение
+        msg = Message(
+            'Тестовое сообщение от Cursor Shop',
+            recipients=[g.user.email]
+        )
+        msg.body = 'Это тестовое сообщение для проверки работы отправки email.'
+        
+        # Отправляем асинхронно
+        Thread(target=send_async_email, args=(app, msg)).start()
+        
+        flash('Тестовое сообщение отправлено. Проверьте логи сервера и вашу почту.', 'success')
+    except Exception as e:
+        flash(f'Ошибка при отправке тестового сообщения: {str(e)}', 'danger')
+    
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     init_db()
