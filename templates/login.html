@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Вход{% endblock %}
+{% block title %}Вход - Cursor Shop🛍️{% endblock %}
 
 {% block content %}
 {% if g.user %}
@@ -120,15 +120,24 @@
                 {% endif %}
             {% endwith %}
             
-            <form method="POST">
+            <form method="POST" action="{{ url_for('login') }}">
+                <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+                
                 <div class="form-group mb-3">
-                    <label for="username_or_email" class="form-label">Логин или Email</label>
-                    <input type="text" class="form-control" id="username_or_email" name="username_or_email" required>
+                    <label for="username" class="form-label">Имя пользователя</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
                 </div>
+                
                 <div class="form-group mb-4">
                     <label for="password" class="form-label">Пароль</label>
                     <input type="password" class="form-control" id="password" name="password" required>
                 </div>
+                
+                <div class="form-group mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">Запомнить меня</label>
+                </div>
+                
                 <div class="text-center">
                     <button type="submit" class="btn btn-primary">Войти</button>
                 </div>

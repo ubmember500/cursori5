@@ -265,6 +265,17 @@
                             {% endfor %}
                         </ul>
                     </li>
+                    <li class="nav-item">
+                        {% if g.user %}
+                        <a class="nav-link" href="{{ url_for('my_orders') }}">
+                            <i class="fas fa-box"></i> Мои заказы
+                        </a>
+                        {% else %}
+                        <a class="nav-link" href="{{ url_for('login', next=url_for('my_orders')) }}">
+                            <i class="fas fa-box"></i> Мои заказы
+                        </a>
+                        {% endif %}
+                    </li>
                 </ul>
                 <div class="d-flex">
                     <a href="{{ url_for('cart') }}" class="btn btn-outline-light me-2">
@@ -273,22 +284,15 @@
                             <span class="badge bg-danger">{{ session.cart|length }}</span>
                         {% endif %}
                     </a>
-                    {% if g.user %}
-                        <div class="dropdown">
-                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
-                                <i class="fas fa-user me-1"></i>{{ g.user.username }}
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#">Мой профиль</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('my_orders') }}">Мои заказы</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">Выйти</a></li>
-                            </ul>
-                        </div>
-                    {% else %}
-                        <a href="{{ url_for('login') }}" class="btn btn-outline-light me-2">Войти</a>
-                        <a href="{{ url_for('register') }}" class="btn btn-outline-light">Регистрация</a>
-                    {% endif %}
+                    <div class="user-info">
+                        {% if g.user %}
+                        <span>Привет, {{ g.user.username }}!</span>
+                        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light ms-2">Выйти</a>
+                        {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-light">Войти</a>
+                        <a href="{{ url_for('register') }}" class="btn btn-sm btn-light ms-2">Регистрация</a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>

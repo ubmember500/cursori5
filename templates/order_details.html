@@ -201,7 +201,7 @@
                 </div>
                 <div class="card-body">
                     {% if order.status == 'pending' %}
-                    <button class="btn btn-danger w-100 mb-3" onclick="confirmCancel({{ order.id }})">
+                    <button class="btn btn-danger w-100 mb-3" onclick="confirmCancel({{ order.id }});">
                         <i class="fas fa-times me-2"></i>Отменить заказ
                     </button>
                     {% endif %}

@@ -21,6 +21,7 @@ from flask_migrate import Migrate
 import bleach
 import re
 from sqlalchemy.exc import IntegrityError
+from auth_middleware import login_required
 
 # Загрузка переменных окружения
 # load_dotenv()  # Убираем загрузку .env
@@ -921,55 +922,34 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if g.user:
-        return redirect(url_for('home'))
-        
     if request.method == 'POST':
-        username_or_email = request.form.get('username_or_email')
-        password = request.form.get('password')
+        username = request.form['username']
+        password = request.form['password']
         
-        user = User.query.filter(
-            (User.username == username_or_email) | (User.email == username_or_email)
-        ).first()
+        user = User.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
+            # Сохраняем ID пользователя в сессии
             session.clear()
             session['user_id'] = user.id
-            session['username'] = user.username
-            session.permanent = True
-            g.user = user
             
-            # Принудительно обновляем кэш
-            cache.delete_memoized(get_cached_products)
-            cache.delete('view//')
-            
-            flash('Вы успешно вошли в систему!', 'success')
+            # Перенаправляем на запрошенную страницу или на главную
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('home'))
-        else:
-            flash('Неверный логин/email или пароль!', 'danger')
+            if not next_page or url_parse(next_page).netloc != '':
+                next_page = url_for('index')
+            
+            return redirect(next_page)
+        
+        flash('Неверное имя пользователя или пароль', 'error')
     
     return render_template('login.html')
 
 
 @app.route('/logout')
 def logout():
-    # Очищаем все данные сессии
     session.clear()
-    g.user = None
-    
-    # Принудительно очищаем весь кэш
-    cache.delete_memoized(get_cached_products)
-    cache.delete('view//')
-    
-    # Добавляем заголовок для предотвращения кэширования браузером
-    response = make_response(redirect(url_for('home')))
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    
-    flash('Вы успешно вышли из системы!', 'success')
-    return response
+    flash('Вы вышли из системы', 'info')
+    return redirect(url_for('index'))
 
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -1130,23 +1110,13 @@ def payment_success():
 
 # Добавляем before_request для проверки пользователя перед каждым запросом
 @app.before_request
-def load_logged_in_user():
-    user_id = session.get('user_id')
-    if user_id is None:
-        g.user = None
-        session.clear()  # Очищаем всю сессию если нет user_id
-    else:
-        user = User.query.get(user_id)
-        if user is None:
-            # Если пользователь не найден в базе, очищаем сессию
-            g.user = None
-            session.clear()
-        else:
-            g.user = user
-            # Обновляем сессию
-            session['user_id'] = user.id
-            session['username'] = user.username
-            session.permanent = True
+def before_request():
+    """
+    Выполняется перед каждым запросом.
+    Загружает информацию о пользователе из сессии.
+    """
+    from auth_middleware import load_logged_in_user
+    load_logged_in_user()
 
 @app.route('/subscribe', methods=['POST'])
 def subscribe_newsletter():
@@ -1228,30 +1198,53 @@ def order_confirmation(order_id):
     return render_template('order_confirmation.html', order=order)
 
 @app.route('/my-orders')
+@login_required
 def my_orders():
-    if not current_user.is_authenticated:
-        flash('Пожалуйста, войдите в систему для просмотра заказов', 'warning')
-        return redirect(url_for('login'))
-    
+    """Display all orders for the currently logged-in user"""
     try:
-        print(f"Пользователь: {current_user.username}, ID: {current_user.id}")
-        orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
-        print(f"Найдено заказов: {len(orders)}")
+        # Получаем все заказы пользователя, отсортированные по дате (новые сверху)
+        orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
+        
+        # Для каждого заказа предварительно загружаем данные
+        for order in orders:
+            # Принудительно загружаем элементы заказа
+            order.items_count = len(order.items)
+            
+            # Вычисляем общее количество товаров
+            order.total_items = sum(item.quantity for item in order.items)
+            
+            # Форматируем статус для отображения
+            if order.status == 'pending':
+                order.status_display = 'Ожидает оплаты'
+            elif order.status == 'paid':
+                order.status_display = 'Оплачен'
+            elif order.status == 'shipped':
+                order.status_display = 'Отправлен'
+            elif order.status == 'delivered':
+                order.status_display = 'Доставлен'
+            elif order.status == 'cancelled':
+                order.status_display = 'Отменен'
+            else:
+                order.status_display = order.status
+        
         return render_template('my_orders.html', orders=orders)
     except Exception as e:
         import traceback
-        print(f"Ошибка при загрузке заказов: {str(e)}")
         traceback.print_exc()
-        return render_template('my_orders.html', orders=[], error_message="Произошла ошибка при загрузке заказов. Пожалуйста, попробуйте позже.")
+        flash('Произошла ошибка при загрузке заказов. Попробуйте позже.', 'error')
+        return render_template('my_orders.html', orders=[], 
+                              error_message="Не удалось загрузить ваши заказы. Возможно, вы еще не сделали ни одного заказа или произошла техническая ошибка.")
 
 @app.route('/order/<int:order_id>')
+@login_required
 def order_details(order_id):
-    if not current_user.is_authenticated:
-        flash('Пожалуйста, войдите в систему для просмотра заказов', 'warning')
-        return redirect(url_for('login'))
-    
+    """Display detailed information about a specific order"""
     try:
-        order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
+        # Получаем заказ и проверяем, принадлежит ли он текущему пользователю
+        order = Order.query.get_or_404(order_id)
+        if order.user_id != g.user.id:
+            abort(403)  # Forbidden - пользователь не владеет этим заказом
+        
         return render_template('order_details.html', order=order)
     except Exception as e:
         import traceback
