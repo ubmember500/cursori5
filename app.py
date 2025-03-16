@@ -685,71 +685,47 @@ def remove_from_cart(product_id):
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     if not g.user:
-        flash('Для оформления заказа необходимо авторизоваться', 'warning')
+        flash('Пожалуйста, войдите в систему для оформления заказа', 'warning')
         return redirect(url_for('login', next=url_for('checkout')))
-
+    
     # Проверяем, есть ли товары в корзине
     if 'cart' not in session or not session['cart']:
-        # Проверяем, пришли ли данные о товаре напрямую (кнопка "Купить сейчас")
-        if request.method == 'POST' and request.form.get('action') == 'buy':
-            try:
-                print("Обработка запроса 'Купить сейчас'")
-                product_id = request.form.get('product_id')
-                print(f"product_id: {product_id}")
+        # Проверяем, есть ли параметр buy_now и product_id
+        product_id = request.args.get('product_id')
+        if product_id:
+            # Получаем информацию о продукте
+            product = Product.query.get(product_id)
+            if product:
+                # Получаем размер, цвет и количество из параметров запроса
+                size = request.args.get('size', '')
+                color = request.args.get('color', '')
+                quantity = int(request.args.get('quantity', 1))
                 
-                if not product_id:
-                    flash('Товар не найден', 'error')
-                    return redirect(url_for('products'))
-                    
-                product = Product.query.get_or_404(int(product_id))
-                quantity = int(request.form.get('quantity', 1))
-                size = request.form.get('size')
-                color = request.form.get('color')
-                image = request.form.get('image')
-                
-                print(f"Данные товара: id={product.id}, name={product.name}, quantity={quantity}, size={size}, color={color}")
-                
-                # Проверяем наличие товара
-                if quantity > product.stock:
-                    flash('Извините, данного количества товара нет в наличии', 'error')
-                    return redirect(url_for('product_detail', product_id=product_id))
-                    
-                # Создаем временную корзину для оформления заказа
+                # Создаем временную корзину для прямой покупки
                 session['cart'] = [{
                     'id': product.id,
                     'name': product.name,
-                    'price': product.price,
+                    'price': float(product.price),
                     'quantity': quantity,
+                    'image': product.image,
                     'size': size,
-                    'color': color,
-                    'image': image
+                    'color': color
                 }]
                 session.modified = True
-                print("Временная корзина создана")
-            except Exception as e:
-                print(f"Ошибка при обработке 'Купить сейчас': {str(e)}")
-                flash('Произошла ошибка при обработке запроса. Попробуйте позже.', 'error')
+            else:
+                flash('Товар не найден', 'error')
                 return redirect(url_for('products'))
         else:
             flash('Ваша корзина пуста', 'warning')
-            return redirect(url_for('cart'))
-
+            return redirect(url_for('products'))
+    
+    # Получаем товары из корзины
     cart_items = []
     total = 0
-
-    # Проверяем наличие всех товаров перед оформлением
-    try:
-        print("Проверка товаров в корзине")
-        for item in session['cart']:
-            product = Product.query.get(item['id'])
-            if not product:
-                flash(f'Товар {item["name"]} больше не доступен', 'error')
-                return redirect(url_for('cart'))
-            
-            if item['quantity'] > product.stock:
-                flash(f'Товар {item["name"]} доступен только в количестве {product.stock} шт.', 'error')
-                return redirect(url_for('cart'))
-
+    
+    for item in session['cart']:
+        product = Product.query.get(item['id'])
+        if product:
             item_total = item['price'] * item['quantity']
             cart_items.append({
                 'id': item['id'],
@@ -762,97 +738,86 @@ def checkout():
                 'color': item.get('color')
             })
             total += item_total
-        print(f"Товары в корзине проверены, общая сумма: {total}")
+    
+    # Добавляем стоимость доставки
+    delivery_cost = 60.00
+    total_with_delivery = total + delivery_cost
+    
+    if request.method == 'POST':
+        # Получаем данные из формы
+        phone_number = request.form.get('phone_number')
+        shipping_address = request.form.get('shipping_address')
+        shipping_city = request.form.get('shipping_city')
+        shipping_postal_code = request.form.get('shipping_postal_code')
+        payment_method = request.form.get('payment_method')
+        messenger_contact = request.form.get('messenger_contact', '')
+        email = request.form.get('email')
         
-        # Добавляем стоимость доставки
-        delivery_cost = 60.0
-        total_with_delivery = total + delivery_cost
-        print(f"Общая сумма с доставкой: {total_with_delivery}")
+        # Проверяем обязательные поля
+        if not phone_number or not shipping_address or not shipping_city or not payment_method:
+            flash('Пожалуйста, заполните все обязательные поля', 'error')
+            return render_template('checkout.html', cart_items=cart_items, total=total, delivery_cost=delivery_cost, total_with_delivery=total_with_delivery)
         
-    except Exception as e:
-        print(f"Ошибка при проверке товаров в корзине: {str(e)}")
-        flash('Произошла ошибка при проверке товаров. Попробуйте позже.', 'error')
-        return redirect(url_for('cart'))
-
-    if request.method == 'POST' and request.form.get('shipping_address'):
+        # Проверяем, что для оплаты картой указан контакт в мессенджере
+        if payment_method == 'card' and not messenger_contact:
+            flash('Для оплаты картой необходимо указать контакт в Telegram/Viber', 'error')
+            return render_template('checkout.html', cart_items=cart_items, total=total, delivery_cost=delivery_cost, total_with_delivery=total_with_delivery)
+        
         try:
-            print("Обработка формы оформления заказа")
-            # Получаем данные формы
-            shipping_address = request.form.get('shipping_address')
-            shipping_city = request.form.get('shipping_city')
-            shipping_postal_code = request.form.get('shipping_postal_code')
-            phone_number = request.form.get('phone_number')
-            payment_method = request.form.get('payment_method')
-            messenger_contact = request.form.get('messenger_contact', '')
-
-            print(f"Данные доставки: адрес={shipping_address}, город={shipping_city}, индекс={shipping_postal_code}, телефон={phone_number}, способ оплаты={payment_method}")
-            if payment_method == 'card' and messenger_contact:
-                print(f"Контакт для связи: {messenger_contact}")
-
-            # Проверяем обязательные поля
-            if not all([shipping_address, shipping_city, phone_number, payment_method]):
-                flash('Пожалуйста, заполните все обязательные поля', 'error')
-                return render_template('checkout.html', cart_items=cart_items, total=total)
-                
-            # Проверяем наличие контакта для связи при оплате картой
-            if payment_method == 'card' and not messenger_contact:
-                flash('Пожалуйста, укажите контакт для связи в Telegram/Viber', 'error')
-                return render_template('checkout.html', cart_items=cart_items, total=total)
-
-            # Создаем заказ с учетом стоимости доставки
+            # Создаем новый заказ
             order = Order(
                 user_id=g.user.id,
-                total_amount=total_with_delivery,  # Общая сумма с доставкой
                 status='pending',
+                total_amount=total_with_delivery,
                 shipping_address=shipping_address,
                 shipping_city=shipping_city,
                 shipping_postal_code=shipping_postal_code,
                 phone_number=phone_number,
-                payment_method=payment_method
+                payment_method=payment_method,
+                messenger_contact=messenger_contact if payment_method == 'card' else None
             )
             
-            # Если выбрана оплата картой, сохраняем контакт в примечании к заказу
-            if payment_method == 'card' and messenger_contact:
-                # Добавляем информацию о контакте в адрес доставки
-                order.shipping_address = f"{shipping_address} (Контакт: {messenger_contact})"
-            
             db.session.add(order)
-            print(f"Заказ создан для пользователя {g.user.id}")
+            db.session.flush()  # Получаем ID заказа
             
-            # Добавляем товары к заказу
-            for item in cart_items:
+            # Добавляем товары в заказ
+            for item in session['cart']:
                 product = Product.query.get(item['id'])
-                if product.stock < item['quantity']:
-                    db.session.rollback()
-                    flash(f'Извините, товар {item["name"]} закончился', 'error')
-                    return redirect(url_for('cart'))
-                
-                order_item = OrderItem(
-                    order=order,
-                    product_id=item['id'],
-                    quantity=item['quantity'],
-                    price=item['price'],
-                    size=item.get('size'),
-                    color=item.get('color')
-                )
-                db.session.add(order_item)
-                print(f"Добавлен товар {item['name']} к заказу")
-                
-                # Уменьшаем количество товара на складе
-                product.stock -= item['quantity']
+                if product:
+                    # Проверяем наличие товара на складе
+                    if product.stock < item['quantity']:
+                        flash(f'Извините, товара "{product.name}" недостаточно на складе. В наличии: {product.stock}', 'error')
+                        return render_template('checkout.html', cart_items=cart_items, total=total, delivery_cost=delivery_cost, total_with_delivery=total_with_delivery)
+                    
+                    # Уменьшаем количество товара на складе
+                    product.stock -= item['quantity']
+                    
+                    # Добавляем товар в заказ
+                    order_item = OrderItem(
+                        order_id=order.id,
+                        product_id=product.id,
+                        quantity=item['quantity'],
+                        price=item['price'],
+                        size=item.get('size'),
+                        color=item.get('color')
+                    )
+                    db.session.add(order_item)
             
             db.session.commit()
-            print("Заказ успешно сохранен в базе данных")
             
             # Очищаем корзину
-            session.pop('cart', None)
+            session['cart'] = []
+            session.modified = True
             
             # Отправляем email с подтверждением
             try:
+                # Используем email из формы, если он есть, иначе email пользователя
+                recipient_email = email if email else g.user.email
+                
                 msg = Message(
                     'Подтверждение заказа',
                     sender='defensivelox@gmail.com',
-                    recipients=[g.user.email]
+                    recipients=[recipient_email]
                 )
                 
                 # Добавляем информацию о доставке в текст письма
@@ -877,7 +842,37 @@ def checkout():
                 Мы свяжемся с вами по телефону {phone_number} для подтверждения заказа.
                 '''
                 mail.send(msg)
-                print(f"Email с подтверждением отправлен на {g.user.email}")
+                print(f"Email с подтверждением отправлен на {recipient_email}")
+                
+                # Отправляем копию администратору
+                admin_msg = Message(
+                    f'Новый заказ #{order.id}',
+                    sender='defensivelox@gmail.com',
+                    recipients=['defensivelox@gmail.com']
+                )
+                
+                admin_msg.body = f'''
+                Новый заказ от пользователя {g.user.username} ({recipient_email})!
+                
+                Номер заказа: {order.id}
+                Сумма товаров: {total} ₴
+                {delivery_info}
+                Итого к оплате: {total_with_delivery} ₴
+                
+                Адрес доставки:
+                {shipping_address}
+                {shipping_city}
+                {shipping_postal_code}
+                
+                Способ оплаты: {payment_method}
+                Телефон: {phone_number}
+                '''
+                
+                if payment_method == 'card' and messenger_contact:
+                    admin_msg.body += f'\nКонтакт в мессенджере: {messenger_contact}'
+                
+                mail.send(admin_msg)
+                print(f"Email с уведомлением о заказе отправлен администратору")
             except Exception as e:
                 print(f"Ошибка отправки email: {e}")
             
@@ -886,13 +881,13 @@ def checkout():
             
         except Exception as e:
             db.session.rollback()
-            print(f'Error creating order: {str(e)}')
+            print(f"Ошибка при оформлении заказа: {e}")
             import traceback
             traceback.print_exc()
-            flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
-            return redirect(url_for('cart'))
-
-    return render_template('checkout.html', cart_items=cart_items, total=total)
+            flash('Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.', 'danger')
+            return render_template('checkout.html', cart_items=cart_items, total=total, delivery_cost=delivery_cost, total_with_delivery=total_with_delivery)
+    
+    return render_template('checkout.html', cart_items=cart_items, total=total, delivery_cost=delivery_cost, total_with_delivery=total_with_delivery)
 
 
 @app.route('/place_order', methods=['POST'])
@@ -1342,10 +1337,12 @@ def order_details(order_id):
 def cancel_order(order_id):
     """Отмена заказа пользователем"""
     try:
-        # Получаем заказ и проверяем, принадлежит ли он текущему пользователю
+        # Получаем заказ
         order = Order.query.get_or_404(order_id)
+        
+        # Проверяем, принадлежит ли заказ текущему пользователю
         if order.user_id != g.user.id:
-            flash('У вас нет прав для отмены этого заказа', 'danger')
+            flash('У вас нет доступа к этому заказу', 'danger')
             return redirect(url_for('my_orders'))
         
         # Проверяем, можно ли отменить заказ (только в статусе "pending")
@@ -1368,10 +1365,14 @@ def cancel_order(order_id):
         
         # Отправляем уведомление на email
         try:
+            # Получаем пользователя
+            user = User.query.get(order.user_id)
+            
+            # Отправляем уведомление клиенту
             msg = Message(
                 'Отмена заказа',
                 sender='defensivelox@gmail.com',
-                recipients=[g.user.email]
+                recipients=[user.email]
             )
             msg.body = f'''
             Ваш заказ #{order.id} был отменен.
@@ -1379,6 +1380,24 @@ def cancel_order(order_id):
             Если у вас есть вопросы, пожалуйста, свяжитесь с нами.
             '''
             mail.send(msg)
+            print(f"Email с уведомлением об отмене отправлен на {user.email}")
+            
+            # Отправляем уведомление администратору
+            admin_msg = Message(
+                f'Отмена заказа #{order.id}',
+                sender='defensivelox@gmail.com',
+                recipients=['defensivelox@gmail.com']
+            )
+            admin_msg.body = f'''
+            Заказ #{order.id} от пользователя {user.username} ({user.email}) был отменен.
+            
+            Детали заказа:
+            Сумма: {order.total_amount} ₴
+            Адрес доставки: {order.shipping_address}, {order.shipping_city}
+            Телефон: {order.phone_number}
+            '''
+            mail.send(admin_msg)
+            print(f"Email с уведомлением об отмене заказа отправлен администратору")
         except Exception as e:
             print(f"Ошибка отправки email: {e}")
         

@@ -18,6 +18,11 @@
                                 <label for="phone_number" class="form-label">Номер телефона *</label>
                                 <input type="tel" class="form-control" id="phone_number" name="phone_number" required>
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ g.user.email if g.user else '' }}" required>
+                                <div class="form-text">На этот адрес будет отправлено подтверждение заказа</div>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="shipping_address" class="form-label">Адрес доставки *</label>
