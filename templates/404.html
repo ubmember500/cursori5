@@ -1,14 +1,14 @@
 {% extends "layout.html" %}
 
-{% block title %}Ошибка сервера - Cursor Shop🛍️{% endblock %}
+{% block title %}Страница не найдена - Cursor Shop🛍️{% endblock %}
 
 {% block content %}
 <div class="container mt-5 text-center">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <h1 class="display-1">500</h1>
-            <h2 class="mb-4">Внутренняя ошибка сервера</h2>
-            <p class="lead mb-5">Извините, на сервере произошла ошибка. Мы уже работаем над её устранением.</p>
+            <h1 class="display-1">404</h1>
+            <h2 class="mb-4">Страница не найдена</h2>
+            <p class="lead mb-5">Извините, запрашиваемая страница не существует или была перемещена.</p>
             <a href="{{ url_for('home') }}" class="btn btn-primary">
                 <i class="fas fa-home me-2"></i>Вернуться на главную
             </a>
