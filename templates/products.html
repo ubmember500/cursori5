@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Товары{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/products.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Фильтры -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Фильтры</h5>
+                    <form id="filterForm">
+                        <!-- Категории -->
+                        <div class="mb-3">
+                            <label class="form-label">Категории</label>
+                            <div class="category-list">
+                                <div class="form-check">
+                                    <input class="form-check-input category-filter" type="radio" name="category" id="category_all" value="" {% if not selected_category %}checked{% endif %}>
+                                    <label class="form-check-label" for="category_all">
+                                        Все категории
+                                    </label>
+                                </div>
+                                {% for category in categories %}
+                                <div class="form-check">
+                                    <input class="form-check-input category-filter" type="radio" name="category" id="category_{{ category.id }}" value="{{ category.id }}" {% if selected_category|string == category.id|string %}checked{% endif %}>
+                                    <label class="form-check-label" for="category_{{ category.id }}">
+                                        {{ category.name }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Цена -->
+                        <div class="mb-3">
+                            <label class="form-label">Цена</label>
+                            <div class="price-range">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span id="minPriceDisplay">0</span>
+                                    <span id="maxPriceDisplay">20 000</span>
+                                </div>
+                                <input type="range" class="form-range" id="minPriceRange" min="0" max="20000" value="{{ min_price }}">
+                                <input type="range" class="form-range" id="maxPriceRange" min="0" max="20000" value="{{ max_price }}">
+                            </div>
+                        </div>
+
+                        <!-- Сортировка -->
+                        <div class="mb-3">
+                            <label class="form-label">Сортировка</label>
+                            <select class="form-select" id="sortSelect">
+                                <option value="default">По умолчанию</option>
+                                <option value="price_asc">Цена (по возрастанию)</option>
+                                <option value="price_desc">Цена (по убыванию)</option>
+                                <option value="name_asc">Название (А-Я)</option>
+                                <option value="name_desc">Название (Я-А)</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Список товаров -->
+        <div class="col-md-9">
+            {% include 'products_partial.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM загружен, инициализация фильтров...');
+    
+    const minSlider = document.getElementById('minPriceRange');
+    const maxSlider = document.getElementById('maxPriceRange');
+    const minDisplay = document.getElementById('minPriceDisplay');
+    const maxDisplay = document.getElementById('maxPriceDisplay');
+    const filterForm = document.getElementById('filterForm');
+    const sortSelect = document.getElementById('sortSelect');
+    const productsContainer = document.getElementById('productsContainer');
+    let debounceTimer;
+
+    // Проверка наличия элементов
+    if (!minSlider || !maxSlider || !minDisplay || !maxDisplay || !filterForm || !sortSelect || !productsContainer) {
+        console.error('Не все необходимые элементы найдены на странице');
+        return;
+    }
+
+    // Предотвращаем отправку формы
+    filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        console.log('Предотвращена отправка формы');
+    });
+
+    // Форматирование числа с разделителями
+    function formatNumber(num) {
+        return parseInt(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+
+    // Обновление отображаемых значений
+    function updateDisplays(minValue, maxValue) {
+        minDisplay.textContent = formatNumber(minValue);
+        maxDisplay.textContent = formatNumber(maxValue);
+        console.log('Обновлены отображаемые значения:', { minValue, maxValue });
+    }
+
+    // Загрузка товаров через AJAX
+    async function loadProducts(params) {
+        try {
+            console.log('Загрузка товаров с параметрами:', params);
+            const response = await fetch(`${window.location.pathname}?${params.toString()}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const html = await response.text();
+            console.log('Получен HTML:', html);
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newProducts = doc.querySelector('#productsContainer');
+            
+            if (newProducts) {
+                productsContainer.innerHTML = newProducts.innerHTML;
+                console.log('Товары обновлены');
+            } else {
+                console.error('Не найден контейнер с товарами в ответе');
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке товаров:', error);
+        }
+    }
+
+    // Обновление URL и данных
+    function updateURLWithParams(newParams = {}) {
+        try {
+            const params = new URLSearchParams();
+            Object.entries(newParams).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '') {
+                    params.set(key, value);
+                }
+            });
+            
+            const newUrl = `${window.location.pathname}?${params.toString()}`;
+            window.history.pushState({}, '', newUrl);
+            console.log('URL обновлен:', newUrl);
+            
+            loadProducts(params);
+        } catch (error) {
+            console.error('Ошибка при обновлении параметров:', error);
+        }
+    }
+
+    // Обработчики для категорий
+    document.querySelectorAll('.category-filter').forEach(radio => {
+        radio.addEventListener('change', function() {
+            console.log('Изменение категории:', this.value);
+            const categoryValue = this.checked ? this.value : null;
+            const minValue = parseFloat(minSlider.value);
+            const maxValue = parseFloat(maxSlider.value);
+            const sortValue = sortSelect.value;
+            
+            updateURLWithParams({
+                category: categoryValue,
+                min_price: minValue,
+                max_price: maxValue,
+                sort: sortValue
+            });
+        });
+    });
+
+    // Обработчик изменения значения ползунка
+    function handleSliderInput(currentSlider, otherSlider, isMin) {
+        let currentValue = parseFloat(currentSlider.value);
+        let otherValue = parseFloat(otherSlider.value);
+        
+        console.log('Обработка изменения ползунка:', {
+            currentValue,
+            otherValue,
+            isMin,
+            currentSlider: currentSlider.id,
+            otherSlider: otherSlider.id
+        });
+        
+        if (isMin && currentValue > otherValue) {
+            currentValue = otherValue;
+            currentSlider.value = otherValue;
+        } else if (!isMin && currentValue < otherValue) {
+            currentValue = otherValue;
+            currentSlider.value = otherValue;
+        }
+        
+        updateDisplays(
+            isMin ? currentValue : parseFloat(minSlider.value),
+            isMin ? parseFloat(maxSlider.value) : currentValue
+        );
+        
+        const categoryValue = document.querySelector('.category-filter:checked')?.value || '';
+        const sortValue = sortSelect.value;
+        
+        updateURLWithParams({
+            category: categoryValue,
+            min_price: parseFloat(minSlider.value),
+            max_price: parseFloat(maxSlider.value),
+            sort: sortValue
+        });
+    }
+
+    // Обработчики для ползунков
+    minSlider.addEventListener('input', function() {
+        handleSliderInput(this, maxSlider, true);
+    });
+
+    maxSlider.addEventListener('input', function() {
+        handleSliderInput(this, minSlider, false);
+    });
+
+    // Обработчик для сортировки
+    sortSelect.addEventListener('change', function() {
+        console.log('Изменение сортировки:', this.value);
+        const categoryValue = document.querySelector('.category-filter:checked')?.value || '';
+        const minValue = parseFloat(minSlider.value);
+        const maxValue = parseFloat(maxSlider.value);
+        
+        updateURLWithParams({
+            category: categoryValue,
+            min_price: minValue,
+            max_price: maxValue,
+            sort: this.value
+        });
+    });
+});
+</script>
+{% endblock %}

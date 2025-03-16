@@ -1,0 +1,216 @@
+{% extends "layout.html" %}
+
+{% block title %}Корзина - Cursor Shop{% endblock %}
+
+{% block extra_css %}
+<style>
+.product-image {
+    width: 100px;
+    height: 100px;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin: 0 auto;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.product-image:hover img {
+    transform: scale(1.1);
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.product-info {
+    max-width: 300px;
+}
+
+.product-info h6 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.product-info small {
+    display: block;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">Корзина</h2>
+    {% if cart_items %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 120px">Фото</th>
+                        <th>Товар</th>
+                        <th>Цена</th>
+                        <th>Количество</th>
+                        <th>Всего</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart_items %}
+                    <tr>
+                        <td>
+                            <div class="product-image">
+                                <img src="{{ url_for('static', filename=item.image) }}" 
+                                     alt="{{ item.name }}" 
+                                     class="img-fluid"
+                                     onerror="this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}'">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="product-info">
+                                <h6>{{ item.name }}</h6>
+                                {% if item.size %}
+                                <small>Размер: {{ item.size }}</small>
+                                {% endif %}
+                                {% if item.color %}
+                                <small>Цвет: {{ item.color }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-nowrap">{{ "%.2f"|format(item.price) }} ₴</td>
+                        <td>
+                            <form action="{{ url_for('update_cart', product_id=item.id) }}" method="post" class="d-flex align-items-center">
+                                <div class="input-group" style="width: 120px;">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="decreaseQuantity('quantity-{{ item.id }}')">-</button>
+                                    <input type="number" name="quantity" id="quantity-{{ item.id }}" value="{{ item.quantity }}" min="1" max="10" class="form-control text-center">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="increaseQuantity('quantity-{{ item.id }}')">+</button>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-outline-primary ms-2" title="Обновить количество">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </form>
+                        </td>
+                        <td class="text-nowrap">{{ "%.2f"|format(item.total) }} ₴</td>
+                        <td>
+                            <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" 
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Вы уверены, что хотите удалить этот товар из корзины?')"
+                               title="Удалить товар">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end"><strong>Итого:</strong></td>
+                        <td class="text-nowrap"><strong>{{ "%.2f"|format(total) }} ₴</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{{ url_for('products') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Продолжить покупки
+            </a>
+            <div>
+                <a href="{{ url_for('cart') }}?clear=true" class="btn btn-outline-danger me-2">
+                    <i class="fas fa-trash-alt me-2"></i>Очистить корзину
+                </a>
+                <form action="{{ url_for('create_payment') }}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-credit-card me-2"></i>Оплатить
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+            <h3>Ваша корзина пуста</h3>
+            <p class="text-muted">Добавьте товары в корзину, чтобы оформить заказ</p>
+            <a href="{{ url_for('products') }}" class="btn btn-primary mt-3">
+                <i class="fas fa-shopping-bag me-2"></i>Перейти к покупкам
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.product-image {
+    width: 100px;
+    height: 100px;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.product-image:hover img {
+    transform: scale(1.1);
+}
+
+.product-info {
+    max-width: 300px;
+}
+
+.input-group .form-control {
+    text-align: center;
+}
+
+.input-group .btn {
+    padding: 0.375rem 0.75rem;
+}
+
+.table td {
+    vertical-align: middle;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function increaseQuantity(inputId) {
+        const input = document.getElementById(inputId);
+        let value = parseInt(input.value);
+        if (value < 10) {
+            input.value = value + 1;
+            input.closest('form').submit();
+        }
+    }
+    
+    function decreaseQuantity(inputId) {
+        const input = document.getElementById(inputId);
+        let value = parseInt(input.value);
+        if (value > 1) {
+            input.value = value - 1;
+            input.closest('form').submit();
+        }
+    }
+    
+    function clearCart() {
+        if (confirm('Вы уверены, что хотите очистить корзину?')) {
+            window.location.href = "{{ url_for('cart') }}?clear=true";
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,190 @@
+{% extends "layout.html" %}
+
+{% block title %}Оформление заказа - Cursor Shop{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">Оформление заказа</h1>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <form action="{{ url_for('place_order') }}" method="post">
+                <div class="card mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">Информация о доставке</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="first-name" class="form-label">Имя</label>
+                                <input type="text" class="form-control" id="first-name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="last-name" class="form-label">Фамилия</label>
+                                <input type="text" class="form-control" id="last-name" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Телефон</label>
+                            <input type="tel" class="form-control" id="phone" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Адрес</label>
+                            <input type="text" class="form-control" id="address" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="city" class="form-label">Город</label>
+                                <input type="text" class="form-control" id="city" required>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="state" class="form-label">Область</label>
+                                <select class="form-select" id="state" required>
+                                    <option value="">Выберите...</option>
+                                    <option value="MOW">Москва</option>
+                                    <option value="SPB">Санкт-Петербург</option>
+                                    <option value="NOV">Новосибирск</option>
+                                    <!-- Другие города -->
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="zip" class="form-label">Индекс</label>
+                                <input type="text" class="form-control" id="zip" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="save-info">
+                            <label class="form-check-label" for="save-info">
+                                Сохранить эту информацию для следующего раза
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">Способ оплаты</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="payment-method" id="credit-card" checked>
+                            <label class="form-check-label" for="credit-card">
+                                Банковская карта
+                            </label>
+                        </div>
+                        
+                        <div class="credit-card-form">
+                            <div class="mb-3">
+                                <label for="card-name" class="form-label">Имя на карте</label>
+                                <input type="text" class="form-control" id="card-name" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="card-number" class="form-label">Номер карты</label>
+                                <input type="text" class="form-control" id="card-number" placeholder="XXXX XXXX XXXX XXXX" required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="expiration" class="form-label">Срок действия</label>
+                                    <input type="text" class="form-control" id="expiration" placeholder="ММ/ГГ" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="cvv" class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="cvv" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="payment-method" id="paypal">
+                            <label class="form-check-label" for="paypal">
+                                <img src="{{ url_for('static', filename='img/paypal.png') }}" alt="PayPal" height="30">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Оформить заказ
+                </button>
+            </form>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Итого</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        {% for item in cart_items %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <div>
+                                <span>{{ item.name }}</span>
+                                <small class="d-block text-muted">Кол-во: {{ item.quantity }}</small>
+                            </div>
+                            <span>{{ "%.2f"|format(item.total) }} ₴</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Подытог</span>
+                        <span>{{ "%.2f"|format(total) }} ₴</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Доставка</span>
+                        <span>{% if total > 5000 %}Бесплатно{% else %}499 ₴{% endif %}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>НДС</span>
+                        <span>{{ "%.2f"|format(total * 0.20) }} ₴</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="fw-bold">Итого к оплате</span>
+                        <span class="fw-bold">{{ "%.2f"|format(total + (0 if total > 5000 else 499) + (total * 0.20)) }} ₴</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="promo-code-checkout" class="form-label">Промокод</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="promo-code-checkout" placeholder="Введите код">
+                            <button class="btn btn-outline-primary" type="button">Применить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Нужна помощь?</h5>
+                    <p class="card-text">Если у вас есть вопросы по заказу, свяжитесь с нашей службой поддержки.</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-phone text-primary me-2"></i>
+                        <span>(123) 456-7890</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-envelope text-primary me-2"></i>
+                        <span>support@cursorclothing.com</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

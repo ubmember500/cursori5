@@ -1,0 +1,641 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ product.name }} - Cursor Shop🛍️{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Скрываем кнопку избранного с максимальной специфичностью */
+body .product-info button.btn-outline-secondary,
+body .product-info a.btn-outline-secondary,
+body .product-info [class*="bi-heart"],
+body .product-info button:has(> .bi-heart),
+body .product-info a:has(> .bi-heart),
+body .product-info .btn:has(> .bi-heart),
+body .product-info .btn.btn-outline-secondary:has(> .bi-heart),
+body button.btn.btn-outline-dark.btn-lg,
+body button.btn-outline-dark:has(i.fa-heart),
+body button:has(> i.fas.fa-heart),
+body .btn:has(> i.fas.fa-heart.me-2),
+body button.btn.btn-outline-dark.btn-lg:has(i.fas.fa-heart),
+body [class*="favorite"],
+body [id*="favorite"],
+body button:has(i.fa-heart),
+body a:has(i.fa-heart),
+body .btn:has(i.fa-heart),
+body button:contains("В избранное"),
+body a:contains("В избранное"),
+body .btn:contains("В избранное") {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    z-index: -9999 !important;
+    transform: scale(0) !important;
+}
+
+/* Стили для основного изображения */
+.product-image {
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+/* Стили для миниатюр */
+.thumbnails {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.thumbnail {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.thumbnail:hover {
+    transform: scale(1.1);
+}
+
+/* Стили для информации о товаре */
+.product-info {
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.product-title {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.product-price {
+    font-size: 1.5rem;
+    color: #0d6efd;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.product-description {
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+/* Стили для выбора размера и цвета */
+.size-selector, .color-selector {
+    margin-bottom: 1.5rem;
+}
+
+.size-selector label, .color-selector label {
+    display: inline-block;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.size-selector input[type="radio"]:checked + label,
+.color-selector input[type="radio"]:checked + label {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+.size-selector input[type="radio"],
+.color-selector input[type="radio"] {
+    display: none;
+}
+
+/* Стили для количества */
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.quantity-selector input {
+    width: 80px;
+    text-align: center;
+    padding: 0.5rem;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+}
+
+/* Стили для кнопок */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.action-buttons .btn {
+    flex: 1;
+    padding: 1rem;
+    font-weight: 600;
+}
+
+/* Стили для вкладок */
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 2rem;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 600;
+    padding: 1rem 2rem;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    border-bottom: 2px solid #0d6efd;
+}
+
+/* Стили для отзывов */
+.review {
+    padding: 1.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.review-rating {
+    color: #ffc107;
+}
+
+/* Стили для похожих товаров */
+.similar-products {
+    margin-top: 4rem;
+}
+
+.similar-product-card {
+    height: 100%;
+    border: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.similar-product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.similar-product-card .card-img-top {
+    height: 300px;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.similar-product-card:hover .card-img-top {
+    transform: scale(1.05);
+}
+
+.similar-product-card .card-body {
+    padding: 1.5rem;
+}
+
+.similar-product-card .card-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.similar-product-card .price {
+    font-size: 1.25rem;
+    color: #0d6efd;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.similar-product-card .btn-group {
+    width: 100%;
+    gap: 0.5rem;
+}
+
+/* Медиа-запросы */
+@media (max-width: 768px) {
+    .product-image {
+        height: 300px;
+    }
+
+    .thumbnail {
+        width: 60px;
+        height: 60px;
+    }
+
+    .product-info {
+        padding: 1rem;
+    }
+
+    .product-title {
+        font-size: 1.5rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .similar-product-card .card-img-top {
+        height: 200px;
+    }
+}
+
+/* Дополнительные стили для защиты от внешних изменений */
+#action-buttons {
+    contain: content;
+    isolation: isolate;
+}
+#action-buttons > *:not(.action-buttons-wrapper) {
+    display: none !important;
+}
+.action-buttons-wrapper > *:not(.buy-now-button):not(.add-to-cart-button) {
+    display: none !important;
+}
+/* Запрещаем добавление новых элементов */
+#action-buttons::before,
+#action-buttons::after,
+.action-buttons-wrapper::before,
+.action-buttons-wrapper::after {
+    display: none !important;
+    content: none !important;
+}
+/* Принудительно показываем нужные кнопки */
+.buy-now-button,
+.add-to-cart-button {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    pointer-events: auto !important;
+}
+
+.isolated-buttons-component {
+    --button-primary-color: #0d6efd;
+    --button-secondary-color: #6c757d;
+    --button-hover-brightness: 0.9;
+    
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 2rem 0;
+    isolation: isolate;
+    contain: content;
+    position: relative;
+}
+
+.isolated-button-wrapper {
+    position: relative;
+    isolation: isolate;
+    contain: content;
+}
+
+.isolated-button {
+    width: 100%;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.2s;
+    position: relative;
+    isolation: isolate;
+    contain: content;
+}
+
+.isolated-button:hover {
+    filter: brightness(var(--button-hover-brightness));
+}
+
+.isolated-button:active {
+    transform: translateY(1px);
+}
+
+.isolated-button--secondary {
+    background-color: white;
+    color: var(--button-secondary-color);
+    border: 2px solid var(--button-secondary-color);
+}
+
+/* Запрещаем добавление любых элементов кроме нашей кнопки */
+.isolated-buttons-component > *:not(.isolated-button-wrapper),
+.isolated-button-wrapper > *:not(.isolated-button),
+.isolated-button > *:not(.isolated-button-text) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    position: absolute !important;
+    pointer-events: none !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('home') }}">Главная</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('products') }}">Товары</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Изображения товара -->
+        <div class="col-md-6">
+            <img src="{{ url_for('static', filename=product_image) }}" 
+                 alt="{{ product.name }}" 
+                 class="product-image" 
+                 id="mainImage"
+                 onerror="this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}'">
+            <div class="thumbnails">
+                <img src="{{ url_for('static', filename=product_image) }}" 
+                     alt="Thumbnail 1" 
+                     class="thumbnail" 
+                     onclick="changeImage(this.src)"
+                     onerror="this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}'">
+            </div>
+        </div>
+
+        <!-- Информация о товаре -->
+        <div class="col-md-6">
+            <div class="product-info">
+                <h1 class="product-title">{{ product.name }}</h1>
+                <div class="product-price">{{ "%.2f"|format(product.price) }} ₴</div>
+                <p class="product-description">{{ product.description }}</p>
+
+                <!-- Выбор размера -->
+                <div class="size-selector">
+                <h5>Размер:</h5>
+                    {% for size in ['XS', 'S', 'M', 'L', 'XL'] %}
+                    <input type="radio" name="size" id="size-{{ size }}" value="{{ size }}" required>
+                    <label for="size-{{ size }}">{{ size }}</label>
+                    {% endfor %}
+            </div>
+
+                <!-- Выбор цвета -->
+                <div class="color-selector">
+                <h5>Цвет:</h5>
+                    {% for color in ['Белый', 'Черный', 'Синий', 'Красный'] %}
+                    <input type="radio" name="color" id="color-{{ color }}" value="{{ color }}" required>
+                    <label for="color-{{ color }}">{{ color }}</label>
+                    {% endfor %}
+            </div>
+
+                <!-- Выбор количества -->
+                <div class="quantity-selector">
+                <h5>Количество:</h5>
+                    <input type="number" id="quantity" name="quantity" value="1" min="1" max="10">
+            </div>
+
+                <!-- Кнопки действий (полностью изолированный компонент) -->
+                <div class="isolated-buttons-component" style="contain: content; isolation: isolate;">
+                    <div class="isolated-button-wrapper" style="contain: content; isolation: isolate;">
+                        <button type="button" 
+                                class="isolated-button isolated-button--secondary" 
+                                onclick="handleAddToCart()"
+                                style="contain: content; isolation: isolate;">
+                            В корзину
+                </button>
+            </div>
+                </div>
+
+                <style>
+                    /* Изолируем компонент с кнопками */
+                    .isolated-buttons-component {
+                        --button-primary-color: #0d6efd;
+                        --button-secondary-color: #6c757d;
+                        --button-hover-brightness: 0.9;
+                        
+                        display: grid;
+                        grid-template-columns: 1fr;
+                        gap: 1rem;
+                        margin: 2rem 0;
+                        isolation: isolate;
+                        contain: content;
+                        position: relative;
+                    }
+
+                    /* Запрещаем добавление любых элементов кроме нашей кнопки */
+                    .isolated-buttons-component > *:not(.isolated-button-wrapper),
+                    .isolated-button-wrapper > *:not(.isolated-button),
+                    .isolated-button > *:not(.isolated-button-text) {
+                        display: none !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                        width: 0 !important;
+                        height: 0 !important;
+                        position: absolute !important;
+                        pointer-events: none !important;
+                    }
+
+                    .isolated-button-wrapper {
+                        position: relative;
+                        isolation: isolate;
+                        contain: content;
+                    }
+
+                    .isolated-button {
+                        width: 100%;
+                        padding: 1rem 2rem;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 1.1rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: filter 0.2s;
+                        position: relative;
+                        isolation: isolate;
+                        contain: content;
+                    }
+
+                    .isolated-button:hover {
+                        filter: brightness(var(--button-hover-brightness));
+                    }
+
+                    .isolated-button:active {
+                        transform: translateY(1px);
+                    }
+
+                    .isolated-button--secondary {
+                        background-color: white;
+                        color: var(--button-secondary-color);
+                        border: 2px solid var(--button-secondary-color);
+                    }
+                </style>
+
+                <!-- Скрытые формы для отправки -->
+                <form id="cartForm" method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="display: none;">
+                    <input type="hidden" name="quantity" value="1">
+                    <input type="hidden" name="size" id="cart_size" value="">
+                    <input type="hidden" name="color" id="cart_color" value="">
+                    <input type="hidden" name="image" value="{{ product_image }}">
+                </form>
+
+                <script>
+                // Блокируем добавление новых элементов в компонент с кнопками
+                const buttonsComponent = document.querySelector('.isolated-buttons-component');
+                const buttonWrapper = document.querySelector('.isolated-button-wrapper');
+                const cartButton = document.querySelector('.isolated-button');
+
+                // Защищаем от изменений
+                Object.freeze(buttonsComponent);
+                Object.freeze(buttonWrapper);
+                Object.freeze(cartButton);
+
+                // Блокируем добавление через innerHTML
+                const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+                Object.defineProperty(buttonsComponent, 'innerHTML', {
+                    set: function() { return; },
+                    get: function() { return originalInnerHTML.get.call(this); }
+                });
+
+                function handleAddToCart() {
+                    const quantity = document.getElementById('quantity').value;
+                    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
+                    const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
+                    
+                    if (!selectedSize || !selectedColor) {
+                        alert('Пожалуйста, выберите размер и цвет');
+                        return;
+                    }
+                    
+                    const form = document.getElementById('cartForm');
+                    form.querySelector('input[name="quantity"]').value = quantity;
+                    document.getElementById('cart_size').value = selectedSize;
+                    document.getElementById('cart_color').value = selectedColor;
+                    form.submit();
+                }
+
+                function changeImage(src) {
+                    document.getElementById('mainImage').src = src;
+                }
+                </script>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладки с информацией -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="productTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="description-tab" data-bs-toggle="tab" href="#description" role="tab">
+                        Описание
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="specifications-tab" data-bs-toggle="tab" href="#specifications" role="tab">
+                        Характеристики
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="reviews-tab" data-bs-toggle="tab" href="#reviews" role="tab">
+                        Отзывы
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="productTabsContent">
+                <!-- Описание -->
+                <div class="tab-pane fade show active" id="description" role="tabpanel">
+                    <p>{{ product.description }}</p>
+                </div>
+
+                <!-- Характеристики -->
+                <div class="tab-pane fade" id="specifications" role="tabpanel">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <th>Материал:</th>
+                                <td>100% хлопок</td>
+                            </tr>
+                            <tr>
+                                <th>Уход:</th>
+                                <td>Машинная стирка при 30°C</td>
+                            </tr>
+                            <tr>
+                                <th>Страна производства:</th>
+                                <td>Украина</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Отзывы -->
+                <div class="tab-pane fade" id="reviews" role="tabpanel">
+                    <div class="review">
+                        <div class="review-header">
+                            <h5>Анна М.</h5>
+                            <div class="review-rating">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                        <p>Отличное качество! Размер соответствует указанному. Очень довольна покупкой!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Похожие товары -->
+    <div class="similar-products">
+        <h3 class="text-center mb-4">Похожие товары</h3>
+        <div class="row g-4">
+            {% for product in similar_products %}
+            <div class="col-md-3">
+                <div class="card similar-product-card">
+                    <img src="{{ url_for('static', filename=product.image) }}" 
+                         class="card-img-top" 
+                         alt="{{ product.name }}"
+                         loading="lazy"
+                         onerror="this.src='{{ url_for('static', filename='img/products/default-product.jpg') }}'">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="price">{{ "%.2f"|format(product.price) }} ₴</p>
+                        <div class="btn-group">
+                            <a href="{{ url_for('product_detail', product_id=product.id) }}" 
+                               class="btn btn-outline-primary">Подробнее</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

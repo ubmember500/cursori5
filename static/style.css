@@ -1,0 +1,136 @@
+/* Main Styles for Cursor Clothing Shop */
+
+/* Global Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+}
+
+/* Стили для ссылок */
+a:not([class]) {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Header & Navigation */
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+/* Hero Section */
+.hero-section {
+    padding: 5rem 0;
+    background-color: #f8f9fa;
+}
+
+/* Product Cards */
+.products-section .product-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.products-section .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.products-section .product-card .card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Product Detail Page */
+.product-detail .product-image-container {
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.product-detail .product-image-container img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.product-detail .color-option {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+}
+
+.product-detail .color-option.active::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 2px solid #0d6efd;
+    border-radius: 50%;
+}
+
+/* Cart Page */
+.cart-page .cart-item-image {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+}
+
+/* Checkout Page */
+.checkout-page .payment-icon {
+    height: 24px;
+    margin-right: 10px;
+}
+
+/* Footer */
+footer {
+    margin-top: 5rem;
+}
+
+/* Alert Styles */
+.alert {
+    margin-bottom: 20px;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+
+.alert-error {
+    background-color: #fff5f5;
+    border-color: #ffe3e3;
+    color: #4a4a4a;
+}
+
+.alert-success {
+    background-color: #f0fff4;
+    border-color: #c6f6d5;
+    color: #2f855a;
+}
+
+.alert-info {
+    background-color: #ebf8ff;
+    border-color: #bee3f8;
+    color: #2b6cb0;
+}
+
+.alert-warning {
+    background-color: #fffff0;
+    border-color: #fefcbf;
+    color: #975a16;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 3rem 0;
+    }
+
+    .product-detail .product-image-container {
+        height: 300px;
+    }
+}

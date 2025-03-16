@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %}Оплата заказа - Cursor Shop{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center mb-0">Оплата заказа</h3>
+                </div>
+                <div class="card-body text-center">
+                    <p class="mb-4">Нажмите кнопку ниже для перехода к оплате через LiqPay</p>
+                    <div class="alert alert-info mb-4">
+                        <h5>Тестовый режим оплаты</h5>
+                        <p class="mb-2">Для тестирования используйте следующие данные карты:</p>
+                        <ul class="list-unstyled">
+                            <li>Номер карты: 4242 4242 4242 4242</li>
+                            <li>Срок действия: любая будущая дата</li>
+                            <li>CVV: любые 3 цифры</li>
+                        </ul>
+                    </div>
+                    {{ payment_form|safe }}
+                    <p class="mt-3 text-muted"><small>Это тестовый режим. Реальная оплата не производится.</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

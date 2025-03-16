@@ -1,0 +1,13 @@
+# Enable mod_rewrite
+RewriteEngine On
+
+# Set WSGI script alias
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ app.py/$1 [QSA,L]
+
+# Set Python handler
+AddHandler cgi-script .py
+
+# Set environment variables
+SetEnv PYTHONPATH /home/username/python
+SetEnv FLASK_APP app.py 

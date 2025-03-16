@@ -1,0 +1,36 @@
+<div class="row g-4" id="productsContainer">
+    {% for product in products %}
+    <div class="col-md-4">
+        <div class="card product-card" data-category="{{ product.category_id }}" data-price="{{ product.price }}">
+            <div class="card-img-wrapper">
+                <img src="{{ url_for('static', filename=product.image) }}" 
+                     class="card-img-top" 
+                     alt="{{ product.name }}"
+                     loading="lazy">
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="price">{{ "%.2f"|format(product.price) }} ₴</p>
+                <div class="btn-group">
+                    <a href="{{ url_for('product_detail', product_id=product.id) }}" 
+                       class="btn btn-outline-primary">Подробнее</a>
+                    <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}" style="flex-grow: 1;">
+                        <input type="hidden" name="quantity" value="1">
+                        <input type="hidden" name="image" value="{{ product.image }}">
+                        <button type="submit" class="btn btn-primary w-100">В корзину</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not products %}
+    <div class="col-12">
+        <div class="text-center mt-5">
+            <h5>Товары не найдены</h5>
+            <p>Попробуйте изменить параметры фильтрации</p>
+        </div>
+    </div>
+    {% endif %}
+</div> 
