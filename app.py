@@ -694,13 +694,18 @@ def checkout():
         # Проверяем, есть ли параметр buy_now и product_id
         product_id = request.args.get('product_id')
         if product_id:
-            # Получаем информацию о продукте
-            product = Product.query.get(product_id)
-            if product:
+            try:
+                # Получаем информацию о продукте
+                product = Product.query.get_or_404(int(product_id))
                 # Получаем размер, цвет и количество из параметров запроса
                 size = request.args.get('size', '')
                 color = request.args.get('color', '')
                 quantity = int(request.args.get('quantity', 1))
+                
+                # Проверяем наличие товара
+                if quantity > product.stock:
+                    flash('Извините, данного количества товара нет в наличии', 'error')
+                    return redirect(url_for('product_detail', product_id=product_id))
                 
                 # Создаем временную корзину для прямой покупки
                 session['cart'] = [{
@@ -713,8 +718,10 @@ def checkout():
                     'color': color
                 }]
                 session.modified = True
-            else:
-                flash('Товар не найден', 'error')
+                print(f"Создана временная корзина для прямой покупки товара {product.name}")
+            except Exception as e:
+                print(f"Ошибка при создании временной корзины: {e}")
+                flash('Произошла ошибка при обработке товара. Попробуйте позже.', 'error')
                 return redirect(url_for('products'))
         else:
             flash('Ваша корзина пуста', 'warning')
@@ -724,21 +731,36 @@ def checkout():
     cart_items = []
     total = 0
     
-    for item in session['cart']:
-        product = Product.query.get(item['id'])
-        if product:
-            item_total = item['price'] * item['quantity']
-            cart_items.append({
-                'id': item['id'],
-                'name': item['name'],
-                'price': item['price'],
-                'quantity': item['quantity'],
-                'total': item_total,
-                'image': item.get('image'),
-                'size': item.get('size'),
-                'color': item.get('color')
-            })
-            total += item_total
+    try:
+        for item in session['cart']:
+            product = Product.query.get(item['id'])
+            if product:
+                item_total = item['price'] * item['quantity']
+                cart_items.append({
+                    'id': item['id'],
+                    'name': item['name'],
+                    'price': item['price'],
+                    'quantity': item['quantity'],
+                    'total': item_total,
+                    'image': item.get('image'),
+                    'size': item.get('size'),
+                    'color': item.get('color')
+                })
+                total += item_total
+            else:
+                # Если товар не найден, удаляем его из корзины
+                session['cart'].remove(item)
+                session.modified = True
+                print(f"Товар с ID {item['id']} не найден и удален из корзины")
+    except Exception as e:
+        print(f"Ошибка при обработке корзины: {e}")
+        flash('Произошла ошибка при обработке корзины. Попробуйте позже.', 'error')
+        return redirect(url_for('cart'))
+    
+    # Если корзина пуста после проверки товаров
+    if not cart_items:
+        flash('Ваша корзина пуста или содержит недоступные товары', 'warning')
+        return redirect(url_for('products'))
     
     # Добавляем стоимость доставки
     delivery_cost = 60.00
@@ -749,10 +771,10 @@ def checkout():
         phone_number = request.form.get('phone_number')
         shipping_address = request.form.get('shipping_address')
         shipping_city = request.form.get('shipping_city')
-        shipping_postal_code = request.form.get('shipping_postal_code')
+        shipping_postal_code = request.form.get('shipping_postal_code', '')
         payment_method = request.form.get('payment_method')
         messenger_contact = request.form.get('messenger_contact', '')
-        email = request.form.get('email')
+        email = request.form.get('email', g.user.email)
         
         # Проверяем обязательные поля
         if not phone_number or not shipping_address or not shipping_city or not payment_method:
@@ -780,6 +802,7 @@ def checkout():
             
             db.session.add(order)
             db.session.flush()  # Получаем ID заказа
+            print(f"Создан заказ с ID {order.id}")
             
             # Добавляем товары в заказ
             for item in session['cart']:
@@ -787,6 +810,7 @@ def checkout():
                 if product:
                     # Проверяем наличие товара на складе
                     if product.stock < item['quantity']:
+                        db.session.rollback()
                         flash(f'Извините, товара "{product.name}" недостаточно на складе. В наличии: {product.stock}', 'error')
                         return render_template('checkout.html', cart_items=cart_items, total=total, delivery_cost=delivery_cost, total_with_delivery=total_with_delivery)
                     
@@ -803,8 +827,10 @@ def checkout():
                         color=item.get('color')
                     )
                     db.session.add(order_item)
+                    print(f"Добавлен товар {product.name} в заказ {order.id}")
             
             db.session.commit()
+            print(f"Заказ успешно сохранен: id={order.id}, пользователь={g.user.id}, сумма={total_with_delivery}")
             
             # Очищаем корзину
             session['cart'] = []
@@ -1269,47 +1295,147 @@ def order_confirmation(order_id):
     if not g.user:
         return redirect(url_for('login'))
         
-    order = Order.query.get_or_404(order_id)
-    
-    # Проверяем, принадлежит ли заказ текущему пользователю
-    if order.user_id != g.user.id:
-        abort(403)
+    try:
+        # Получаем заказ
+        order = Order.query.get_or_404(order_id)
         
-    return render_template('order_confirmation.html', order=order)
+        # Проверяем, принадлежит ли заказ текущему пользователю
+        if order.user_id != g.user.id:
+            print(f"Доступ запрещен: пользователь {g.user.id} пытается просмотреть подтверждение заказа {order_id} пользователя {order.user_id}")
+            abort(403)
+        
+        # Получаем пользователя
+        user = User.query.get(order.user_id)
+        
+        # Загружаем элементы заказа
+        order_items = OrderItem.query.filter_by(order_id=order.id).all()
+        
+        # Загружаем информацию о товарах
+        items_with_products = []
+        for item in order_items:
+            product = Product.query.get(item.product_id)
+            if product:
+                items_with_products.append({
+                    'id': item.id,
+                    'product_id': item.product_id,
+                    'product': product,
+                    'quantity': item.quantity,
+                    'price': item.price,
+                    'size': item.size,
+                    'color': item.color
+                })
+            else:
+                # Добавляем элемент с базовой информацией, если товар не найден
+                items_with_products.append({
+                    'id': item.id,
+                    'product_id': item.product_id,
+                    'product': {'name': 'Товар недоступен', 'image': None},
+                    'quantity': item.quantity,
+                    'price': item.price,
+                    'size': item.size,
+                    'color': item.color
+                })
+        
+        # Создаем объект заказа с дополнительной информацией
+        order_data = {
+            'id': order.id,
+            'user_id': order.user_id,
+            'user': user,
+            'status': order.status,
+            'total_amount': order.total_amount,
+            'created_at': order.created_at,
+            'shipping_address': order.shipping_address,
+            'shipping_city': order.shipping_city,
+            'shipping_postal_code': order.shipping_postal_code,
+            'phone_number': order.phone_number,
+            'payment_method': order.payment_method,
+            'messenger_contact': order.messenger_contact,
+            'items': items_with_products
+        }
+        
+        return render_template('order_confirmation.html', order=order_data)
+    except Exception as e:
+        print(f"Ошибка при загрузке подтверждения заказа {order_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Произошла ошибка при загрузке подтверждения заказа', 'danger')
+        return redirect(url_for('my_orders'))
 
 @app.route('/my-orders')
 @login_required
 def my_orders():
     """Display all orders for the currently logged-in user"""
     try:
+        print(f"Загрузка заказов для пользователя {g.user.id}")
+        
         # Получаем все заказы пользователя, отсортированные по дате (новые сверху)
         orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
+        print(f"Найдено заказов: {len(orders)}")
         
         # Для каждого заказа предварительно загружаем данные
+        processed_orders = []
         for order in orders:
-            # Принудительно загружаем элементы заказа
-            order.items_count = len(order.items)
-            
-            # Вычисляем общее количество товаров
-            order.total_items = sum(item.quantity for item in order.items)
-            
-            # Форматируем статус для отображения
-            if order.status == 'pending':
-                order.status_display = 'Ожидает оплаты'
-            elif order.status == 'paid':
-                order.status_display = 'Оплачен'
-            elif order.status == 'shipped':
-                order.status_display = 'Отправлен'
-            elif order.status == 'delivered':
-                order.status_display = 'Доставлен'
-            elif order.status == 'cancelled':
-                order.status_display = 'Отменен'
-            else:
-                order.status_display = order.status
+            try:
+                # Загружаем элементы заказа
+                order_items = OrderItem.query.filter_by(order_id=order.id).all()
+                
+                # Создаем копию объекта заказа с дополнительными атрибутами
+                order_dict = {
+                    'id': order.id,
+                    'status': order.status,
+                    'total_amount': order.total_amount,
+                    'created_at': order.created_at,
+                    'shipping_address': order.shipping_address,
+                    'shipping_city': order.shipping_city,
+                    'shipping_postal_code': order.shipping_postal_code,
+                    'phone_number': order.phone_number,
+                    'payment_method': order.payment_method,
+                    'messenger_contact': order.messenger_contact,
+                    'items': [],
+                    'items_count': len(order_items),
+                    'total_items': sum(item.quantity for item in order_items)
+                }
+                
+                # Добавляем информацию о товарах
+                for item in order_items:
+                    product = Product.query.get(item.product_id)
+                    if product:
+                        order_dict['items'].append({
+                            'id': item.id,
+                            'product_id': item.product_id,
+                            'product': product,
+                            'quantity': item.quantity,
+                            'price': item.price,
+                            'size': item.size,
+                            'color': item.color
+                        })
+                
+                # Форматируем статус для отображения
+                if order.status == 'pending':
+                    order_dict['status_display'] = 'Ожидает оплаты'
+                elif order.status == 'paid':
+                    order_dict['status_display'] = 'Оплачен'
+                elif order.status == 'shipped':
+                    order_dict['status_display'] = 'Отправлен'
+                elif order.status == 'delivered':
+                    order_dict['status_display'] = 'Доставлен'
+                elif order.status == 'cancelled':
+                    order_dict['status_display'] = 'Отменен'
+                else:
+                    order_dict['status_display'] = order.status
+                
+                processed_orders.append(order_dict)
+                print(f"Обработан заказ {order.id} с {len(order_items)} товарами")
+                
+            except Exception as e:
+                print(f"Ошибка при обработке заказа {order.id}: {e}")
+                import traceback
+                traceback.print_exc()
         
-        return render_template('my_orders.html', orders=orders)
+        return render_template('my_orders.html', orders=processed_orders)
     except Exception as e:
         import traceback
+        print(f"Ошибка при загрузке заказов: {e}")
         traceback.print_exc()
         flash('Произошла ошибка при загрузке заказов. Попробуйте позже.', 'error')
         return render_template('my_orders.html', orders=[], 
@@ -1320,15 +1446,66 @@ def my_orders():
 def order_details(order_id):
     """Display detailed information about a specific order"""
     try:
+        print(f"Загрузка деталей заказа {order_id}")
+        
         # Получаем заказ и проверяем, принадлежит ли он текущему пользователю
         order = Order.query.get_or_404(order_id)
         if order.user_id != g.user.id:
+            print(f"Доступ запрещен: пользователь {g.user.id} пытается просмотреть заказ {order_id} пользователя {order.user_id}")
             abort(403)  # Forbidden - пользователь не владеет этим заказом
         
-        return render_template('order_details.html', order=order)
+        # Загружаем элементы заказа
+        order_items = OrderItem.query.filter_by(order_id=order.id).all()
+        print(f"Найдено {len(order_items)} элементов заказа")
+        
+        # Загружаем информацию о товарах
+        items_with_products = []
+        for item in order_items:
+            product = Product.query.get(item.product_id)
+            if product:
+                items_with_products.append({
+                    'id': item.id,
+                    'product_id': item.product_id,
+                    'product': product,
+                    'quantity': item.quantity,
+                    'price': item.price,
+                    'size': item.size,
+                    'color': item.color
+                })
+            else:
+                print(f"Товар с ID {item.product_id} не найден")
+                # Добавляем элемент с базовой информацией, если товар не найден
+                items_with_products.append({
+                    'id': item.id,
+                    'product_id': item.product_id,
+                    'product': {'name': 'Товар недоступен', 'image': None},
+                    'quantity': item.quantity,
+                    'price': item.price,
+                    'size': item.size,
+                    'color': item.color
+                })
+        
+        # Создаем объект заказа с дополнительной информацией
+        order_data = {
+            'id': order.id,
+            'user_id': order.user_id,
+            'status': order.status,
+            'total_amount': order.total_amount,
+            'created_at': order.created_at,
+            'shipping_address': order.shipping_address,
+            'shipping_city': order.shipping_city,
+            'shipping_postal_code': order.shipping_postal_code,
+            'phone_number': order.phone_number,
+            'payment_method': order.payment_method,
+            'messenger_contact': order.messenger_contact,
+            'items': items_with_products
+        }
+        
+        print(f"Заказ {order_id} успешно загружен")
+        return render_template('order_details.html', order=order_data)
     except Exception as e:
         import traceback
-        print(f"Ошибка при загрузке заказа {order_id}: {str(e)}")
+        print(f"Ошибка при загрузке заказа {order_id}: {e}")
         traceback.print_exc()
         flash('Произошла ошибка при загрузке заказа', 'danger')
         return redirect(url_for('my_orders'))
@@ -1338,16 +1515,20 @@ def order_details(order_id):
 def cancel_order(order_id):
     """Отмена заказа пользователем"""
     try:
+        print(f"Попытка отмены заказа {order_id} пользователем {g.user.id}")
+        
         # Получаем заказ
         order = Order.query.get_or_404(order_id)
         
         # Проверяем, принадлежит ли заказ текущему пользователю
         if order.user_id != g.user.id:
+            print(f"Доступ запрещен: пользователь {g.user.id} пытается отменить заказ {order_id} пользователя {order.user_id}")
             flash('У вас нет доступа к этому заказу', 'danger')
             return redirect(url_for('my_orders'))
         
         # Проверяем, можно ли отменить заказ (только в статусе "pending")
         if order.status != 'pending':
+            print(f"Невозможно отменить заказ {order_id} в статусе {order.status}")
             flash('Этот заказ нельзя отменить, так как он уже обрабатывается или доставлен', 'warning')
             return redirect(url_for('order_details', order_id=order_id))
         
@@ -1355,13 +1536,15 @@ def cancel_order(order_id):
         order.status = 'cancelled'
         
         # Возвращаем товары на склад
-        for item in order.items:
+        order_items = OrderItem.query.filter_by(order_id=order.id).all()
+        for item in order_items:
             product = Product.query.get(item.product_id)
             if product:
                 product.stock += item.quantity
                 print(f"Возвращено на склад: {item.quantity} шт. товара {product.name}")
         
         db.session.commit()
+        print(f"Заказ {order_id} успешно отменен")
         flash('Заказ успешно отменен', 'success')
         
         # Отправляем уведомление на email
@@ -1406,7 +1589,7 @@ def cancel_order(order_id):
         
     except Exception as e:
         db.session.rollback()
-        print(f"Ошибка при отмене заказа {order_id}: {str(e)}")
+        print(f"Ошибка при отмене заказа {order_id}: {e}")
         import traceback
         traceback.print_exc()
         flash('Произошла ошибка при отмене заказа. Попробуйте позже.', 'danger')

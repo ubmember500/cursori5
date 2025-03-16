@@ -72,12 +72,7 @@
                                          {% elif order.status == 'delivered' %}bg-primary
                                          {% elif order.status == 'cancelled' %}bg-danger
                                          {% endif %} text-white">
-                        {% if order.status == 'pending' %}Ожидает оплаты
-                        {% elif order.status == 'paid' %}Оплачен
-                        {% elif order.status == 'shipped' %}Отправлен
-                        {% elif order.status == 'delivered' %}Доставлен
-                        {% elif order.status == 'cancelled' %}Отменен
-                        {% endif %}
+                        {{ order.status_display }}
                     </span>
                 </div>
                 <div class="card-body">

@@ -75,6 +75,7 @@
                         {% elif order.status == 'shipped' %}Отправлен
                         {% elif order.status == 'delivered' %}Доставлен
                         {% elif order.status == 'cancelled' %}Отменен
+                        {% else %}{{ order.status }}
                         {% endif %}
                     </span>
                 </div>
@@ -192,6 +193,10 @@
                         {% if order.shipping_postal_code %}, {{ order.shipping_postal_code }}{% endif %}
                     </p>
                     <p><strong>Телефон:</strong> {{ order.phone_number }}</p>
+                    
+                    {% if order.messenger_contact %}
+                    <p><strong>Контакт для связи:</strong> {{ order.messenger_contact }}</p>
+                    {% endif %}
                 </div>
             </div>
 
