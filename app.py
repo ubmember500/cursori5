@@ -949,7 +949,7 @@ def login():
 def logout():
     session.clear()
     flash('Вы вышли из системы', 'info')
-    return redirect(url_for('index'))
+    return redirect(url_for('home'))
 
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
