@@ -692,33 +692,44 @@ def checkout():
     if 'cart' not in session or not session['cart']:
         # Проверяем, пришли ли данные о товаре напрямую (кнопка "Купить сейчас")
         if request.method == 'POST' and request.form.get('action') == 'buy':
-            product_id = request.form.get('product_id')
-            if not product_id:
-                flash('Товар не найден', 'error')
+            try:
+                print("Обработка запроса 'Купить сейчас'")
+                product_id = request.form.get('product_id')
+                print(f"product_id: {product_id}")
+                
+                if not product_id:
+                    flash('Товар не найден', 'error')
+                    return redirect(url_for('products'))
+                    
+                product = Product.query.get_or_404(int(product_id))
+                quantity = int(request.form.get('quantity', 1))
+                size = request.form.get('size')
+                color = request.form.get('color')
+                image = request.form.get('image')
+                
+                print(f"Данные товара: id={product.id}, name={product.name}, quantity={quantity}, size={size}, color={color}")
+                
+                # Проверяем наличие товара
+                if quantity > product.stock:
+                    flash('Извините, данного количества товара нет в наличии', 'error')
+                    return redirect(url_for('product_detail', product_id=product_id))
+                    
+                # Создаем временную корзину для оформления заказа
+                session['cart'] = [{
+                    'id': product.id,
+                    'name': product.name,
+                    'price': product.price,
+                    'quantity': quantity,
+                    'size': size,
+                    'color': color,
+                    'image': image
+                }]
+                session.modified = True
+                print("Временная корзина создана")
+            except Exception as e:
+                print(f"Ошибка при обработке 'Купить сейчас': {str(e)}")
+                flash('Произошла ошибка при обработке запроса. Попробуйте позже.', 'error')
                 return redirect(url_for('products'))
-                
-            product = Product.query.get_or_404(int(product_id))
-            quantity = int(request.form.get('quantity', 1))
-            size = request.form.get('size')
-            color = request.form.get('color')
-            image = request.form.get('image')
-            
-            # Проверяем наличие товара
-            if quantity > product.stock:
-                flash('Извините, данного количества товара нет в наличии', 'error')
-                return redirect(url_for('product_detail', product_id=product_id))
-                
-            # Создаем временную корзину для оформления заказа
-            session['cart'] = [{
-                'id': product.id,
-                'name': product.name,
-                'price': product.price,
-                'quantity': quantity,
-                'size': size,
-                'color': color,
-                'image': image
-            }]
-            session.modified = True
         else:
             flash('Ваша корзина пуста', 'warning')
             return redirect(url_for('cart'))
@@ -727,37 +738,47 @@ def checkout():
     total = 0
 
     # Проверяем наличие всех товаров перед оформлением
-    for item in session['cart']:
-        product = Product.query.get(item['id'])
-        if not product:
-            flash(f'Товар {item["name"]} больше не доступен', 'error')
-            return redirect(url_for('cart'))
-        
-        if item['quantity'] > product.stock:
-            flash(f'Товар {item["name"]} доступен только в количестве {product.stock} шт.', 'error')
-            return redirect(url_for('cart'))
+    try:
+        print("Проверка товаров в корзине")
+        for item in session['cart']:
+            product = Product.query.get(item['id'])
+            if not product:
+                flash(f'Товар {item["name"]} больше не доступен', 'error')
+                return redirect(url_for('cart'))
+            
+            if item['quantity'] > product.stock:
+                flash(f'Товар {item["name"]} доступен только в количестве {product.stock} шт.', 'error')
+                return redirect(url_for('cart'))
 
-        item_total = item['price'] * item['quantity']
-        cart_items.append({
-            'id': item['id'],
-            'name': item['name'],
-            'price': item['price'],
-            'quantity': item['quantity'],
-            'total': item_total,
-            'image': item.get('image'),
-            'size': item.get('size'),
-            'color': item.get('color')
-        })
-        total += item_total
+            item_total = item['price'] * item['quantity']
+            cart_items.append({
+                'id': item['id'],
+                'name': item['name'],
+                'price': item['price'],
+                'quantity': item['quantity'],
+                'total': item_total,
+                'image': item.get('image'),
+                'size': item.get('size'),
+                'color': item.get('color')
+            })
+            total += item_total
+        print(f"Товары в корзине проверены, общая сумма: {total}")
+    except Exception as e:
+        print(f"Ошибка при проверке товаров в корзине: {str(e)}")
+        flash('Произошла ошибка при проверке товаров. Попробуйте позже.', 'error')
+        return redirect(url_for('cart'))
 
     if request.method == 'POST' and request.form.get('shipping_address'):
         try:
+            print("Обработка формы оформления заказа")
             # Получаем данные формы
             shipping_address = request.form.get('shipping_address')
             shipping_city = request.form.get('shipping_city')
             shipping_postal_code = request.form.get('shipping_postal_code')
             phone_number = request.form.get('phone_number')
             payment_method = request.form.get('payment_method')
+
+            print(f"Данные доставки: адрес={shipping_address}, город={shipping_city}, индекс={shipping_postal_code}, телефон={phone_number}, способ оплаты={payment_method}")
 
             # Проверяем обязательные поля
             if not all([shipping_address, shipping_city, phone_number, payment_method]):
@@ -776,6 +797,7 @@ def checkout():
                 payment_method=payment_method
             )
             db.session.add(order)
+            print(f"Заказ создан для пользователя {g.user.id}")
             
             # Добавляем товары к заказу
             for item in cart_items:
@@ -794,11 +816,13 @@ def checkout():
                     color=item.get('color')
                 )
                 db.session.add(order_item)
+                print(f"Добавлен товар {item['name']} к заказу")
                 
                 # Уменьшаем количество товара на складе
                 product.stock -= item['quantity']
             
             db.session.commit()
+            print("Заказ успешно сохранен в базе данных")
             
             # Очищаем корзину
             session.pop('cart', None)
@@ -827,6 +851,7 @@ def checkout():
                 Мы свяжемся с вами по телефону {phone_number} для подтверждения заказа.
                 '''
                 mail.send(msg)
+                print(f"Email с подтверждением отправлен на {g.user.email}")
             except Exception as e:
                 print(f"Ошибка отправки email: {e}")
             
@@ -836,6 +861,8 @@ def checkout():
         except Exception as e:
             db.session.rollback()
             print(f'Error creating order: {str(e)}')
+            import traceback
+            traceback.print_exc()
             flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
             return redirect(url_for('cart'))
 
