@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h2 class="card-title mb-4">Спасибо за ваш заказ!</h2>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h4>Заказ #{{ order.id }} успешно оформлен</h4>
+                        <p>Мы отправили подтверждение на ваш email: {{ order.user.email }}</p>
+                    </div>
+                    
+                    <div class="order-details mt-4">
+                        <h4>Детали заказа:</h4>
+                        <p><strong>Статус:</strong> {{ order.status }}</p>
+                        <p><strong>Сумма:</strong> {{ order.total_amount }} ₴</p>
+                        <p><strong>Способ оплаты:</strong> {{ order.payment_method }}</p>
+                        
+                        <h5 class="mt-4">Адрес доставки:</h5>
+                        <p>{{ order.shipping_address }}<br>
+                           {{ order.shipping_city }}<br>
+                           {{ order.shipping_postal_code }}</p>
+                        
+                        <p><strong>Контактный телефон:</strong> {{ order.phone_number }}</p>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4>Товары в заказе:</h4>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Товар</th>
+                                        <th>Размер</th>
+                                        <th>Цвет</th>
+                                        <th>Количество</th>
+                                        <th>Цена</th>
+                                        <th>Сумма</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order.items %}
+                                    <tr>
+                                        <td>{{ item.product.name }}</td>
+                                        <td>{{ item.size or '-' }}</td>
+                                        <td>{{ item.color or '-' }}</td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>{{ item.price }} ₴</td>
+                                        <td>{{ item.price * item.quantity }} ₴</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="5" class="text-end"><strong>Итого:</strong></td>
+                                        <td><strong>{{ order.total_amount }} ₴</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">Вернуться на главную</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

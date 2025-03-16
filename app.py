@@ -1,6 +1,6 @@
 # from liqpay import LiqPay  # Temporarily commented out
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, g, make_response, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, g, make_response, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import os
@@ -205,6 +205,41 @@ class Session(db.Model):
     session_id = db.Column(db.String(255), unique=True)
     data = db.Column(db.Text)
     expiry = db.Column(db.DateTime)
+
+
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, paid, shipped, delivered, cancelled
+    total_amount = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Информация о доставке
+    shipping_address = db.Column(db.String(200))
+    shipping_city = db.Column(db.String(100))
+    shipping_postal_code = db.Column(db.String(20))
+    phone_number = db.Column(db.String(20))
+    
+    # Способ оплаты
+    payment_method = db.Column(db.String(50))  # cash, card, bank_transfer
+    
+    # Связь с пользователем и товарами
+    user = db.relationship('User', backref='orders')
+    items = db.relationship('OrderItem', backref='order', cascade='all, delete-orphan')
+
+
+class OrderItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)  # Цена на момент заказа
+    
+    # Дополнительные параметры товара
+    size = db.Column(db.String(10))
+    color = db.Column(db.String(50))
+    
+    product = db.relationship('Product')
 
 
 # Create database tables
@@ -666,17 +701,36 @@ def checkout():
             'price': item['price'],
             'quantity': item['quantity'],
             'total': item_total,
-            'image': item.get('image')
+            'image': item.get('image'),
+            'size': item.get('size'),
+            'color': item.get('color')
         })
         total += item_total
 
     if request.method == 'POST':
         try:
+            # Получаем данные формы
+            shipping_address = request.form.get('shipping_address')
+            shipping_city = request.form.get('shipping_city')
+            shipping_postal_code = request.form.get('shipping_postal_code')
+            phone_number = request.form.get('phone_number')
+            payment_method = request.form.get('payment_method')
+
+            # Проверяем обязательные поля
+            if not all([shipping_address, shipping_city, phone_number, payment_method]):
+                flash('Пожалуйста, заполните все обязательные поля', 'error')
+                return render_template('checkout.html', cart_items=cart_items, total=total)
+
             # Создаем заказ
             order = Order(
                 user_id=g.user.id,
                 total_amount=total,
-                status='pending'
+                status='pending',
+                shipping_address=shipping_address,
+                shipping_city=shipping_city,
+                shipping_postal_code=shipping_postal_code,
+                phone_number=phone_number,
+                payment_method=payment_method
             )
             db.session.add(order)
             
@@ -692,7 +746,9 @@ def checkout():
                     order=order,
                     product_id=item['id'],
                     quantity=item['quantity'],
-                    price=item['price']
+                    price=item['price'],
+                    size=item.get('size'),
+                    color=item.get('color')
                 )
                 db.session.add(order_item)
                 
@@ -704,12 +760,39 @@ def checkout():
             # Очищаем корзину
             session.pop('cart', None)
             
-            flash('Заказ успешно оформлен!', 'success')
+            # Отправляем email с подтверждением
+            try:
+                msg = Message(
+                    'Подтверждение заказа',
+                    sender='defensivelox@gmail.com',
+                    recipients=[g.user.email]
+                )
+                msg.body = f'''
+                Спасибо за ваш заказ!
+                
+                Номер заказа: {order.id}
+                Сумма заказа: {total} ₴
+                Статус: В обработке
+                
+                Адрес доставки:
+                {shipping_address}
+                {shipping_city}
+                {shipping_postal_code}
+                
+                Способ оплаты: {payment_method}
+                
+                Мы свяжемся с вами по телефону {phone_number} для подтверждения заказа.
+                '''
+                mail.send(msg)
+            except Exception as e:
+                print(f"Ошибка отправки email: {e}")
+            
+            flash('Заказ успешно оформлен! Мы отправили подтверждение на ваш email.', 'success')
             return redirect(url_for('order_confirmation', order_id=order.id))
             
         except Exception as e:
             db.session.rollback()
-            app.logger.error(f'Error creating order: {str(e)}')
+            print(f'Error creating order: {str(e)}')
             flash('Произошла ошибка при оформлении заказа. Попробуйте позже.', 'error')
             return redirect(url_for('cart'))
 
@@ -785,31 +868,40 @@ def register():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         
+        print(f"Попытка регистрации: username={username}, email={email}")  # Добавляем лог
+        
         # Проверяем, что пароли совпадают
         if password != confirm_password:
+            print("Пароли не совпадают")  # Добавляем лог
             flash('Пароли не совпадают!', 'danger')
             return redirect(url_for('register'))
         
         # Проверяем, что пользователь с таким email или username еще не существует
         if User.query.filter_by(username=username).first():
+            print(f"Пользователь с именем {username} уже существует")  # Добавляем лог
             flash('Пользователь с таким именем уже существует!', 'danger')
             return redirect(url_for('register'))
             
         if User.query.filter_by(email=email).first():
+            print(f"Пользователь с email {email} уже существует")  # Добавляем лог
             flash('Пользователь с таким email уже существует!', 'danger')
             return redirect(url_for('register'))
         
-        # Создаем нового пользователя
-        user = User(username=username, email=email)
-        user.set_password(password)
-        
         try:
+            # Создаем нового пользователя
+            user = User(username=username, email=email)
+            user.set_password(password)
+            print(f"Создаем нового пользователя: {username}")  # Добавляем лог
+            
             db.session.add(user)
             db.session.commit()
+            print(f"Пользователь {username} успешно создан")  # Добавляем лог
+            
             flash('Регистрация успешна! Теперь вы можете войти.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
             db.session.rollback()
+            print(f"Ошибка при создании пользователя: {str(e)}")  # Добавляем лог
             flash('Произошла ошибка при регистрации. Попробуйте позже.', 'danger')
             return redirect(url_for('register'))
     
@@ -1110,6 +1202,19 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
+
+@app.route('/order-confirmation/<int:order_id>')
+def order_confirmation(order_id):
+    if not g.user:
+        return redirect(url_for('login'))
+        
+    order = Order.query.get_or_404(order_id)
+    
+    # Проверяем, принадлежит ли заказ текущему пользователю
+    if order.user_id != g.user.id:
+        abort(403)
+        
+    return render_template('order_confirmation.html', order=order)
 
 if __name__ == '__main__':
     init_db()
