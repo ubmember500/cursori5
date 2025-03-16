@@ -1229,30 +1229,40 @@ def order_confirmation(order_id):
 
 @app.route('/my-orders')
 def my_orders():
+    if not current_user.is_authenticated:
+        flash('Пожалуйста, войдите в систему для просмотра заказов', 'warning')
+        return redirect(url_for('login'))
+    
     try:
-        print("Вход в маршрут my_orders")
-        if not g.user:
-            print("Пользователь не авторизован")
-            flash('Для просмотра заказов необходимо авторизоваться', 'warning')
-            return redirect(url_for('login', next=url_for('my_orders')))
-        
-        print(f"Пользователь авторизован: {g.user.username} (ID: {g.user.id})")
-        # Получаем все заказы пользователя, отсортированные по дате (новые сверху)
-        orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
+        print(f"Пользователь: {current_user.username}, ID: {current_user.id}")
+        orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
         print(f"Найдено заказов: {len(orders)}")
-        
         return render_template('my_orders.html', orders=orders)
     except Exception as e:
-        print(f"Ошибка в маршруте my_orders: {str(e)}")
         import traceback
+        print(f"Ошибка при загрузке заказов: {str(e)}")
         traceback.print_exc()
-        # Вместо перенаправления на главную, рендерим шаблон my_orders с пустым списком заказов
-        # и сообщением об ошибке
-        flash('Произошла ошибка при загрузке заказов. Попробуйте позже.', 'error')
-        return render_template('my_orders.html', orders=[], error_message="Не удалось загрузить ваши заказы. Возможно, вы еще не сделали ни одного заказа или произошла техническая ошибка.")
+        return render_template('my_orders.html', orders=[], error_message="Произошла ошибка при загрузке заказов. Пожалуйста, попробуйте позже.")
+
+@app.route('/order/<int:order_id>')
+def order_details(order_id):
+    if not current_user.is_authenticated:
+        flash('Пожалуйста, войдите в систему для просмотра заказов', 'warning')
+        return redirect(url_for('login'))
+    
+    try:
+        order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
+        return render_template('order_details.html', order=order)
+    except Exception as e:
+        import traceback
+        print(f"Ошибка при загрузке заказа {order_id}: {str(e)}")
+        traceback.print_exc()
+        flash('Произошла ошибка при загрузке заказа', 'danger')
+        return redirect(url_for('my_orders'))
 
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, port=5001)
 
+print("Flask application for Cursor Clothing Shop is ready to run!")
 print("Flask application for Cursor Clothing Shop is ready to run!")
