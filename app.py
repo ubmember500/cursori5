@@ -688,9 +688,40 @@ def checkout():
         flash('Для оформления заказа необходимо авторизоваться', 'warning')
         return redirect(url_for('login', next=url_for('checkout')))
 
+    # Проверяем, есть ли товары в корзине
     if 'cart' not in session or not session['cart']:
-        flash('Ваша корзина пуста', 'warning')
-        return redirect(url_for('cart'))
+        # Проверяем, пришли ли данные о товаре напрямую (кнопка "Купить сейчас")
+        if request.method == 'POST' and request.form.get('action') == 'buy':
+            product_id = request.form.get('product_id')
+            if not product_id:
+                flash('Товар не найден', 'error')
+                return redirect(url_for('products'))
+                
+            product = Product.query.get_or_404(int(product_id))
+            quantity = int(request.form.get('quantity', 1))
+            size = request.form.get('size')
+            color = request.form.get('color')
+            image = request.form.get('image')
+            
+            # Проверяем наличие товара
+            if quantity > product.stock:
+                flash('Извините, данного количества товара нет в наличии', 'error')
+                return redirect(url_for('product_detail', product_id=product_id))
+                
+            # Создаем временную корзину для оформления заказа
+            session['cart'] = [{
+                'id': product.id,
+                'name': product.name,
+                'price': product.price,
+                'quantity': quantity,
+                'size': size,
+                'color': color,
+                'image': image
+            }]
+            session.modified = True
+        else:
+            flash('Ваша корзина пуста', 'warning')
+            return redirect(url_for('cart'))
 
     cart_items = []
     total = 0
@@ -719,7 +750,7 @@ def checkout():
         })
         total += item_total
 
-    if request.method == 'POST':
+    if request.method == 'POST' and request.form.get('shipping_address'):
         try:
             # Получаем данные формы
             shipping_address = request.form.get('shipping_address')
