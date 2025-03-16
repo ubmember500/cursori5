@@ -747,6 +747,7 @@ def checkout():
                     'color': item.get('color')
                 })
                 total += item_total
+                print(f"Товар {product.name} (ID: {product.id}) добавлен в корзину, цена: {item['price']}, количество: {item['quantity']}")
             else:
                 # Если товар не найден, удаляем его из корзины
                 session['cart'].remove(item)
@@ -765,6 +766,7 @@ def checkout():
     # Добавляем стоимость доставки
     delivery_cost = 60.00
     total_with_delivery = total + delivery_cost
+    print(f"Общая сумма товаров: {total}, с доставкой: {total_with_delivery}")
     
     if request.method == 'POST':
         # Получаем данные из формы
@@ -805,7 +807,7 @@ def checkout():
             print(f"Создан заказ с ID {order.id}")
             
             # Добавляем товары в заказ
-            for item in session['cart']:
+            for item in cart_items:
                 product = Product.query.get(item['id'])
                 if product:
                     # Проверяем наличие товара на складе
