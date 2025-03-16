@@ -23,7 +23,7 @@ import re
 from sqlalchemy.exc import IntegrityError
 
 # Загрузка переменных окружения
-load_dotenv()
+# load_dotenv()  # Убираем загрузку .env
 
 # Настройка путей
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -38,8 +38,8 @@ SOCIAL_MEDIA = {
 }
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{os.path.join(INSTANCE_DIR, "shop.db")}')
+app.config['SECRET_KEY'] = 'your-secret-key-here'  # Устанавливаем секретный ключ напрямую
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(INSTANCE_DIR, "shop.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SOCIAL_MEDIA'] = SOCIAL_MEDIA
 
@@ -49,17 +49,17 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # Настройка безопасной сессии
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
-app.config['SESSION_COOKIE_SECURE'] = False  # Разрешаем cookie без HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 
 # Настройка почты
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+app.config['MAIL_USERNAME'] = 'defensivelox@gmail.com'
+app.config['MAIL_PASSWORD'] = 'pgqm xxgl srss caue'
+app.config['MAIL_DEFAULT_SENDER'] = 'defensivelox@gmail.com'
 
 mail = Mail(app)
 db = SQLAlchemy(app)
