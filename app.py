@@ -1436,12 +1436,18 @@ def order_confirmation(order_id):
         flash('Произошла ошибка при загрузке подтверждения заказа', 'danger')
         return redirect(url_for('my_orders'))
 
-@app.route('/my-orders')
+@app.route('/my_orders')
 @login_required
 def my_orders():
     """Display all orders for the currently logged-in user"""
     try:
-        print(f"Загрузка заказов для пользователя {g.user.id}")
+        # Проверяем, что пользователь авторизован
+        if not g.user:
+            print("Ошибка: пользователь не авторизован")
+            flash('Для просмотра заказов необходимо войти в систему', 'error')
+            return redirect(url_for('login', next=url_for('my_orders')))
+        
+        print(f"Загрузка заказов для пользователя {g.user.id} ({g.user.username})")
         
         # Получаем все заказы пользователя, отсортированные по дате (новые сверху)
         orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
@@ -1451,8 +1457,10 @@ def my_orders():
         processed_orders = []
         for order in orders:
             try:
+                print(f"Обработка заказа {order.id}")
                 # Загружаем элементы заказа
                 order_items = OrderItem.query.filter_by(order_id=order.id).all()
+                print(f"Найдено элементов заказа: {len(order_items)}")
                 
                 # Создаем копию объекта заказа с дополнительными атрибутами
                 order_dict = {
@@ -1484,6 +1492,8 @@ def my_orders():
                             'size': item.size,
                             'color': item.color
                         })
+                    else:
+                        print(f"Предупреждение: товар с ID {item.product_id} не найден для заказа {order.id}")
                 
                 # Форматируем статус для отображения
                 if order.status == 'pending':
@@ -1500,14 +1510,22 @@ def my_orders():
                     order_dict['status_display'] = order.status
                 
                 processed_orders.append(order_dict)
-                print(f"Обработан заказ {order.id} с {len(order_items)} товарами")
+                print(f"Заказ {order.id} успешно обработан")
                 
             except Exception as e:
                 print(f"Ошибка при обработке заказа {order.id}: {e}")
                 import traceback
                 traceback.print_exc()
         
-        return render_template('my_orders.html', orders=processed_orders)
+        print(f"Всего обработано заказов: {len(processed_orders)}")
+        
+        # Проверяем, есть ли заказы для отображения
+        if processed_orders:
+            return render_template('my_orders.html', orders=processed_orders)
+        else:
+            print("У пользователя нет заказов")
+            return render_template('my_orders.html', orders=[], 
+                                  error_message="У вас пока нет заказов. Перейдите в каталог, чтобы сделать первый заказ.")
     except Exception as e:
         import traceback
         print(f"Ошибка при загрузке заказов: {e}")
