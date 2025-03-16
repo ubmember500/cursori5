@@ -12,8 +12,8 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        # Импортируем User здесь, чтобы избежать циклических импортов
-        from models import User
+        # Импортируем User из app, а не из models
+        from app import User
         g.user = User.query.get(user_id)
 
 def login_required(view):
