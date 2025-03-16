@@ -208,6 +208,8 @@ class Session(db.Model):
 
 
 class Order(db.Model):
+    __tablename__ = 'orders'  # Явно указываем имя таблицы
+    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status = db.Column(db.String(20), default='pending')  # pending, paid, shipped, delivered, cancelled
@@ -229,8 +231,10 @@ class Order(db.Model):
 
 
 class OrderItem(db.Model):
+    __tablename__ = 'order_items'  # Явно указываем имя таблицы
+    
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)  # Обновляем ссылку на таблицу orders
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)  # Цена на момент заказа
@@ -1225,13 +1229,25 @@ def order_confirmation(order_id):
 
 @app.route('/my-orders')
 def my_orders():
-    if not g.user:
-        flash('Для просмотра заказов необходимо авторизоваться', 'warning')
-        return redirect(url_for('login', next=url_for('my_orders')))
-    
-    # Получаем все заказы пользователя, отсортированные по дате (новые сверху)
-    orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
-    return render_template('my_orders.html', orders=orders)
+    try:
+        print("Вход в маршрут my_orders")
+        if not g.user:
+            print("Пользователь не авторизован")
+            flash('Для просмотра заказов необходимо авторизоваться', 'warning')
+            return redirect(url_for('login', next=url_for('my_orders')))
+        
+        print(f"Пользователь авторизован: {g.user.username} (ID: {g.user.id})")
+        # Получаем все заказы пользователя, отсортированные по дате (новые сверху)
+        orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
+        print(f"Найдено заказов: {len(orders)}")
+        
+        return render_template('my_orders.html', orders=orders)
+    except Exception as e:
+        print(f"Ошибка в маршруте my_orders: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash('Произошла ошибка при загрузке заказов', 'error')
+        return redirect(url_for('home'))
 
 if __name__ == '__main__':
     init_db()
