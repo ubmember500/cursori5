@@ -43,6 +43,8 @@
                                 {{ g.user.username }}
                             </a>
                             <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('my_orders') }}">Мои заказы</a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('logout') }}">Выйти</a></li>
                             </ul>
                         </li>

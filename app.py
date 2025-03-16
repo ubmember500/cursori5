@@ -1223,6 +1223,16 @@ def order_confirmation(order_id):
         
     return render_template('order_confirmation.html', order=order)
 
+@app.route('/my-orders')
+def my_orders():
+    if not g.user:
+        flash('Для просмотра заказов необходимо авторизоваться', 'warning')
+        return redirect(url_for('login', next=url_for('my_orders')))
+    
+    # Получаем все заказы пользователя, отсортированные по дате (новые сверху)
+    orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.created_at.desc()).all()
+    return render_template('my_orders.html', orders=orders)
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, port=5001)
