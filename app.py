@@ -1246,8 +1246,10 @@ def my_orders():
         print(f"Ошибка в маршруте my_orders: {str(e)}")
         import traceback
         traceback.print_exc()
-        flash('Произошла ошибка при загрузке заказов', 'error')
-        return redirect(url_for('home'))
+        # Вместо перенаправления на главную, рендерим шаблон my_orders с пустым списком заказов
+        # и сообщением об ошибке
+        flash('Произошла ошибка при загрузке заказов. Попробуйте позже.', 'error')
+        return render_template('my_orders.html', orders=[], error_message="Не удалось загрузить ваши заказы. Возможно, вы еще не сделали ни одного заказа или произошла техническая ошибка.")
 
 if __name__ == '__main__':
     init_db()

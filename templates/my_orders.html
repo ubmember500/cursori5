@@ -2,15 +2,52 @@
 
 {% block title %}Мои заказы - Cursor Shop🛍️{% endblock %}
 
+{% block extra_css %}
+<style>
+    .order-card {
+        transition: transform 0.3s ease;
+    }
+    .order-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .empty-orders {
+        text-align: center;
+        padding: 50px 0;
+    }
+    .empty-orders i {
+        font-size: 5rem;
+        color: #ccc;
+        margin-bottom: 20px;
+    }
+    .error-message {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">Мои заказы</h1>
 
-    {% if orders %}
+    {% if error_message %}
+        <div class="error-message">
+            <i class="fas fa-exclamation-circle fa-3x mb-3 text-warning"></i>
+            <h3 class="mb-3">Упс! Что-то пошло не так</h3>
+            <p class="text-muted mb-4">{{ error_message }}</p>
+            <a href="{{ url_for('products') }}" class="btn btn-primary">
+                <i class="fas fa-shopping-cart me-2"></i>Перейти к покупкам
+            </a>
+        </div>
+    {% elif orders %}
         <div class="row">
             {% for order in orders %}
             <div class="col-12 mb-4">
-                <div class="card">
+                <div class="card order-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="mb-0">Заказ #{{ order.id }}</h5>
@@ -84,14 +121,23 @@
             {% endfor %}
         </div>
     {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-shopping-bag fa-4x mb-3 text-muted"></i>
+        <div class="empty-orders">
+            <i class="fas fa-shopping-bag mb-3"></i>
             <h3>У вас пока нет заказов</h3>
-            <p class="text-muted">Самое время что-нибудь купить!</p>
+            <p class="text-muted mb-4">Самое время что-нибудь купить! Выберите товары из нашего каталога и оформите свой первый заказ.</p>
             <a href="{{ url_for('products') }}" class="btn btn-primary">
                 <i class="fas fa-shopping-cart me-2"></i>Перейти к покупкам
             </a>
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Дополнительный JavaScript для страницы заказов
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Страница заказов загружена');
+    });
+</script>
 {% endblock %} 
