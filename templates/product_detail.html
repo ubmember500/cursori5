@@ -421,21 +421,26 @@ body .btn:contains("В избранное") {
                     <div class="quantity-selector mb-3">
                         <h5>Количество:</h5>
                         <div class="input-group" style="width: 150px;">
-                            <button class="btn btn-outline-secondary" type="button" onclick="updateQuantity(-1)">-</button>
+                            <button class="btn btn-outline-secondary" type="button" id="decreaseQuantity">-</button>
                             <input type="number" class="form-control text-center" name="quantity" id="quantity" value="1" min="1" max="{{ product.stock }}">
-                            <button class="btn btn-outline-secondary" type="button" onclick="updateQuantity(1)">+</button>
+                            <button class="btn btn-outline-secondary" type="button" id="increaseQuantity">+</button>
                         </div>
                     </div>
                     
                     <input type="hidden" name="image" value="{{ product_image }}">
                     <input type="hidden" name="product_id" value="{{ product.id }}">
                     
+                    <!-- Сообщение об ошибке для размера и цвета -->
+                    <div id="validation-message" class="alert alert-danger d-none mb-3">
+                        Пожалуйста, выберите размер и цвет товара
+                    </div>
+                    
                     <!-- Кнопки действий -->
                     <div class="action-buttons">
-                        <button type="submit" name="action" value="cart" class="btn btn-primary">
+                        <button type="submit" name="action" value="cart" class="btn btn-primary" id="addToCartBtn">
                             <i class="fas fa-shopping-cart me-2"></i>В корзину
                         </button>
-                        <button type="submit" name="action" value="buy" class="btn btn-success" formaction="{{ url_for('checkout') }}">
+                        <button type="submit" name="action" value="buy" class="btn btn-success" id="buyNowBtn">
                             <i class="fas fa-shopping-bag me-2"></i>Купить сейчас
                         </button>
                     </div>
@@ -456,44 +461,74 @@ body .btn:contains("В избранное") {
                 const cartButton = document.querySelector('.isolated-button');
 
                 // Защищаем от изменений
-                Object.freeze(buttonsComponent);
-                Object.freeze(buttonWrapper);
-                Object.freeze(cartButton);
+                if (buttonsComponent) Object.freeze(buttonsComponent);
+                if (buttonWrapper) Object.freeze(buttonWrapper);
+                if (cartButton) Object.freeze(cartButton);
 
                 // Блокируем добавление через innerHTML
-                const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-                Object.defineProperty(buttonsComponent, 'innerHTML', {
-                    set: function() { return; },
-                    get: function() { return originalInnerHTML.get.call(this); }
+                if (buttonsComponent) {
+                    const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+                    Object.defineProperty(buttonsComponent, 'innerHTML', {
+                        set: function() { return; },
+                        get: function() { return originalInnerHTML.get.call(this); }
+                    });
+                }
+
+                // Обработка кнопок количества
+                document.getElementById('decreaseQuantity').addEventListener('click', function() {
+                    const input = document.getElementById('quantity');
+                    const currentValue = parseInt(input.value) || 1;
+                    if (currentValue > 1) {
+                        input.value = currentValue - 1;
+                    }
                 });
 
-                function handleAddToCart() {
-                    const quantity = document.getElementById('quantity').value;
-                    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
-                    const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
+                document.getElementById('increaseQuantity').addEventListener('click', function() {
+                    const input = document.getElementById('quantity');
+                    const currentValue = parseInt(input.value) || 1;
+                    const maxStock = {{ product.stock }};
+                    if (currentValue < maxStock) {
+                        input.value = currentValue + 1;
+                    }
+                });
+
+                // Проверка выбора размера и цвета перед отправкой формы
+                document.getElementById('addToCartBtn').addEventListener('click', function(e) {
+                    validateAndSubmit(e, 'cart');
+                });
+
+                document.getElementById('buyNowBtn').addEventListener('click', function(e) {
+                    validateAndSubmit(e, 'buy');
+                });
+
+                function validateAndSubmit(e, action) {
+                    e.preventDefault();
+                    
+                    const selectedSize = document.querySelector('input[name="size"]:checked');
+                    const selectedColor = document.querySelector('input[name="color"]:checked');
+                    const validationMessage = document.getElementById('validation-message');
                     
                     if (!selectedSize || !selectedColor) {
-                        alert('Пожалуйста, выберите размер и цвет');
-                        return;
+                        validationMessage.classList.remove('d-none');
+                        // Прокрутка к сообщению об ошибке
+                        validationMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return false;
                     }
                     
-                    const form = document.getElementById('cartForm');
-                    form.querySelector('input[name="quantity"]').value = quantity;
-                    document.getElementById('cart_size').value = selectedSize;
-                    document.getElementById('cart_color').value = selectedColor;
+                    validationMessage.classList.add('d-none');
+                    
+                    // Отправляем форму с выбранным действием
+                    const form = document.querySelector('form');
+                    
+                    if (action === 'buy') {
+                        form.action = "{{ url_for('checkout') }}";
+                    }
+                    
                     form.submit();
                 }
 
                 function changeImage(src) {
                     document.getElementById('mainImage').src = src;
-                }
-
-                function updateQuantity(change) {
-                    const input = document.getElementById('quantity');
-                    const currentValue = parseInt(input.value) || 1;
-                    const maxStock = {{ product.stock }};
-                    const newValue = Math.max(1, Math.min(currentValue + change, maxStock));
-                    input.value = newValue;
                 }
                 </script>
             </div>
