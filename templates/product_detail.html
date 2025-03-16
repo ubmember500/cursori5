@@ -455,50 +455,33 @@ body .btn:contains("В избранное") {
                 </form>
 
                 <script>
-                // Блокируем добавление новых элементов в компонент с кнопками
-                const buttonsComponent = document.querySelector('.isolated-buttons-component');
-                const buttonWrapper = document.querySelector('.isolated-button-wrapper');
-                const cartButton = document.querySelector('.isolated-button');
-
-                // Защищаем от изменений
-                if (buttonsComponent) Object.freeze(buttonsComponent);
-                if (buttonWrapper) Object.freeze(buttonWrapper);
-                if (cartButton) Object.freeze(cartButton);
-
-                // Блокируем добавление через innerHTML
-                if (buttonsComponent) {
-                    const originalInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-                    Object.defineProperty(buttonsComponent, 'innerHTML', {
-                        set: function() { return; },
-                        get: function() { return originalInnerHTML.get.call(this); }
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Обработка кнопок количества
+                    document.getElementById('decreaseQuantity').addEventListener('click', function() {
+                        const input = document.getElementById('quantity');
+                        const currentValue = parseInt(input.value) || 1;
+                        if (currentValue > 1) {
+                            input.value = currentValue - 1;
+                        }
                     });
-                }
 
-                // Обработка кнопок количества
-                document.getElementById('decreaseQuantity').addEventListener('click', function() {
-                    const input = document.getElementById('quantity');
-                    const currentValue = parseInt(input.value) || 1;
-                    if (currentValue > 1) {
-                        input.value = currentValue - 1;
-                    }
-                });
+                    document.getElementById('increaseQuantity').addEventListener('click', function() {
+                        const input = document.getElementById('quantity');
+                        const currentValue = parseInt(input.value) || 1;
+                        const maxStock = parseInt("{{ product.stock }}");
+                        if (currentValue < maxStock) {
+                            input.value = currentValue + 1;
+                        }
+                    });
 
-                document.getElementById('increaseQuantity').addEventListener('click', function() {
-                    const input = document.getElementById('quantity');
-                    const currentValue = parseInt(input.value) || 1;
-                    const maxStock = {{ product.stock }};
-                    if (currentValue < maxStock) {
-                        input.value = currentValue + 1;
-                    }
-                });
+                    // Проверка выбора размера и цвета перед отправкой формы
+                    document.getElementById('addToCartBtn').addEventListener('click', function(e) {
+                        validateAndSubmit(e, 'cart');
+                    });
 
-                // Проверка выбора размера и цвета перед отправкой формы
-                document.getElementById('addToCartBtn').addEventListener('click', function(e) {
-                    validateAndSubmit(e, 'cart');
-                });
-
-                document.getElementById('buyNowBtn').addEventListener('click', function(e) {
-                    validateAndSubmit(e, 'buy');
+                    document.getElementById('buyNowBtn').addEventListener('click', function(e) {
+                        validateAndSubmit(e, 'buy');
+                    });
                 });
 
                 function validateAndSubmit(e, action) {
