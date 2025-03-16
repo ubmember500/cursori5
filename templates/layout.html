@@ -280,7 +280,7 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="#">Мой профиль</a></li>
-                                <li><a class="dropdown-item" href="#">Мои заказы</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('my_orders') }}">Мои заказы</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('logout') }}">Выйти</a></li>
                             </ul>
